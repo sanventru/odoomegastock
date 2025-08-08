@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista Tree de Alertas -->
+    <record id="view_production_alert_tree" model="ir.ui.view">
+        <field name="name">megastock.production.alert.tree</field>
+        <field name="model">megastock.production.alert</field>
+        <field name="arch" type="xml">
+            <tree string="Alertas de Producción" create="false" decoration-danger="priority=='5'" decoration-warning="priority=='4'" decoration-info="state=='resolved'">
+                <field name="detection_date"/>
+                <field name="priority" widget="priority"/>
+                <field name="severity" widget="badge" decoration-danger="severity=='critical'" decoration-warning="severity=='error'" decoration-info="severity=='info'"/>
+                <field name="alert_type"/>
+                <field name="title"/>
+                <field name="production_line"/>
+                <field name="state" widget="badge" decoration-success="state=='resolved'" decoration-warning="state=='acknowledged'" decoration-danger="state=='escalated'"/>
+                <field name="escalation_count" optional="hide"/>
+                <field name="response_time" optional="hide"/>
+                <field name="resolution_time" optional="hide"/>
+                <field name="workcenter_id" optional="hide"/>
+                <field name="responsible_user_id" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form de Alertas -->
+    <record id="view_production_alert_form" model="ir.ui.view">
+        <field name="name">megastock.production.alert.form</field>
+        <field name="model">megastock.production.alert</field>
+        <field name="arch" type="xml">
+            <form string="Alerta de Producción" create="false">
+                <header>
+                    <button name="acknowledge_alert" string="Reconocer" type="object" class="btn-warning" states="active"/>
+                    <button name="resolve_alert" string="Resolver" type="object" class="btn-success" states="active,acknowledged,escalated"/>
+                    <button name="escalate_alert" string="Escalar" type="object" class="btn-danger" states="active,acknowledged"/>
+                    <field name="state" widget="statusbar" statusbar_visible="active,acknowledged,resolved"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_related_production" type="object" class="oe_stat_button" icon="fa-industry" attrs="{'invisible': [('production_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Producción</span>
+                            </div>
+                        </button>
+                        <button name="action_view_related_kpi" type="object" class="oe_stat_button" icon="fa-bar-chart" attrs="{'invisible': [('kpi_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">KPI</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <div class="oe_title">
+                        <div class="oe_edit_only">
+                            <label for="title"/>
+                        </div>
+                        <h1>
+                            <field name="title" class="oe_inline"/>
+                        </h1>
+                        <div class="oe_edit_only">
+                            <label for="message"/>
+                        </div>
+                        <field name="message"/>
+                    </div>
+
+                    <group>
+                        <group name="alert_info">
+                            <field name="alert_type"/>
+                            <field name="production_line"/>
+                            <field name="priority" widget="priority"/>
+                            <field name="severity" widget="selection"/>
+                            <field name="detection_date"/>
+                        </group>
+                        <group name="escalation_info">
+                            <field name="auto_escalate"/>
+                            <field name="escalation_time" attrs="{'invisible': [('auto_escalate', '=', False)]}"/>
+                            <field name="escalation_count"/>
+                            <field name="max_escalations"/>
+                            <field name="escalation_date" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Relaciones">
+                        <group>
+                            <field name="workcenter_id"/>
+                            <field name="production_id"/>
+                            <field name="plan_id"/>
+                            <field name="kpi_id"/>
+                        </group>
+                        <group>
+                            <field name="responsible_user_id"/>
+                            <field name="acknowledged_by" readonly="1"/>
+                            <field name="resolved_by" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Fechas y Tiempos">
+                        <group>
+                            <field name="acknowledgment_date" readonly="1"/>
+                            <field name="resolution_date" readonly="1"/>
+                            <field name="expiry_date"/>
+                        </group>
+                        <group>
+                            <field name="response_time" readonly="1"/>
+                            <field name="resolution_time" readonly="1"/>
+                            <field name="is_recurring" readonly="1"/>
+                            <field name="recurrence_count" readonly="1" attrs="{'invisible': [('is_recurring', '=', False)]}"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Escalación">
+                            <field name="escalation_user_ids" widget="many2many_tags"/>
+                        </page>
+                        <page string="Acciones">
+                            <group>
+                                <field name="auto_actions"/>
+                                <field name="action_taken"/>
+                            </group>
+                        </page>
+                        <page string="Datos Técnicos">
+                            <group>
+                                <field name="source_model" readonly="1"/>
+                                <field name="source_id" readonly="1"/>
+                                <field name="additional_data" readonly="1"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers"/>
+                    <field name="activity_ids" widget="mail_activity"/>
+                    <field name="message_ids" widget="mail_thread"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Search de Alertas -->
+    <record id="view_production_alert_search" model="ir.ui.view">
+        <field name="name">megastock.production.alert.search</field>
+        <field name="model">megastock.production.alert</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Alertas">
+                <field name="title"/>
+                <field name="message"/>
+                <field name="alert_type"/>
+                <field name="production_line"/>
+                <field name="workcenter_id"/>
+                <field name="responsible_user_id"/>
+
+                <filter string="Activas" name="active" domain="[('state', '=', 'active')]"/>
+                <filter string="Reconocidas" name="acknowledged" domain="[('state', '=', 'acknowledged')]"/>
+                <filter string="Escaladas" name="escalated" domain="[('state', '=', 'escalated')]"/>
+                <filter string="Resueltas" name="resolved" domain="[('state', '=', 'resolved')]"/>
+                
+                <separator/>
+                <filter string="Críticas" name="critical" domain="[('severity', '=', 'critical')]"/>
+                <filter string="Error" name="error" domain="[('severity', '=', 'error')]"/>
+                <filter string="Advertencia" name="warning" domain="[('severity', '=', 'warning')]"/>
+                
+                <separator/>
+                <filter string="Prioridad Alta" name="high_priority" domain="[('priority', 'in', ['4', '5'])]"/>
+                <filter string="KPI Crítico" name="kpi_alerts" domain="[('alert_type', '=', 'kpi')]"/>
+                <filter string="Cuellos de Botella" name="bottleneck" domain="[('alert_type', '=', 'bottleneck')]"/>
+                
+                <separator/>
+                <filter string="Hoy" name="today" domain="[('detection_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
+                <filter string="Esta Semana" name="this_week" domain="[('detection_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                
+                <separator/>
+                <filter string="Papel Periódico" name="papel_periodico" domain="[('production_line', '=', 'papel_periodico')]"/>
+                <filter string="Cajas" name="cajas" domain="[('production_line', '=', 'cajas')]"/>
+                <filter string="Lámina Micro" name="lamina_micro" domain="[('production_line', '=', 'lamina_micro')]"/>
+
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Tipo" name="group_type" context="{'group_by': 'alert_type'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Línea" name="group_line" context="{'group_by': 'production_line'}"/>
+                    <filter string="Prioridad" name="group_priority" context="{'group_by': 'priority'}"/>
+                    <filter string="Severidad" name="group_severity" context="{'group_by': 'severity'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'detection_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Kanban de Alertas -->
+    <record id="view_production_alert_kanban" model="ir.ui.view">
+        <field name="name">megastock.production.alert.kanban</field>
+        <field name="model">megastock.production.alert</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state" class="o_kanban_small_column">
+                <field name="title"/>
+                <field name="message"/>
+                <field name="alert_type"/>
+                <field name="priority"/>
+                <field name="severity"/>
+                <field name="state"/>
+                <field name="detection_date"/>
+                <field name="production_line"/>
+                <field name="escalation_count"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_card oe_kanban_global_click #{record.priority.raw_value >= '4' ? 'oe_kanban_color_2' : record.priority.raw_value == '3' ? 'oe_kanban_color_3' : ''}">
+                            <div class="o_dropdown_kanban dropdown">
+                                <a class="dropdown-toggle o-no-caret btn" role="button" data-toggle="dropdown" data-display="static" href="#" aria-label="Dropdown menu" title="Dropdown menu">
+                                    <span class="fa fa-ellipsis-v"/>
+                                </a>
+                                <div class="dropdown-menu" role="menu">
+                                    <a name="acknowledge_alert" type="object" class="dropdown-item" t-if="record.state.raw_value == 'active'">Reconocer</a>
+                                    <a name="resolve_alert" type="object" class="dropdown-item" t-if="record.state.raw_value != 'resolved'">Resolver</a>
+                                    <a name="escalate_alert" type="object" class="dropdown-item" t-if="record.state.raw_value in ['active', 'acknowledged']">Escalar</a>
+                                </div>
+                            </div>
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="title"/>
+                                        </strong>
+                                    </div>
+                                    <div class="o_kanban_record_top_right">
+                                        <span t-attf-class="badge badge-pill #{record.severity.raw_value == 'critical' ? 'badge-danger' : record.severity.raw_value == 'error' ? 'badge-warning' : 'badge-info'}">
+                                            <t t-esc="record.severity.value"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <field name="message" t-att-title="record.message.value"/>
+                                    <div class="text-muted">
+                                        <i class="fa fa-clock-o"/> <t t-esc="record.detection_date.value"/>
+                                    </div>
+                                    <div class="text-muted">
+                                        <i class="fa fa-industry"/> <t t-esc="record.production_line.value"/>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom" t-if="record.escalation_count.raw_value > 0">
+                                    <div class="oe_kanban_bottom_left">
+                                        <span class="badge badge-warning">
+                                            Escalado <t t-esc="record.escalation_count.value"/> veces
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana Principal -->
+    <record id="action_production_alert" model="ir.actions.act_window">
+        <field name="name">Alertas de Producción</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">megastock.production.alert</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="search_view_id" ref="view_production_alert_search"/>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay alertas de producción
+            </p>
+            <p>Las alertas se generan automáticamente cuando se detectan condiciones críticas en la producción.</p>
+        </field>
+    </record>
+
+    <!-- Vista Tree de Reglas de Escalación -->
+    <record id="view_alert_escalation_rule_tree" model="ir.ui.view">
+        <field name="name">megastock.alert.escalation.rule.tree</field>
+        <field name="model">megastock.alert.escalation.rule</field>
+        <field name="arch" type="xml">
+            <tree string="Reglas de Escalación">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="alert_type"/>
+                <field name="severity"/>
+                <field name="production_line"/>
+                <field name="escalation_time"/>
+                <field name="max_escalations"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form de Reglas de Escalación -->
+    <record id="view_alert_escalation_rule_form" model="ir.ui.view">
+        <field name="name">megastock.alert.escalation.rule.form</field>
+        <field name="model">megastock.alert.escalation.rule</field>
+        <field name="arch" type="xml">
+            <form string="Regla de Escalación">
+                <sheet>
+                    <div class="oe_title">
+                        <div class="oe_edit_only">
+                            <label for="name"/>
+                        </div>
+                        <h1>
+                            <field name="name" class="oe_inline"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="alert_type"/>
+                            <field name="severity"/>
+                            <field name="production_line"/>
+                        </group>
+                        <group>
+                            <field name="escalation_time"/>
+                            <field name="max_escalations"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Destinatarios por Nivel">
+                            <group>
+                                <group string="Nivel 1 - Supervisores">
+                                    <field name="level_1_user_ids" widget="many2many_tags" nolabel="1"/>
+                                </group>
+                                <group string="Nivel 2 - Gerentes">
+                                    <field name="level_2_user_ids" widget="many2many_tags" nolabel="1"/>
+                                </group>
+                            </group>
+                            <group string="Nivel 3 - Dirección">
+                                <field name="level_3_user_ids" widget="many2many_tags" nolabel="1"/>
+                            </group>
+                        </page>
+                        <page string="Acciones Automáticas">
+                            <field name="auto_actions" placeholder="Código Python a ejecutar cuando se escala la alerta"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción de Reglas de Escalación -->
+    <record id="action_alert_escalation_rule" model="ir.actions.act_window">
+        <field name="name">Reglas de Escalación</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">megastock.alert.escalation.rule</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay reglas de escalación configuradas
+            </p>
+            <p>Configure reglas para automatizar la escalación de alertas según tipo, severidad y línea de producción.</p>
+        </field>
+    </record>
+
+</odoo>

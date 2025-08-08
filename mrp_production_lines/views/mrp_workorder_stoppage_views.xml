@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción principal para paradas de órdenes de trabajo -->
+    <record id="action_mrp_workorder_stoppage" model="ir.actions.act_window">
+        <field name="name">Paradas de Órdenes de Trabajo</field>
+        <field name="res_model">mrp.workorder.stoppage</field>
+        <field name="view_mode">tree,form,kanban,graph,pivot</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Registrar una nueva parada de producción
+            </p>
+            <p>
+                Las paradas de órdenes de trabajo permiten registrar y analizar las interrupciones
+                que ocurren durante el proceso de fabricación.
+            </p>
+        </field>
+    </record>
+
+    <!-- Vista de lista -->
+    <record id="mrp_workorder_stoppage_view_tree" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.tree</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <tree default_order="start_time desc" decoration-danger="is_active == True">
+                <field name="start_time"/>
+                <field name="end_time"/>
+                <field name="workorder_id"/>
+                <field name="workcenter_id"/>
+                <field name="production_line"/>
+                <field name="stoppage_category_id"/>
+                <field name="duration_minutes"/>
+                <field name="is_active" invisible="1"/>
+                <field name="operator_id"/>
+                <button name="action_end_stoppage" type="object" 
+                        string="Finalizar" class="btn-sm btn-warning"
+                        attrs="{'invisible': [('is_active', '=', False)]}"/>
+                <button name="action_extend_stoppage" type="object" 
+                        string="Reactivar" class="btn-sm btn-info"
+                        attrs="{'invisible': [('is_active', '=', True)]}"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de formulario -->
+    <record id="mrp_workorder_stoppage_view_form" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.form</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_end_stoppage" type="object" 
+                            string="Finalizar Parada" class="btn-primary"
+                            attrs="{'invisible': [('is_active', '=', False)]}"/>
+                    <button name="action_extend_stoppage" type="object" 
+                            string="Reactivar Parada" class="btn-warning"
+                            attrs="{'invisible': [('is_active', '=', True)]}"/>
+                    <field name="is_active" widget="statusbar" 
+                           statusbar_colors='{"True": "warning", "False": "success"}'/>
+                </header>
+                
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="display_name" readonly="1"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="Información General">
+                            <field name="workorder_id"/>
+                            <field name="stoppage_category_id"/>
+                            <field name="operator_id"/>
+                        </group>
+                        <group string="Tiempo">
+                            <field name="start_time"/>
+                            <field name="end_time"/>
+                            <field name="duration_minutes" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Información Relacionada" col="2">
+                            <field name="workcenter_id" readonly="1"/>
+                            <field name="production_id" readonly="1"/>
+                            <field name="production_line" readonly="1"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Observaciones">
+                        <field name="notes" nolabel="1"/>
+                    </group>
+                </sheet>
+                
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Kanban -->
+    <record id="mrp_workorder_stoppage_view_kanban" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.kanban</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <kanban default_order="start_time desc" class="o_kanban_mobile">
+                <field name="id"/>
+                <field name="display_name"/>
+                <field name="start_time"/>
+                <field name="end_time"/>
+                <field name="duration_minutes"/>
+                <field name="is_active"/>
+                <field name="stoppage_category_id"/>
+                <field name="workcenter_id"/>
+                <field name="color"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_color_#{kanban_getcolor(record.color.raw_value)} oe_kanban_card oe_kanban_global_click">
+                            <div class="o_kanban_record_top mb16">
+                                <div class="o_kanban_record_headings">
+                                    <strong class="o_kanban_record_title">
+                                        <t t-esc="record.stoppage_category_id.value"/>
+                                    </strong>
+                                    <span t-if="record.is_active.raw_value" 
+                                          class="badge badge-pill badge-danger float-right">
+                                        En curso
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="o_kanban_record_body">
+                                <div>
+                                    <i class="fa fa-industry"/> <t t-esc="record.workcenter_id.value"/>
+                                </div>
+                                <div>
+                                    <i class="fa fa-clock-o"/> 
+                                    <t t-esc="record.start_time.value"/>
+                                    <span t-if="record.duration_minutes.raw_value > 0">
+                                        (<t t-esc="Math.round(record.duration_minutes.raw_value)"/> min)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista de gráfico -->
+    <record id="mrp_workorder_stoppage_view_graph" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.graph</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <graph string="Análisis de Paradas" type="bar">
+                <field name="stoppage_category_id"/>
+                <field name="duration_minutes" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Vista pivot -->
+    <record id="mrp_workorder_stoppage_view_pivot" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.pivot</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de Paradas">
+                <field name="workcenter_id" type="row"/>
+                <field name="stoppage_category_id" type="col"/>
+                <field name="duration_minutes" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Vista de búsqueda -->
+    <record id="mrp_workorder_stoppage_view_search" model="ir.ui.view">
+        <field name="name">mrp.workorder.stoppage.search</field>
+        <field name="model">mrp.workorder.stoppage</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="workorder_id"/>
+                <field name="stoppage_category_id"/>
+                <field name="workcenter_id"/>
+                <field name="operator_id"/>
+                
+                <filter name="active_stoppages" string="Paradas Activas" 
+                        domain="[('is_active', '=', True)]"/>
+                <filter name="finished_stoppages" string="Paradas Finalizadas" 
+                        domain="[('is_active', '=', False)]"/>
+                <separator/>
+                <filter name="today" string="Hoy" 
+                        domain="[('start_time', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')), 
+                                 ('start_time', '&lt;=', datetime.datetime.now().strftime('%Y-%m-%d 23:59:59'))]"/>
+                <filter name="last_7_days" string="Últimos 7 días" 
+                        domain="[('start_time', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                <filter name="last_30_days" string="Últimos 30 días" 
+                        domain="[('start_time', '&gt;=', (context_today() - datetime.timedelta(days=30)).strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="papel_periodico" string="Papel Periódico" 
+                        domain="[('production_line', '=', 'papel_periodico')]"/>
+                <filter name="cajas" string="Cajas" 
+                        domain="[('production_line', '=', 'cajas')]"/>
+                <filter name="lamina_micro" string="Lámina Micro" 
+                        domain="[('production_line', '=', 'lamina_micro')]"/>
+                
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_workcenter" string="Centro de Trabajo"
+                            context="{'group_by': 'workcenter_id'}"/>
+                    <filter name="group_category" string="Categoría de Parada"
+                            context="{'group_by': 'stoppage_category_id'}"/>
+                    <filter name="group_production_line" string="Línea de Producción"
+                            context="{'group_by': 'production_line'}"/>
+                    <filter name="group_date" string="Fecha"
+                            context="{'group_by': 'start_time:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Menú -->
+    <menuitem id="menu_mrp_workorder_stoppage" 
+              name="Paradas de Producción"
+              parent="mrp.menu_mrp_manufacturing"
+              action="action_mrp_workorder_stoppage"
+              sequence="16"/>
+
+</odoo>

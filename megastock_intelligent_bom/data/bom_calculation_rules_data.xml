@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== REGLAS DE CÁLCULO AUTOMÁTICO BOM ========== -->
+        
+        <!-- Regla: Cálculo Área Superficie Cajas -->
+        <record id="calculation_rule_box_surface_area" model="megastock.bom.calculation.rule">
+            <field name="name">Cálculo Área Superficie Cajas</field>
+            <field name="code">BOX_SURFACE_AREA</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">surface_area</field>
+            <field name="formula">((length + width) * 2 + 10) * ((width + height) * 2 + 10) / 1000000</field>
+            <field name="description">
+Fórmula para calcular área de superficie de desarrollo de caja:
+- Considera desarrollo completo FEFCO
+- Agrega 10mm por lado para solapas de pegado
+- Resultado en metros cuadrados
+- Variables: length, width, height en mm
+            </field>
+            <field name="unit_factor">1.0</field>
+            <field name="waste_percentage">3.0</field>  <!-- 3% merma estándar -->
+        </record>
+        
+        <!-- Regla: Cálculo Área Láminas Simples -->
+        <record id="calculation_rule_sheet_area" model="megastock.bom.calculation.rule">
+            <field name="name">Cálculo Área Láminas</field>
+            <field name="code">SHEET_AREA</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_laminas'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">surface_area</field>
+            <field name="formula">length * width / 1000000</field>
+            <field name="description">
+Fórmula simple para láminas rectangulares:
+- Área = largo × ancho
+- Variables en mm, resultado en m²
+- Sin solapas adicionales
+            </field>
+            <field name="unit_factor">1.0</field>
+            <field name="waste_percentage">2.0</field>  <!-- 2% merma láminas -->
+        </record>
+        
+        <!-- Regla: Consumo Adhesivo por m² -->
+        <record id="calculation_rule_adhesive_consumption" model="megastock.bom.calculation.rule">
+            <field name="name">Consumo Adhesivo por m²</field>
+            <field name="code">ADHESIVE_CONSUMPTION</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas')), (4, ref('megastock_products.category_laminas'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">material_consumption</field>
+            <field name="formula">surface_area * adhesive_rate * layers</field>
+            <field name="description">
+Consumo de adhesivo basado en:
+- surface_area: Área total en m²
+- adhesive_rate: 8 g/m² estándar almidón
+- layers: Número de capas a pegar (2 para corrugado simple)
+            </field>
+            <field name="unit_factor">0.008</field>  <!-- 8 g/m² -->
+            <field name="waste_percentage">5.0</field>  <!-- 5% desperdicio adhesivo -->
+        </record>
+        
+        <!-- Regla: Consumo Tinta por Cobertura -->
+        <record id="calculation_rule_ink_consumption" model="megastock.bom.calculation.rule">
+            <field name="name">Consumo Tinta por Cobertura</field>
+            <field name="code">INK_CONSUMPTION</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas')), (4, ref('megastock_products.category_microcorrugado'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">material_consumption</field>
+            <field name="formula">surface_area * coverage_percentage * ink_density</field>
+            <field name="description">
+Consumo de tinta flexográfica:
+- surface_area: Área impresa en m²
+- coverage_percentage: % área cubierta (0.3 = 30%)
+- ink_density: Densidad tinta 15 g/m² estándar
+            </field>
+            <field name="unit_factor">0.015</field>  <!-- 15 g/m² -->
+            <field name="waste_percentage">8.0</field>  <!-- 8% desperdicio tinta -->
+        </record>
+        
+        <!-- Regla: Cálculo Microcorrugado Premium -->
+        <record id="calculation_rule_microcorrugado_area" model="megastock.bom.calculation.rule">
+            <field name="name">Área Microcorrugado con Precisión</field>
+            <field name="code">MICRO_PRECISION_AREA</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_microcorrugado'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">surface_area</field>
+            <field name="formula">((length + width + 15) * 2) * ((width + height + 15) * 2) / 1000000</field>
+            <field name="description">
+Área para microcorrugado con mayor precisión:
+- Agrega 15mm por lado (vs 10mm estándar)
+- Mayor desperdicio por tolerancias estrictas
+- Incluye área para calibración y ajustes
+            </field>
+            <field name="unit_factor">1.0</field>
+            <field name="waste_percentage">5.0</field>  <!-- 5% merma por precisión -->
+        </record>
+        
+        <!-- Regla: Papel Periódico por Resmas -->
+        <record id="calculation_rule_newspaper_sheets" model="megastock.bom.calculation.rule">
+            <field name="name">Hojas Papel Periódico por Resma</field>
+            <field name="code">NEWSPAPER_SHEETS</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_papel_periodico'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">piece_count</field>
+            <field name="formula">quantity * 500</field>  <!-- 500 hojas por resma -->
+            <field name="description">
+Cálculo hojas totales para papel periódico:
+- Resma estándar: 500 hojas
+- Dimensiones: 54 x 35 cm
+- Gramaje: 45 g/m²
+            </field>
+            <field name="unit_factor">500.0</field>
+            <field name="waste_percentage">1.0</field>  <!-- 1% merma papel periódico -->
+        </record>
+        
+        <!-- Regla: Optimización Bobina Madre -->
+        <record id="calculation_rule_master_roll_optimization" model="megastock.bom.calculation.rule">
+            <field name="name">Optimización Bobina Madre</field>
+            <field name="code">MASTER_ROLL_OPTIMIZATION</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_papel_periodico'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">roll_optimization</field>
+            <field name="formula">ceil(total_area / roll_area) * utilization_factor</field>
+            <field name="description">
+Optimización uso de bobina madre:
+- roll_area: 2160 m² por bobina (1.08m × 2000m)
+- utilization_factor: 95% aprovechamiento
+- ceil: Redondear hacia arriba número de bobinas
+            </field>
+            <field name="unit_factor">0.95</field>  <!-- 95% utilización -->
+            <field name="waste_percentage">5.0</field>  <!-- 5% desperdicio bobina -->
+        </record>
+        
+        <!-- Regla: Cálculo Automático Variantes -->
+        <record id="calculation_rule_variant_auto" model="megastock.bom.calculation.rule">
+            <field name="name">Cálculo Automático Variantes</field>
+            <field name="code">VARIANT_AUTO_CALC</field>
+            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas'))]"/>
+            <field name="active">True</field>
+            <field name="calculation_type">variant_calculation</field>
+            <field name="formula">base_consumption * dimension_factor * complexity_factor</field>
+            <field name="description">
+Cálculo automático para variantes de producto:
+- base_consumption: Consumo base del template
+- dimension_factor: Escala por dimensiones
+- complexity_factor: Ajuste por complejidad (1.0-1.3)
+            </field>
+            <field name="unit_factor">1.0</field>
+            <field name="waste_percentage">3.0</field>
+        </record>
+        
+        <!-- ========== REGLAS DE SUSTITUCIÓN AUTOMÁTICA ========== -->
+        
+        <!-- Regla: Sustitución Papel KRAFT por disponibilidad -->
+        <record id="substitution_rule_kraft_availability" model="megastock.material.substitution.rule">
+            <field name="name">Sustitución KRAFT por Disponibilidad</field>
+            <field name="code">KRAFT_AVAILABILITY</field>
+            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_150"/>
+            <field name="active">True</field>
+            <field name="substitution_type">availability</field>
+            <field name="trigger_condition">stock_below_minimum</field>
+            <field name="min_stock_days">7</field>
+            <field name="description">
+Sustitución automática cuando stock KRAFT 150g < 7 días:
+1. KRAFT 175g con factor 0.85 (menos cantidad)
+2. KRAFT 125g con factor 1.15 (más cantidad)
+3. Alerta automática al planificador
+            </field>
+        </record>
+        
+        <!-- Líneas de Sustitución KRAFT -->
+        <record id="substitution_line_kraft_175" model="megastock.material.substitution.line">
+            <field name="substitution_rule_id" ref="substitution_rule_kraft_availability"/>
+            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_175"/>
+            <field name="sequence">10</field>
+            <field name="conversion_factor">0.85</field>  <!-- Menos cantidad por mayor gramaje -->
+            <field name="quality_impact">0</field>  <!-- Sin impacto calidad -->
+            <field name="cost_impact">5</field>  <!-- +5% costo -->
+            <field name="notes">KRAFT 175g - Mayor resistencia, menos cantidad requerida</field>
+        </record>
+        
+        <record id="substitution_line_kraft_125" model="megastock.material.substitution.line">
+            <field name="substitution_rule_id" ref="substitution_rule_kraft_availability"/>
+            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_125"/>
+            <field name="sequence">20</field>
+            <field name="conversion_factor">1.15</field>  <!-- Más cantidad por menor gramaje -->
+            <field name="quality_impact">-2</field>  <!-- -2% resistencia -->
+            <field name="cost_impact">-3</field>  <!-- -3% costo -->
+            <field name="notes">KRAFT 125g - Menor costo, verificar especificaciones cliente</field>
+        </record>
+        
+        <!-- Regla: Sustitución Tintas CMYK -->
+        <record id="substitution_rule_ink_cmyk" model="megastock.material.substitution.rule">
+            <field name="name">Sustitución Tintas CMYK</field>
+            <field name="code">INK_CMYK_SUBSTITUTION</field>
+            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_tinta_flexo_cyan"/>
+            <field name="active">True</field>
+            <field name="substitution_type">cost_optimization</field>
+            <field name="trigger_condition">cost_variance_above</field>
+            <field name="cost_variance_threshold">10.0</field>
+            <field name="description">
+Sustitución tintas CMYK cuando variación costo > 10%:
+- Proveedores alternativos con misma calidad
+- Tintas equivalentes de otros fabricantes
+- Mantener perfiles de color Pantone
+            </field>
+        </record>
+        
+        <!-- Regla: Sustitución Adhesivos -->
+        <record id="substitution_rule_adhesive_type" model="megastock.material.substitution.rule">
+            <field name="name">Sustitución Tipo Adhesivo</field>
+            <field name="code">ADHESIVE_TYPE_SUBSTITUTION</field>
+            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_adhesivo_almidon"/>
+            <field name="active">True</field>
+            <field name="substitution_type">quality_requirement</field>
+            <field name="trigger_condition">product_specification</field>
+            <field name="description">
+Sustitución adhesivo según especificaciones:
+- PVA para microcorrugado (mayor adherencia)
+- Almidón para corrugado estándar (económico)
+- Hot melt para aplicaciones especiales
+            </field>
+        </record>
+        
+        <!-- Línea: Adhesivo PVA como alternativa -->
+        <record id="substitution_line_adhesive_pva" model="megastock.material.substitution.line">
+            <field name="substitution_rule_id" ref="substitution_rule_adhesive_type"/>
+            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_adhesivo_pva"/>
+            <field name="sequence">10</field>
+            <field name="conversion_factor">0.8</field>  <!-- Menos cantidad por mayor adherencia -->
+            <field name="quality_impact">15</field>  <!-- +15% adherencia -->
+            <field name="cost_impact">25</field>  <!-- +25% costo -->
+            <field name="notes">PVA para microcorrugado - Mayor adherencia y resistencia humedad</field>
+        </record>
+        
+        <!-- ========== REGLAS DE OPTIMIZACIÓN DE COSTOS ========== -->
+        
+        <!-- Regla: Optimización Lotes Compra -->
+        <record id="cost_optimization_purchase_lots" model="megastock.bom.cost.optimization">
+            <field name="name">Optimización Lotes de Compra</field>
+            <field name="code">PURCHASE_LOT_OPTIMIZATION</field>
+            <field name="optimization_type">purchase_quantity</field>
+            <field name="active">True</field>
+            <field name="trigger_condition">monthly_consumption</field>
+            <field name="description">
+Optimización automática lotes de compra:
+- Analizar consumo mensual por material
+- Calcular EOQ (Economic Order Quantity)
+- Considerar descuentos por volumen
+- Ajustar por espacio almacenamiento
+            </field>
+            <field name="target_saving_percentage">8.0</field>
+            <field name="implementation_priority">high</field>
+        </record>
+        
+        <!-- Regla: Optimización Desperdicios -->
+        <record id="cost_optimization_waste_reduction" model="megastock.bom.cost.optimization">
+            <field name="name">Reducción Desperdicios</field>
+            <field name="code">WASTE_REDUCTION</field>
+            <field name="optimization_type">waste_minimization</field>
+            <field name="active">True</field>
+            <field name="trigger_condition">waste_above_target</field>
+            <field name="description">
+Reducción automática de desperdicios:
+- Analizar patrones de merma por producto
+- Sugerir ajustes en fórmulas de cálculo
+- Optimizar tamaños de bobinas/láminas
+- Reutilización de recortes en productos menores
+            </field>
+            <field name="target_saving_percentage">12.0</field>
+            <field name="implementation_priority">high</field>
+        </record>
+        
+        <!-- Regla: Consolidación Proveedores -->
+        <record id="cost_optimization_supplier_consolidation" model="megastock.bom.cost.optimization">
+            <field name="name">Consolidación Proveedores</field>
+            <field name="code">SUPPLIER_CONSOLIDATION</field>
+            <field name="optimization_type">supplier_optimization</field>
+            <field name="active">True</field>
+            <field name="trigger_condition">multiple_suppliers</field>
+            <field name="description">
+Consolidación inteligente de proveedores:
+- Analizar costos totales por proveedor
+- Incluir costos logísticos y administrativos
+- Evaluar descuentos por volumen consolidado
+- Considerar riesgos de dependencia única
+            </field>
+            <field name="target_saving_percentage">6.0</field>
+            <field name="implementation_priority">medium</field>
+        </record>
+        
+        <!-- ========== CONFIGURACIÓN ALERTAS INTELIGENTES ========== -->
+        
+        <!-- Alerta: Variación Costos BOM -->
+        <record id="intelligent_alert_bom_cost_variance" model="ir.cron">
+            <field name="name">Alerta Variación Costos BOM</field>
+            <field name="model_id" ref="mrp.model_mrp_bom"/>
+            <field name="state">code</field>
+            <field name="code">
+# Detectar variaciones significativas en costos BOM
+import logging
+_logger = logging.getLogger(__name__)
+
+# Buscar BOM con variaciones de costo > 10%
+bom_records = env['mrp.bom'].search([('active', '=', True)])
+
+for bom in bom_records:
+    current_cost = bom._calculate_current_cost()
+    standard_cost = bom._get_standard_cost()
+    
+    if standard_cost > 0:
+        variance_pct = abs((current_cost - standard_cost) / standard_cost * 100)
+        
+        if variance_pct > 10.0:
+            _logger.warning(f"ALERTA BOM: {bom.display_name} - Variación costo: {variance_pct:.1f}%")
+            
+            # Crear actividad para revisar BOM
+            bom.activity_schedule(
+                'mail.mail_activity_data_todo',
+                summary=f'Revisar Variación Costo BOM: {variance_pct:.1f}%',
+                note=f'Costo actual: ${current_cost:.2f}, Estándar: ${standard_cost:.2f}',
+                user_id=env.ref('megastock_base.user_gabriela_encarnacion').id,
+            )
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+        
+        <!-- Alerta: Materiales Próximos a Vencer -->
+        <record id="intelligent_alert_material_expiry" model="ir.cron">
+            <field name="name">Alerta Materiales Próximos a Vencer</field>
+            <field name="model_id" ref="product.model_product_product"/>
+            <field name="state">code</field>
+            <field name="code">
+# Alertar sobre materiales con stock próximo a vencer
+from datetime import datetime, timedelta
+
+# Buscar lotes próximos a vencer en 30 días
+expiry_date = datetime.now() + timedelta(days=30)
+expiring_lots = env['stock.production.lot'].search([
+    ('expiration_date', '&lt;=', expiry_date),
+    ('expiration_date', '&gt;=', datetime.now()),
+])
+
+for lot in expiring_lots:
+    # Buscar BOM que usen este material
+    bom_lines = env['mrp.bom.line'].search([
+        ('product_id', '=', lot.product_id.id)
+    ])
+    
+    if bom_lines:
+        days_to_expiry = (lot.expiration_date - datetime.now()).days
+        _logger.warning(f"Material {lot.product_id.name} vence en {days_to_expiry} días - Revisar BOM")
+        
+        # Sugerir sustitución automática si está configurada
+        substitution_rules = env['megastock.material.substitution.rule'].search([
+            ('primary_material_id', '=', lot.product_id.id),
+            ('trigger_condition', '=', 'expiry_approaching')
+        ])
+        
+        for rule in substitution_rules:
+            rule._trigger_substitution_process()
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+        
+    </data>
+</odoo>

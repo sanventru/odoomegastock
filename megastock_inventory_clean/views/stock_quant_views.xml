@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista extendida de quants -->
+        <record id="view_stock_quant_tree_megastock" model="ir.ui.view">
+            <field name="name">stock.quant.tree.megastock</field>
+            <field name="model">stock.quant</field>
+            <field name="inherit_id" ref="stock.view_stock_quant_tree"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos MEGASTOCK -->
+                <xpath expr="//field[@name='lot_id']" position="after">
+                    <field name="supplier_id" optional="show"/>
+                    <field name="purchase_date" optional="hide"/>
+                    <field name="quality_status" optional="show" 
+                           decoration-info="quality_status=='pending'"
+                           decoration-success="quality_status=='approved'"
+                           decoration-danger="quality_status=='rejected'"
+                           decoration-warning="quality_status=='quarantine'"/>
+                    <field name="days_to_expiry" optional="show" 
+                           decoration-danger="expiry_alert==True"/>
+                    <field name="expiry_alert" invisible="1"/>
+                    <field name="lot_origin" optional="hide"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista form extendida -->
+        <record id="view_stock_quant_form_megastock" model="ir.ui.view">
+            <field name="name">stock.quant.form.megastock</field>
+            <field name="model">stock.quant</field>
+            <field name="inherit_id" ref="stock.view_stock_quant_form_editable"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar información adicional después del campo lot_id -->
+                <xpath expr="//field[@name='lot_id']" position="after">
+                    <field name="supplier_id" readonly="1" optional="show"/>
+                    <field name="purchase_date" readonly="1" optional="hide"/>
+                    <field name="lot_origin" readonly="1" optional="hide"/>
+                    <field name="quality_status" optional="show"/>
+                    <field name="days_to_expiry" optional="show" 
+                           attrs="{'invisible': [('days_to_expiry', '=', 0)]}"/>
+                    <field name="expiry_alert" invisible="1"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de quants con alertas -->
+        <record id="action_stock_quant_alerts" model="ir.actions.act_window">
+            <field name="name">Alertas de Stock</field>
+            <field name="res_model">stock.quant</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('expiry_alert', '=', True)]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    ¡No hay alertas de stock!
+                </p>
+                <p>
+                    Aquí aparecerán los materiales próximos a expirar.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

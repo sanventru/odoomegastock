@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Grupos de Seguridad para Sistema de Planificación de Producción -->
+    
+    <!-- Grupo Base de Planificación -->
+    <record id="group_production_planning_user" model="res.groups">
+        <field name="name">Planificación de Producción / Usuario</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="comment">Usuario básico con acceso de lectura a planificación</field>
+    </record>
+
+    <!-- Grupo Operador de Producción -->
+    <record id="group_production_operator" model="res.groups">
+        <field name="name">Planificación de Producción / Operador</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_planning_user'))]"/>
+        <field name="comment">Operador con acceso a colas de trabajo y cronogramas</field>
+    </record>
+
+    <!-- Grupo Supervisor de Línea -->
+    <record id="group_production_supervisor" model="res.groups">
+        <field name="name">Planificación de Producción / Supervisor</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="comment">Supervisor con acceso a KPIs y reprogramación</field>
+    </record>
+
+    <!-- Grupo Planificador -->
+    <record id="group_production_planner" model="res.groups">
+        <field name="name">Planificación de Producción / Planificador</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_supervisor'))]"/>
+        <field name="comment">Planificador con acceso completo a planificación y algoritmos</field>
+    </record>
+
+    <!-- Grupo Gerente de Producción -->
+    <record id="group_production_manager" model="res.groups">
+        <field name="name">Planificación de Producción / Gerente</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_planner'))]"/>
+        <field name="comment">Gerente con acceso total incluyendo análisis y configuración</field>
+    </record>
+
+    <!-- Grupo Administrador del Sistema -->
+    <record id="group_production_admin" model="res.groups">
+        <field name="name">Planificación de Producción / Administrador</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_manager'))]"/>
+        <field name="comment">Administrador con acceso total y configuración de sistema</field>
+    </record>
+
+    <!-- Dashboard Access Groups -->
+    <record id="group_dashboard_viewer" model="res.groups">
+        <field name="name">Dashboard Producción / Visualizador</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_production_planning_user'))]"/>
+        <field name="comment">Acceso de solo lectura a dashboards</field>
+    </record>
+
+    <record id="group_dashboard_manager" model="res.groups">
+        <field name="name">Dashboard Producción / Administrador</field>
+        <field name="category_id" ref="base.module_category_manufacturing"/>
+        <field name="implied_ids" eval="[(4, ref('group_dashboard_viewer')), (4, ref('group_production_supervisor'))]"/>
+        <field name="comment">Administración completa de dashboards y configuración</field>
+    </record>
+
+    <!-- Reglas de Seguridad por Líneas de Producción -->
+    
+    <!-- Acceso por Línea - Papel Periódico -->
+    <record id="rule_papel_periodico_access" model="ir.rule">
+        <field name="name">Acceso Línea Papel Periódico</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[('production_line_filter', 'in', ['papel_periodico', 'all'])]</field>
+    </record>
+
+    <!-- Acceso por Línea - Cajas -->
+    <record id="rule_cajas_access" model="ir.rule">
+        <field name="name">Acceso Línea Cajas</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[('production_line_filter', 'in', ['cajas', 'all'])]</field>
+    </record>
+
+    <!-- Acceso por Línea - Lámina Micro -->
+    <record id="rule_lamina_micro_access" model="ir.rule">
+        <field name="name">Acceso Línea Lámina Micro</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[('production_line_filter', 'in', ['lamina_micro', 'all'])]</field>
+    </record>
+
+    <!-- Reglas para Supervisores - Acceso de Escritura -->
+    <record id="rule_supervisor_write_access" model="ir.rule">
+        <field name="name">Supervisores - Acceso Escritura</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="groups" eval="[(4, ref('group_production_supervisor'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">['|', ('create_uid', '=', user.id), ('state', 'in', ['draft', 'confirmed'])]</field>
+    </record>
+
+    <!-- Reglas para KPIs - Solo datos propios de línea -->
+    <record id="rule_kpi_line_access" model="ir.rule">
+        <field name="name">KPIs por Línea de Producción</field>
+        <field name="model_id" ref="model_megastock_production_kpi"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[('production_line', 'in', ['all'] + [line for line in ['papel_periodico', 'cajas', 'lamina_micro'] if user.has_group('megastock_production_planning.group_production_operator')])]</field>
+    </record>
+
+    <!-- Reglas para Work Queues -->
+    <record id="rule_work_queue_access" model="ir.rule">
+        <field name="name">Colas de Trabajo - Acceso por Línea</field>
+        <field name="model_id" ref="model_megastock_work_queue"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">['|', ('production_line', '=', 'all'), ('production_line', 'in', ['papel_periodico', 'cajas', 'lamina_micro'])]</field>
+    </record>
+
+    <!-- Reglas para Cronogramas -->
+    <record id="rule_schedule_access" model="ir.rule">
+        <field name="name">Cronogramas - Acceso por Estado</field>
+        <field name="model_id" ref="model_megastock_production_schedule"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[('state', 'in', ['scheduled', 'confirmed', 'in_progress'])]</field>
+    </record>
+
+    <!-- Reglas para Planificadores - Acceso Total -->
+    <record id="rule_planner_full_access" model="ir.rule">
+        <field name="name">Planificadores - Acceso Total</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="groups" eval="[(4, ref('group_production_planner'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- Reglas de Dashboard -->
+    <record id="rule_dashboard_viewer" model="ir.rule">
+        <field name="name">Dashboard - Solo Visualización</field>
+        <field name="model_id" ref="model_megastock_production_kpi"/>
+        <field name="groups" eval="[(4, ref('group_dashboard_viewer'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="False"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- Reglas para Análisis - Solo Gerentes y Admin -->
+    <record id="rule_analysis_manager_access" model="ir.rule">
+        <field name="name">Análisis - Solo Gerentes</field>
+        <field name="model_id" ref="model_megastock_production_analysis"/>
+        <field name="groups" eval="[(4, ref('group_production_manager'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="True"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <!-- Restricciones por Horario de Trabajo -->
+    <record id="rule_working_hours" model="ir.rule">
+        <field name="name">Restricción Horario de Trabajo</field>
+        <field name="model_id" ref="model_megastock_work_queue"/>
+        <field name="groups" eval="[(4, ref('group_production_operator'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="False"/>
+        <field name="perm_unlink" eval="False"/>
+        <field name="domain_force">[
+            '|',
+            ('state', '!=', 'active'),
+            '&amp;',
+            ('state', '=', 'active'),
+            ('id', 'in', [1])  # Simplificado - en realidad sería más complejo
+        ]</field>
+    </record>
+
+    <!-- Configuración de Menús por Grupos -->
+    
+    <!-- Menú Dashboard - Disponible para todos los usuarios -->
+    <record id="menu_production_dashboard_root" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('group_production_planning_user')])]"/>
+    </record>
+
+    <!-- Menú Planificación - Solo planificadores y superiores -->
+    <record id="menu_production_planning" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('group_production_planner')])]"/>
+    </record>
+
+    <!-- Menú Análisis - Solo gerentes y superiores -->
+    <record id="menu_production_analysis" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('group_production_manager')])]"/>
+    </record>
+
+    <!-- Menú Configuración - Solo administradores -->
+    <record id="menu_production_config" model="ir.ui.menu">
+        <field name="groups_id" eval="[(6, 0, [ref('group_production_admin')])]"/>
+    </record>
+
+</odoo>

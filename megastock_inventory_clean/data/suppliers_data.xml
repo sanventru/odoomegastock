@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== PROVEEDORES DE PAPEL ========== -->
+        
+        <!-- BILLERUD -->
+        <record id="supplier_billerud" model="res.partner">
+            <field name="name">BILLERUD</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.se"/>  <!-- Suecia -->
+            <!-- VAT field temporarily removed due to format validation -->
+            <field name="phone">+46-8-553-335-00</field>
+            <field name="email">info@billerud.com</field>
+            <field name="website">https://www.billerud.com</field>
+            <field name="street">Box 703</field>
+            <field name="city">Solna</field>
+            <field name="zip">169 27</field>
+            <field name="comment">Proveedor principal de papel KRAFT de alta calidad</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- SMARTWHITE -->
+        <record id="supplier_smartwhite" model="res.partner">
+            <field name="name">SMARTWHITE PAPER COMPANY</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.co"/>  <!-- Colombia -->
+            <!-- VAT field temporarily removed due to format validation -->
+            <field name="phone">+57-1-234-5678</field>
+            <field name="email">ventas@smartwhite.com.co</field>
+            <field name="website">https://www.smartwhite.com.co</field>
+            <field name="street">Calle 100 #15-25</field>
+            <field name="city">Bogotá</field>
+            <field name="zip">110221</field>
+            <field name="comment">Proveedor de papeles Medium y Liner para corrugado</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- CARTONES NACIONALES (Ecuador) -->
+        <record id="supplier_cartones_nacionales" model="res.partner">
+            <field name="name">CARTONES NACIONALES S.A.</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.ec"/>  <!-- Ecuador -->
+            <!-- VAT field removed: 1790012345001 -->
+            <field name="phone">+593-4-123-4567</field>
+            <field name="email">ventas@cartonesnacionales.com.ec</field>
+            <field name="website">https://www.cartonesnacionales.com.ec</field>
+            <field name="street">Km 8.5 Vía Daule</field>
+            <field name="city">Guayaquil</field>
+            <field name="zip">090150</field>
+            <field name="comment">Proveedor local de papeles para corrugado</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- ========== PROVEEDORES DE TINTAS ========== -->
+        
+        <!-- FLINT GROUP -->
+        <record id="supplier_flint_group" model="res.partner">
+            <field name="name">FLINT GROUP</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.de"/>  <!-- Alemania -->
+            <!-- VAT field removed: DE123456789 -->
+            <field name="phone">+49-211-7991-0</field>
+            <field name="email">info@flintgrp.com</field>
+            <field name="website">https://www.flintgrp.com</field>
+            <field name="street">Nordostpark 80</field>
+            <field name="city">Nürnberg</field>
+            <field name="zip">90411</field>
+            <field name="comment">Proveedor principal de tintas flexográficas</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- SUN CHEMICAL -->
+        <record id="supplier_sun_chemical" model="res.partner">
+            <field name="name">SUN CHEMICAL CORPORATION</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.us"/>  <!-- Estados Unidos -->
+            <!-- VAT field removed: US987654321 -->
+            <field name="phone">+1-201-933-4500</field>
+            <field name="email">info@sunchemical.com</field>
+            <field name="website">https://www.sunchemical.com</field>
+            <field name="street">35 Waterview Blvd</field>
+            <field name="city">Parsippany</field>
+            <field name="zip">07054</field>
+            <field name="comment">Proveedor de tintas CMYK y colores especiales</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- ========== PROVEEDORES DE ADHESIVOS ========== -->
+        
+        <!-- HENKEL -->
+        <record id="supplier_henkel" model="res.partner">
+            <field name="name">HENKEL ADHESIVES</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.de"/>  <!-- Alemania -->
+            <!-- VAT field removed: DE456789123 -->
+            <field name="phone">+49-211-797-0</field>
+            <field name="email">adhesives@henkel.com</field>
+            <field name="website">https://www.henkel-adhesives.com</field>
+            <field name="street">Henkelstrasse 67</field>
+            <field name="city">Düsseldorf</field>
+            <field name="zip">40191</field>
+            <field name="comment">Proveedor de adhesivos industriales y PVA</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- QUÍMICA SUIZA (Ecuador) -->
+        <record id="supplier_quimica_suiza" model="res.partner">
+            <field name="name">QUÍMICA SUIZA DEL ECUADOR S.A.</field>
+            <field name="is_company">True</field>
+            <field name="supplier_rank">1</field>
+            <field name="customer_rank">0</field>
+            <field name="country_id" ref="base.ec"/>  <!-- Ecuador -->
+            <!-- VAT field removed: 1790123456001 -->
+            <field name="phone">+593-2-246-8100</field>
+            <field name="email">ventas@quimicasuiza.com</field>
+            <field name="website">https://www.quimicasuiza.com</field>
+            <field name="street">Av. El Inca E4-255 y Amazonas</field>
+            <field name="city">Quito</field>
+            <field name="zip">170135</field>
+            <field name="comment">Proveedor local de almidón y adhesivos</field>
+            <!-- Category field temporarily removed -->
+        </record>
+
+        <!-- ========== CONFIGURAR INFORMACIÓN DE COMPRA POR PROVEEDOR ========== -->
+        
+        <!-- Información de compra BILLERUD - KRAFT -->
+        <record id="supplierinfo_billerud_kraft_125" model="product.supplierinfo">
+            <field name="product_tmpl_id" ref="product_kraft_125"/>
+            <field name="partner_id" ref="supplier_billerud"/>
+            <field name="min_qty">5.0</field>  <!-- Mínimo 5 toneladas -->
+            <field name="price">850.00</field>
+            <field name="currency_id" ref="base.USD"/>
+            <field name="delay">14</field>  <!-- 14 días de entrega -->
+            <field name="product_code">BLR-KRAFT-125</field>
+            <field name="product_name">KRAFT 125g/m² Premium</field>
+        </record>
+
+        <record id="supplierinfo_billerud_kraft_150" model="product.supplierinfo">
+            <field name="product_tmpl_id" ref="product_kraft_150"/>
+            <field name="partner_id" ref="supplier_billerud"/>
+            <field name="min_qty">5.0</field>
+            <field name="price">920.00</field>
+            <field name="currency_id" ref="base.USD"/>
+            <field name="delay">14</field>
+            <field name="product_code">BLR-KRAFT-150</field>
+            <field name="product_name">KRAFT 150g/m² Premium</field>
+        </record>
+
+        <!-- Información de compra SMARTWHITE - Medium -->
+        <record id="supplierinfo_smartwhite_medium_90" model="product.supplierinfo">
+            <field name="product_tmpl_id" ref="product_medium_90"/>
+            <field name="partner_id" ref="supplier_smartwhite"/>
+            <field name="min_qty">3.0</field>
+            <field name="price">720.00</field>
+            <field name="currency_id" ref="base.USD"/>
+            <field name="delay">7</field>  <!-- 7 días de entrega -->
+            <field name="product_code">SW-MED-90</field>
+            <field name="product_name">Medium 90g/m² Standard</field>
+        </record>
+
+        <!-- Información de compra FLINT GROUP - Tintas -->
+        <record id="supplierinfo_flint_tinta_negra" model="product.supplierinfo">
+            <field name="product_tmpl_id" ref="product_tinta_negra"/>
+            <field name="partner_id" ref="supplier_flint_group"/>
+            <field name="min_qty">20.0</field>  <!-- Mínimo 20 litros -->
+            <field name="price">12.50</field>
+            <field name="currency_id" ref="base.USD"/>
+            <field name="delay">10</field>
+            <field name="product_code">FLT-NEG-001</field>
+            <field name="product_name">Tinta Flexo Negra Estándar</field>
+        </record>
+
+        <!-- Información de compra HENKEL - PVA -->
+        <!--
+        <record id="supplierinfo_henkel_pva" model="product.supplierinfo">
+            <field name="product_tmpl_id" ref="product_goma_pva"/>
+            <field name="partner_id" ref="supplier_henkel"/>
+            <field name="min_qty">50.0</field>
+            <field name="price">4.20</field>
+            <field name="currency_id" ref="base.USD"/>
+            <field name="delay">12</field>
+            <field name="product_code">HKL-PVA-IND</field>
+            <field name="product_name">PVA Industrial Grade</field>
+        </record>
+        -->
+
+    </data>
+</odoo>

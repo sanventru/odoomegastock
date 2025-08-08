@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Jobs Automáticos para Sistema de Planificación de Producción -->
+
+    <!-- Job: Actualización Automática de KPIs (cada 15 minutos) -->
+    <record id="cron_update_production_kpis" model="ir.cron">
+        <field name="name">Actualizar KPIs de Producción</field>
+        <field name="model_id" ref="model_megastock_production_kpi"/>
+        <field name="state">code</field>
+        <field name="code">model.auto_calculate_daily_kpis()</field>
+        <field name="interval_number">15</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">5</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Generación Automática de Planes Diarios (cada día a las 5:00 AM) -->
+    <record id="cron_generate_daily_plans" model="ir.cron">
+        <field name="name">Generar Planes Diarios Automáticos</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="state">code</field>
+        <field name="code">model.auto_generate_daily_plan()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">10</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=5, minute=0, second=0)"/>
+    </record>
+
+    <!-- Job: Actualización de Estados de Cronogramas (cada 5 minutos) -->
+    <record id="cron_update_schedule_status" model="ir.cron">
+        <field name="name">Actualizar Estados de Cronogramas</field>
+        <field name="model_id" ref="model_megastock_production_schedule"/>
+        <field name="state">code</field>
+        <field name="code">model.auto_update_schedules()</field>
+        <field name="interval_number">5</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">8</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Reprogramación Automática de Producciones Retrasadas (cada hora) -->
+    <record id="cron_auto_reschedule_delayed" model="ir.cron">
+        <field name="name">Reprogramar Producciones Retrasadas</field>
+        <field name="model_id" ref="model_mrp_production"/>
+        <field name="state">code</field>
+        <field name="code">model.auto_reschedule_delayed_productions()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">7</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Optimización Automática de Colas de Trabajo (cada 30 minutos) -->
+    <record id="cron_optimize_work_queues" model="ir.cron">
+        <field name="name">Optimizar Colas de Trabajo</field>
+        <field name="model_id" ref="model_megastock_work_queue"/>
+        <field name="state">code</field>
+        <field name="code">
+for queue in model.search([('state', '=', 'active')]):
+    queue.optimize_queue()
+        </field>
+        <field name="interval_number">30</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">6</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Análisis de Capacidad y Cuellos de Botella (cada 2 horas) -->
+    <record id="cron_analyze_capacity_bottlenecks" model="ir.cron">
+        <field name="name">Analizar Cuellos de Botella</field>
+        <field name="model_id" ref="model_megastock_capacity_planning"/>
+        <field name="state">code</field>
+        <field name="code">
+active_plans = model.search([('state', '=', 'active')])
+for plan in active_plans:
+    plan.analyze_bottlenecks()
+        </field>
+        <field name="interval_number">2</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">4</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Generación de Análisis de Performance Semanal (domingos a las 6:00 AM) -->
+    <record id="cron_weekly_performance_analysis" model="ir.cron">
+        <field name="name">Análisis de Performance Semanal</field>
+        <field name="model_id" ref="model_megastock_production_analysis"/>
+        <field name="state">code</field>
+        <field name="code">model.auto_generate_weekly_analysis()</field>
+        <field name="interval_number">7</field>
+        <field name="interval_type">days</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">3</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=(6-DateTime.now().weekday()))).replace(hour=6, minute=0, second=0)"/>
+    </record>
+
+    <!-- Job: Limpieza de Datos Históricos (mensual, primer día del mes a las 2:00 AM) -->
+    <record id="cron_cleanup_historical_data" model="ir.cron">
+        <field name="name">Limpieza de Datos Históricos</field>
+        <field name="model_id" ref="model_megastock_production_kpi"/>
+        <field name="state">code</field>
+        <field name="code">
+# Eliminar KPIs más antiguos de 6 meses
+cutoff_date = fields.Date.today() - timedelta(days=180)
+old_kpis = model.search([('measurement_date', '&lt;', cutoff_date)])
+old_kpis.unlink()
+
+# Limpiar logs de colas de trabajo más antiguos de 30 días
+queue_cutoff = fields.Date.today() - timedelta(days=30)
+old_queue_items = env['megastock.queue.item'].search([
+    ('completion_time', '&lt;', queue_cutoff),
+    ('state', '=', 'completed')
+])
+old_queue_items.unlink()
+        </field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">months</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">1</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="nextcall" eval="(DateTime.now().replace(day=1) + timedelta(days=32)).replace(day=1, hour=2, minute=0, second=0)"/>
+    </record>
+
+    <!-- Job: Backup de Configuraciones Críticas (diario a las 3:00 AM) -->
+    <record id="cron_backup_critical_configs" model="ir.cron">
+        <field name="name">Backup de Configuraciones</field>
+        <field name="model_id" ref="model_megastock_scheduling_algorithm"/>
+        <field name="state">code</field>
+        <field name="code">
+import json
+from datetime import datetime
+
+# Backup de algoritmos de programación
+algorithms = model.search([])
+backup_data = {
+    'timestamp': datetime.now().isoformat(),
+    'algorithms': []
+}
+
+for algo in algorithms:
+    backup_data['algorithms'].append({
+        'name': algo.name,
+        'code': algo.code,
+        'algorithm_type': algo.algorithm_type,
+        'active': algo.active,
+        'parameters': {
+            'population_size': algo.population_size,
+            'generations': algo.generations,
+            'mutation_rate': algo.mutation_rate,
+            'crossover_rate': algo.crossover_rate
+        }
+    })
+
+# Guardar en attachments para recuperación
+attachment = env['ir.attachment'].create({
+    'name': f'algorithm_backup_{datetime.now().strftime("%Y%m%d")}',
+    'type': 'binary',
+    'datas': base64.b64encode(json.dumps(backup_data, indent=2).encode()),
+    'res_model': 'megastock.scheduling.algorithm',
+    'res_id': 0
+})
+        </field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">2</field>
+        <field name="user_id" ref="base.user_root"/>
+        <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).replace(hour=3, minute=0, second=0)"/>
+    </record>
+
+    <!-- Job: Verificación de Salud del Sistema (cada 4 horas) -->
+    <record id="cron_system_health_check" model="ir.cron">
+        <field name="name">Verificación de Salud del Sistema</field>
+        <field name="model_id" ref="model_megastock_production_plan"/>
+        <field name="state">code</field>
+        <field name="code">
+import logging
+_logger = logging.getLogger(__name__)
+
+# Verificar planes activos sin líneas
+plans_without_lines = model.search([
+    ('state', 'in', ['confirmed', 'in_progress']),
+    ('plan_line_ids', '=', False)
+])
+
+if plans_without_lines:
+    _logger.warning(f"Encontrados {len(plans_without_lines)} planes sin líneas de detalle")
+
+# Verificar colas saturadas
+saturated_queues = env['megastock.work.queue'].search([
+    ('state', '=', 'active'),
+    ('current_items_count', '>', 100)  # Más de 100 items en cola
+])
+
+if saturated_queues:
+    _logger.warning(f"Encontradas {len(saturated_queues)} colas saturadas")
+
+# Verificar cronogramas con conflictos
+conflicted_schedules = env['megastock.production.schedule'].search([
+    ('state', 'in', ['scheduled', 'confirmed'])
+])
+
+conflict_count = 0
+for schedule in conflicted_schedules:
+    overlapping = env['megastock.production.schedule'].search([
+        ('workcenter_id', '=', schedule.workcenter_id.id),
+        ('start_datetime', '&lt;', schedule.end_datetime),
+        ('end_datetime', '>', schedule.start_datetime),
+        ('id', '!=', schedule.id),
+        ('state', 'in', ['scheduled', 'confirmed', 'in_progress'])
+    ])
+    if overlapping:
+        conflict_count += 1
+
+if conflict_count > 0:
+    _logger.warning(f"Encontrados {conflict_count} cronogramas con conflictos")
+
+_logger.info("Verificación de salud del sistema completada")
+        </field>
+        <field name="interval_number">4</field>
+        <field name="interval_type">hours</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">5</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+    <!-- Job: Notificaciones de Dashboard (cada 10 minutos, solo en horario laboral) -->
+    <record id="cron_dashboard_notifications" model="ir.cron">
+        <field name="name">Notificaciones de Dashboard</field>
+        <field name="model_id" ref="model_megastock_production_kpi"/>
+        <field name="state">code</field>
+        <field name="code">
+from datetime import datetime
+
+# Solo ejecutar en horario laboral (6 AM - 10 PM)
+current_hour = datetime.now().hour
+if 6 &lt;= current_hour &lt;= 22:
+    # Verificar KPIs críticos
+    critical_kpis = model.search([
+        ('measurement_date', '=', fields.Date.today()),
+        ('alert_level', '=', 'red')
+    ])
+    
+    if critical_kpis:
+        # Crear notificación para usuarios dashboard
+        users = env.ref('megastock_production_planning.group_dashboard_manager').users
+        for user in users:
+            env['mail.message'].create({
+                'subject': f'⚠️ {len(critical_kpis)} KPIs Críticos Detectados',
+                'body': f'Se detectaron {len(critical_kpis)} KPIs en estado crítico que requieren atención inmediata.',
+                'message_type': 'notification',
+                'author_id': env.user.partner_id.id,
+                'partner_ids': [(4, user.partner_id.id)]
+            })
+</field>
+        <field name="interval_number">10</field>
+        <field name="interval_type">minutes</field>
+        <field name="numbercall">-1</field>
+        <field name="active" eval="True"/>
+        <field name="priority">6</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+
+</odoo>

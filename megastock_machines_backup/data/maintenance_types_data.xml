@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== TIPOS DE MANTENIMIENTO ========== -->
+        
+        <!-- Mantenimiento Preventivo Mensual -->
+        <record id="maintenance_type_preventivo_mensual" model="maintenance.stage">
+            <field name="name">Preventivo Mensual</field>
+            <field name="sequence">10</field>
+            <field name="fold">False</field>
+            <field name="done">False</field>
+        </record>
+        
+        <!-- Mantenimiento Preventivo Trimestral -->
+        <record id="maintenance_type_preventivo_trimestral" model="maintenance.stage">
+            <field name="name">Preventivo Trimestral</field>
+            <field name="sequence">20</field>
+            <field name="fold">False</field>
+            <field name="done">False</field>
+        </record>
+        
+        <!-- Mantenimiento Preventivo Semestral -->
+        <record id="maintenance_type_preventivo_semestral" model="maintenance.stage">
+            <field name="name">Preventivo Semestral</field>
+            <field name="sequence">30</field>
+            <field name="fold">False</field>
+            <field name="done">False</field>
+        </record>
+        
+        <!-- Mantenimiento Correctivo Urgente -->
+        <record id="maintenance_type_correctivo_urgente" model="maintenance.stage">
+            <field name="name">Correctivo Urgente</field>
+            <field name="sequence">40</field>
+            <field name="fold">False</field>
+            <field name="done">False</field>
+        </record>
+        
+        <!-- Mantenimiento Correctivo Programado -->
+        <record id="maintenance_type_correctivo_programado" model="maintenance.stage">
+            <field name="name">Correctivo Programado</field>
+            <field name="sequence">50</field>
+            <field name="fold">False</field>
+            <field name="done">False</field>
+        </record>
+        
+        <!-- ========== CALENDARIOS DE MANTENIMIENTO ========== -->
+        
+        <!-- Mantenimiento Mensual PREPRINTER -->
+        <record id="maintenance_calendar_preprinter_mensual" model="maintenance.request">
+            <field name="name">Mantenimiento Mensual - PREPRINTER</field>
+            <field name="equipment_id" ref="equipment_preprinter"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="stage_id" ref="maintenance_type_preventivo_mensual"/>
+            <field name="priority">2</field>  <!-- Normal -->
+            <field name="duration">4.0</field>  <!-- 4 horas -->
+            <field name="schedule_date">2025-08-15</field>
+            <field name="description">
+                - Limpieza de rodillos y anilox
+                - Verificación de presiones de impresión
+                - Lubricación de sistemas de movimiento
+                - Revisión de cuchillas doctoras
+                - Calibración de registros de colores
+            </field>
+        </record>
+        
+        <!-- Mantenimiento Mensual CORRUGADORA -->
+        <record id="maintenance_calendar_corrugadora_mensual" model="maintenance.request">
+            <field name="name">Mantenimiento Mensual - CORRUGADORA</field>
+            <field name="equipment_id" ref="equipment_corrugadora"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="stage_id" ref="maintenance_type_preventivo_mensual"/>
+            <field name="priority">3</field>  <!-- Alto -->
+            <field name="duration">6.0</field>  <!-- 6 horas -->
+            <field name="schedule_date">2025-08-10</field>
+            <field name="description">
+                - Limpieza y calibración de rodillos corrugadores
+                - Verificación de temperaturas de calefacción
+                - Revisión de sistema de adhesivo
+                - Lubricación de cadenas y engranajes
+                - Control de tensión de papeles
+                - Verificación de sistemas de corte
+            </field>
+        </record>
+        
+        <!-- Mantenimiento Mensual TROQUELADORA -->
+        <record id="maintenance_calendar_troqueladora_mensual" model="maintenance.request">
+            <field name="name">Mantenimiento Mensual - TROQUELADORA</field>
+            <field name="equipment_id" ref="equipment_troqueladora"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="stage_id" ref="maintenance_type_preventivo_mensual"/>
+            <field name="priority">2</field>  <!-- Normal -->
+            <field name="duration">3.0</field>  <!-- 3 horas -->
+            <field name="schedule_date">2025-08-20</field>
+            <field name="description">
+                - Afilado y ajuste de cuchillas de troquelado
+                - Verificación de presiones de corte
+                - Lubricación de sistemas neumáticos
+                - Limpieza de mesas de troquelado
+                - Calibración de sistemas de alimentación
+            </field>
+        </record>
+        
+        <!-- Mantenimiento Trimestral CORRUGADORA -->
+        <record id="maintenance_calendar_corrugadora_trimestral" model="maintenance.request">
+            <field name="name">Mantenimiento Trimestral - CORRUGADORA</field>
+            <field name="equipment_id" ref="equipment_corrugadora"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="stage_id" ref="maintenance_type_preventivo_trimestral"/>
+            <field name="priority">3</field>  <!-- Alto -->
+            <field name="duration">12.0</field>  <!-- 12 horas -->
+            <field name="schedule_date">2025-09-15</field>
+            <field name="description">
+                - Revisión completa de sistema eléctrico
+                - Cambio de filtros de aire y aceite
+                - Calibración de sensores de temperatura
+                - Reemplazo de correas de transmisión
+                - Verificación de alineación de rodillos
+                - Pruebas de funcionamiento integral
+            </field>
+        </record>
+        
+        <!-- ========== CONFIGURACIÓN DE ALERTAS ========== -->
+        
+        <!-- Alerta configuración 30 días antes -->
+        <record id="maintenance_alert_30_days" model="ir.cron">
+            <field name="name">Alerta Mantenimiento - 30 días</field>
+            <field name="model_id" ref="maintenance.model_maintenance_request"/>
+            <field name="state">code</field>
+            <field name="code">
+                # Buscar mantenimientos próximos en 30 días
+                from datetime import datetime, timedelta
+                import logging
+                _logger = logging.getLogger(__name__)
+                
+                future_date = datetime.now() + timedelta(days=30)
+                upcoming_maintenance = env['maintenance.request'].search([
+                    ('schedule_date', '&lt;=', future_date),
+                    ('schedule_date', '&gt;=', datetime.now()),
+                    ('stage_id.done', '=', False)
+                ])
+                
+                if upcoming_maintenance:
+                    _logger.info(f"Mantenimientos próximos encontrados: {len(upcoming_maintenance)}")
+                    # Aquí se puede enviar notificación
+            </field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="active">True</field>
+        </record>
+        
+        <!-- ========== TIPOS DE FALLAS COMUNES ========== -->
+        
+        <!-- Falla Eléctrica -->
+        <record id="failure_type_electrical" model="maintenance.equipment.category">
+            <field name="name">Falla Eléctrica</field>
+            <field name="note">Problemas en sistema eléctrico, motores, sensores</field>
+        </record>
+        
+        <!-- Falla Mecánica -->
+        <record id="failure_type_mechanical" model="maintenance.equipment.category">
+            <field name="name">Falla Mecánica</field>
+            <field name="note">Problemas en rodillos, cadenas, engranajes, correas</field>
+        </record>
+        
+        <!-- Falla Neumática/Hidráulica -->
+        <record id="failure_type_pneumatic" model="maintenance.equipment.category">
+            <field name="name">Falla Neumática/Hidráulica</field>
+            <field name="note">Problemas en sistemas de aire comprimido o hidráulicos</field>
+        </record>
+        
+        <!-- Falla de Calidad -->
+        <record id="failure_type_quality" model="maintenance.equipment.category">
+            <field name="name">Falla de Calidad</field>
+            <field name="note">Problemas que afectan la calidad del producto final</field>
+        </record>
+        
+    </data>
+</odoo>

@@ -1,0 +1,327 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== PLANTILLAS DE PRODUCTOS CAJAS ========== -->
+        
+        <!-- Template: Caja Tapa y Fondo -->
+        <record id="template_caja_tapa_fondo" model="product.template">
+            <field name="name">Caja Tapa y Fondo</field>
+            <field name="categ_id" ref="megastock_base.product_category_cajas_tapa_fondo"/>
+            <field name="type">product</field>
+            <field name="megastock_category">cajas</field>
+            <field name="tipo_caja">tapa_fondo</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_largo'),
+                    'value_ids': [(6, 0, [
+                        ref('value_largo_20'), ref('value_largo_25'), 
+                        ref('value_largo_30'), ref('value_largo_35'),
+                        ref('value_largo_40'), ref('value_largo_50')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_ancho'),
+                    'value_ids': [(6, 0, [
+                        ref('value_ancho_15'), ref('value_ancho_20'), 
+                        ref('value_ancho_25'), ref('value_ancho_30')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_alto'),
+                    'value_ids': [(6, 0, [
+                        ref('value_alto_10'), ref('value_alto_15'), 
+                        ref('value_alto_20')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_flauta'),
+                    'value_ids': [(6, 0, [
+                        ref('value_flauta_c'), ref('value_flauta_b')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_material'),
+                    'value_ids': [(6, 0, [
+                        ref('value_material_kraft'), ref('value_material_interstock')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_colores'),
+                    'value_ids': [(6, 0, [
+                        ref('value_color_sin_impresion'), ref('value_color_1'),
+                        ref('value_color_2'), ref('value_color_4_cmyk')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- Template: Caja Jumbo -->
+        <record id="template_caja_jumbo" model="product.template">
+            <field name="name">Caja Jumbo</field>
+            <field name="categ_id" ref="megastock_base.product_category_cajas_jumbo"/>
+            <field name="type">product</field>
+            <field name="megastock_category">cajas</field>
+            <field name="tipo_caja">jumbo</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_largo'),
+                    'value_ids': [(6, 0, [
+                        ref('value_largo_40'), ref('value_largo_50')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_ancho'),
+                    'value_ids': [(6, 0, [
+                        ref('value_ancho_25'), ref('value_ancho_30')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_flauta'),
+                    'value_ids': [(6, 0, [
+                        ref('value_flauta_c'), ref('value_flauta_b')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_test'),
+                    'value_ids': [(6, 0, [
+                        ref('value_test_275'), ref('value_test_300')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- ========== PLANTILLAS DE PRODUCTOS LÁMINAS ========== -->
+        
+        <!-- Template: Láminas por Gramaje -->
+        <record id="template_laminas_corrugadas" model="product.template">
+            <field name="name">Láminas Corrugadas</field>
+            <field name="categ_id" ref="megastock_base.product_category_laminas"/>
+            <field name="type">product</field>
+            <field name="megastock_category">laminas</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_largo'),
+                    'value_ids': [(6, 0, [
+                        ref('value_largo_30'), ref('value_largo_35'),
+                        ref('value_largo_40'), ref('value_largo_50')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_ancho'),
+                    'value_ids': [(6, 0, [
+                        ref('value_ancho_20'), ref('value_ancho_25'), 
+                        ref('value_ancho_30')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_gramaje'),
+                    'value_ids': [(6, 0, [
+                        ref('value_gramaje_125'), ref('value_gramaje_150'),
+                        ref('value_gramaje_175')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_flauta'),
+                    'value_ids': [(6, 0, [
+                        ref('value_flauta_c'), ref('value_flauta_e')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_colores'),
+                    'value_ids': [(6, 0, [
+                        ref('value_color_sin_impresion'), ref('value_color_1'),
+                        ref('value_color_2')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- ========== PLANTILLAS PAPEL PERIÓDICO ========== -->
+        
+        <!-- Template: Papel Periódico en Resmas -->
+        <record id="template_papel_periodico" model="product.template">
+            <field name="name">Papel Periódico</field>
+            <field name="categ_id" ref="megastock_base.product_category_papel_periodico"/>
+            <field name="type">product</field>
+            <field name="megastock_category">papel</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="uom_id" ref="uom.product_uom_unit"/>
+            <field name="uom_po_id" ref="uom.product_uom_unit"/>
+        </record>
+
+        <!-- ========== PLANTILLAS PLANCHAS ========== -->
+        
+        <!-- Template: Planchas de Cartón -->
+        <record id="template_planchas_carton" model="product.template">
+            <field name="name">Planchas de Cartón</field>
+            <field name="categ_id" ref="megastock_base.product_category_planchas"/>
+            <field name="type">product</field>
+            <field name="megastock_category">planchas</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_largo'),
+                    'value_ids': [(6, 0, [
+                        ref('value_largo_40'), ref('value_largo_50')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_ancho'),
+                    'value_ids': [(6, 0, [
+                        ref('value_ancho_25'), ref('value_ancho_30')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_flauta'),
+                    'value_ids': [(6, 0, [
+                        ref('value_flauta_c'), ref('value_flauta_b')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_test'),
+                    'value_ids': [(6, 0, [
+                        ref('value_test_250'), ref('value_test_275')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- ========== PLANTILLAS SEPARADORES ========== -->
+        
+        <!-- Template: Separadores -->
+        <record id="template_separadores" model="product.template">
+            <field name="name">Separadores</field>
+            <field name="categ_id" ref="megastock_base.product_category_separadores"/>
+            <field name="type">product</field>
+            <field name="megastock_category">separadores</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="route_ids" eval="[(4, ref('mrp.route_warehouse0_manufacture'))]"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_largo'),
+                    'value_ids': [(6, 0, [
+                        ref('value_largo_20'), ref('value_largo_25'), 
+                        ref('value_largo_30')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_ancho'),
+                    'value_ids': [(6, 0, [
+                        ref('value_ancho_15'), ref('value_ancho_20'), 
+                        ref('value_ancho_25')
+                    ])]
+                }),
+                (0, 0, {
+                    'attribute_id': ref('attribute_gramaje'),
+                    'value_ids': [(6, 0, [
+                        ref('value_gramaje_125'), ref('value_gramaje_150')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- ========== PLANTILLAS MATERIAS PRIMAS ========== -->
+        
+        <!-- Template: Papel KRAFT -->
+        <record id="template_papel_kraft" model="product.template">
+            <field name="name">Papel KRAFT</field>
+            <field name="categ_id" ref="megastock_base.product_category_papel_kraft"/>
+            <field name="type">product</field>
+            <field name="megastock_category">materias_primas</field>
+            <field name="material_type">kraft</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="uom_id" ref="uom.product_uom_ton"/>
+            <field name="uom_po_id" ref="uom.product_uom_ton"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_gramaje'),
+                    'value_ids': [(6, 0, [
+                        ref('value_gramaje_125'), ref('value_gramaje_150'),
+                        ref('value_gramaje_175'), ref('value_gramaje_200')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- Template: Papel Medium -->
+        <record id="template_papel_medium" model="product.template">
+            <field name="name">Papel Medium</field>
+            <field name="categ_id" ref="megastock_base.product_category_papel_medium"/>
+            <field name="type">product</field>
+            <field name="megastock_category">materias_primas</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="uom_id" ref="uom.product_uom_ton"/>
+            <field name="uom_po_id" ref="uom.product_uom_ton"/>
+            <field name="attribute_line_ids" eval="[
+                (0, 0, {
+                    'attribute_id': ref('attribute_gramaje'),
+                    'value_ids': [(6, 0, [
+                        ref('value_gramaje_90'), ref('value_gramaje_125')
+                    ])]
+                })
+            ]"/>
+        </record>
+
+        <!-- Template: Tintas -->
+        <record id="template_tintas" model="product.template">
+            <field name="name">Tintas de Impresión</field>
+            <field name="categ_id" ref="megastock_base.product_category_tintas"/>
+            <field name="type">product</field>
+            <field name="megastock_category">materias_primas</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="uom_id" ref="uom.product_uom_litre"/>
+            <field name="uom_po_id" ref="uom.product_uom_litre"/>
+        </record>
+
+        <!-- Template: Adhesivos -->
+        <record id="template_adhesivos" model="product.template">
+            <field name="name">Adhesivos</field>
+            <field name="categ_id" ref="megastock_base.product_category_adhesivos"/>
+            <field name="type">product</field>
+            <field name="megastock_category">materias_primas</field>
+            <field name="detailed_type">product</field>
+            <field name="invoice_policy">order</field>
+            <field name="purchase_method">purchase</field>
+            <field name="tracking">lot</field>
+            <field name="uom_id" ref="uom.product_uom_kgm"/>
+            <field name="uom_po_id" ref="uom.product_uom_kgm"/>
+        </record>
+
+    </data>
+</odoo>

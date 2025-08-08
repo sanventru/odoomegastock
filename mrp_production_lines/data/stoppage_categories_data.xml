@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Categorías para Todas las Líneas -->
+        <record id="stoppage_cat_cambio_op" model="mrp.stoppage.category">
+            <field name="name">Cambio de O.P.</field>
+            <field name="code">CHG_OP</field>
+            <field name="production_line">all</field>
+            <field name="sequence">10</field>
+            <field name="color">1</field>
+            <field name="description">Tiempo utilizado para cambio de orden de producción</field>
+        </record>
+
+        <record id="stoppage_cat_mantenimiento" model="mrp.stoppage.category">
+            <field name="name">Mantenimiento</field>
+            <field name="code">MAINT</field>
+            <field name="production_line">all</field>
+            <field name="sequence">20</field>
+            <field name="color">3</field>
+            <field name="description">Mantenimiento preventivo o correctivo de equipos</field>
+        </record>
+
+        <record id="stoppage_cat_falta_espacio" model="mrp.stoppage.category">
+            <field name="name">Falta de Espacio</field>
+            <field name="code">NO_SPACE</field>
+            <field name="production_line">all</field>
+            <field name="sequence">30</field>
+            <field name="color">4</field>
+            <field name="description">Falta de espacio para almacenar producto en proceso</field>
+        </record>
+
+        <record id="stoppage_cat_falta_insumos" model="mrp.stoppage.category">
+            <field name="name">Falta de Insumos</field>
+            <field name="code">NO_MATS</field>
+            <field name="production_line">all</field>
+            <field name="sequence">40</field>
+            <field name="color">6</field>
+            <field name="description">Falta de materias primas o insumos</field>
+        </record>
+
+        <record id="stoppage_cat_accidente" model="mrp.stoppage.category">
+            <field name="name">Accidente</field>
+            <field name="code">ACCIDT</field>
+            <field name="production_line">all</field>
+            <field name="sequence">50</field>
+            <field name="color">9</field>
+            <field name="description">Accidente laboral o de seguridad</field>
+        </record>
+
+        <record id="stoppage_cat_capacitacion" model="mrp.stoppage.category">
+            <field name="name">Capacitaciones</field>
+            <field name="code">TRAIN</field>
+            <field name="production_line">all</field>
+            <field name="sequence">60</field>
+            <field name="color">2</field>
+            <field name="description">Tiempo dedicado a capacitación del personal</field>
+        </record>
+
+        <record id="stoppage_cat_corte_energia" model="mrp.stoppage.category">
+            <field name="name">Corte de Energía</field>
+            <field name="code">POWER</field>
+            <field name="production_line">all</field>
+            <field name="sequence">70</field>
+            <field name="color">10</field>
+            <field name="description">Interrupciones por corte de energía eléctrica</field>
+        </record>
+
+        <record id="stoppage_cat_dano_mecanico" model="mrp.stoppage.category">
+            <field name="name">Daño Mecánico</field>
+            <field name="code">MECH_DMG</field>
+            <field name="production_line">all</field>
+            <field name="sequence">80</field>
+            <field name="color">8</field>
+            <field name="description">Fallas mecánicas en equipos</field>
+        </record>
+
+        <record id="stoppage_cat_dano_electrico" model="mrp.stoppage.category">
+            <field name="name">Daño Eléctrico</field>
+            <field name="code">ELEC_DMG</field>
+            <field name="production_line">all</field>
+            <field name="sequence">90</field>
+            <field name="color">7</field>
+            <field name="description">Fallas eléctricas en equipos</field>
+        </record>
+
+        <!-- Categorías específicas para Papel Periódico -->
+        <record id="stoppage_cat_cambio_bobinas_papel" model="mrp.stoppage.category">
+            <field name="name">Cambio de Bobinas</field>
+            <field name="code">CHG_REEL</field>
+            <field name="production_line">papel_periodico</field>
+            <field name="sequence">100</field>
+            <field name="color">5</field>
+            <field name="description">Tiempo para cambio de bobinas de papel</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_cuchillas" model="mrp.stoppage.category">
+            <field name="name">Cambio de Cuchillas</field>
+            <field name="code">CHG_BLAD</field>
+            <field name="production_line">papel_periodico</field>
+            <field name="sequence">110</field>
+            <field name="color">1</field>
+            <field name="description">Cambio de cuchillas en guillotina</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_liston" model="mrp.stoppage.category">
+            <field name="name">Cambio de Listón</field>
+            <field name="code">CHG_SLAT</field>
+            <field name="production_line">papel_periodico</field>
+            <field name="sequence">120</field>
+            <field name="color">3</field>
+            <field name="description">Cambio de listón en guillotina</field>
+        </record>
+
+        <!-- Categorías específicas para Cajas -->
+        <record id="stoppage_cat_empalmes" model="mrp.stoppage.category">
+            <field name="name">Empalmes</field>
+            <field name="code">SPLICES</field>
+            <field name="production_line">cajas</field>
+            <field name="sequence">130</field>
+            <field name="color">4</field>
+            <field name="description">Tiempo para realizar empalmes en el corrugador</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_bobina_cajas" model="mrp.stoppage.category">
+            <field name="name">Cambio de Bobina</field>
+            <field name="code">CHG_REEL_C</field>
+            <field name="production_line">cajas</field>
+            <field name="sequence">140</field>
+            <field name="color">6</field>
+            <field name="description">Cambio de bobinas en corrugador</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_recubrimiento" model="mrp.stoppage.category">
+            <field name="name">Cambio de Recubrimiento</field>
+            <field name="code">CHG_COAT</field>
+            <field name="production_line">cajas</field>
+            <field name="sequence">150</field>
+            <field name="color">2</field>
+            <field name="description">Cambio de recubrimiento en corrugador</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_tintas_cajas" model="mrp.stoppage.category">
+            <field name="name">Cambio de Tintas</field>
+            <field name="code">CHG_INK_C</field>
+            <field name="production_line">cajas</field>
+            <field name="sequence">160</field>
+            <field name="color">8</field>
+            <field name="description">Cambio de tintas en flexográfica</field>
+        </record>
+
+        <!-- Categorías específicas para Lámina Micro -->
+        <record id="stoppage_cat_cambio_tintas_micro" model="mrp.stoppage.category">
+            <field name="name">Cambio de Tintas</field>
+            <field name="code">CHG_INK_M</field>
+            <field name="production_line">lamina_micro</field>
+            <field name="sequence">170</field>
+            <field name="color">9</field>
+            <field name="description">Cambio de tintas en pre-printer</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_tesaprint" model="mrp.stoppage.category">
+            <field name="name">Cambio Tesaprint</field>
+            <field name="code">CHG_TESA</field>
+            <field name="production_line">lamina_micro</field>
+            <field name="sequence">180</field>
+            <field name="color">10</field>
+            <field name="description">Cambio de cinta tesaprint en pre-printer</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_rasquetas" model="mrp.stoppage.category">
+            <field name="name">Cambio de Rasquetas</field>
+            <field name="code">CHG_SCRP</field>
+            <field name="production_line">lamina_micro</field>
+            <field name="sequence">190</field>
+            <field name="color">7</field>
+            <field name="description">Cambio de rasquetas en pre-printer</field>
+        </record>
+
+        <record id="stoppage_cat_cambio_goma" model="mrp.stoppage.category">
+            <field name="name">Cambio de Goma</field>
+            <field name="code">CHG_GLUE</field>
+            <field name="production_line">lamina_micro</field>
+            <field name="sequence">200</field>
+            <field name="color">5</field>
+            <field name="description">Cambio de goma en dobladoras</field>
+        </record>
+
+        <record id="stoppage_cat_peso_bobinas" model="mrp.stoppage.category">
+            <field name="name">Peso de Bobinas</field>
+            <field name="code">REEL_WGT</field>
+            <field name="production_line">lamina_micro</field>
+            <field name="sequence">210</field>
+            <field name="color">1</field>
+            <field name="description">Tiempo para pesado de bobinas</field>
+        </record>
+
+    </data>
+</odoo>

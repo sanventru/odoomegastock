@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista del Wizard de Alertas -->
+        <record id="view_stock_alert_wizard" model="ir.ui.view">
+            <field name="name">megastock.stock.alert.wizard.form</field>
+            <field name="model">megastock.stock.alert.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Alertas de Stock MEGASTOCK">
+                    <header>
+                        <button name="action_generate_alert_report" type="object" 
+                                string="Generar Reporte" class="btn-primary"/>
+                    </header>
+                    
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Alertas de Stock</h1>
+                            <p>Seleccione el tipo de alerta que desea revisar</p>
+                        </div>
+                        
+                        <group>
+                            <field name="alert_type" widget="radio"/>
+                        </group>
+                        
+                        <div class="alert alert-info" role="alert">
+                            <h4>Tipos de Alertas:</h4>
+                            <ul>
+                                <li><strong>Stock Bajo:</strong> Productos que están por debajo del stock mínimo configurado</li>
+                                <li><strong>Próximo a Expirar:</strong> Materiales que están próximos a su fecha de expiración</li>
+                                <li><strong>Calidad Pendiente:</strong> Materiales que requieren inspección de calidad</li>
+                            </ul>
+                        </div>
+                        
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción del Wizard -->
+        <record id="action_stock_alert_wizard" model="ir.actions.act_window">
+            <field name="name">Alertas de Stock</field>
+            <field name="res_model">megastock.stock.alert.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+        </record>
+
+    </data>
+</odoo>

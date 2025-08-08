@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista de formulario extendida para Product Product (Variantes) -->
+        <record id="product_product_form_view_megastock" model="ir.ui.view">
+            <field name="name">product.product.form.megastock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_normal_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar información de códigos MEGASTOCK -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="megastock_code" readonly="1"/>
+                    <field name="variant_code" readonly="1" 
+                           attrs="{'invisible': [('variant_code', '=', False)]}"/>
+                    <field name="megastock_category" readonly="1"/>
+                </xpath>
+
+                <!-- Agregar pestaña de información técnica -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="Información Técnica" 
+                          attrs="{'invisible': [('megastock_category', '=', False)]}">
+                        
+                        <group string="Descripción Técnica de la Variante">
+                            <field name="technical_description" readonly="1" nolabel="1"/>
+                        </group>
+
+                        <!-- Botones de acción específicos para variantes -->
+                        <div class="oe_button_box">
+                            <button name="action_duplicate_with_variants" type="object" 
+                                    class="btn-secondary" string="Duplicar con Variantes"/>
+                        </div>
+
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de lista extendida para variantes -->
+        <record id="product_product_tree_view_megastock" model="ir.ui.view">
+            <field name="name">product.product.tree.megastock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_product_tree_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar columnas de códigos MEGASTOCK -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="variant_code" optional="show"/>
+                    <field name="megastock_category" optional="hide"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda extendida para variantes -->
+        <record id="product_product_search_view_megastock" model="ir.ui.view">
+            <field name="name">product.product.search.megastock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_search_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos de búsqueda -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="variant_code" string="Código Variante"/>
+                    <field name="megastock_code" string="Código Base"/>
+                </xpath>
+
+                <!-- Agregar filtros -->
+                <xpath expr="//filter[@name='consumable']" position="after">
+                    <separator/>
+                    <filter string="Con Variantes" name="filter_variants" 
+                            domain="[('variant_code', '!=', False)]"/>
+                    <filter string="CAJAS" name="filter_cajas_var" 
+                            domain="[('megastock_category', '=', 'cajas')]"/>
+                    <filter string="LÁMINAS" name="filter_laminas_var" 
+                            domain="[('megastock_category', '=', 'laminas')]"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Acción para Variantes MEGASTOCK -->
+        <record id="action_product_variant_megastock" model="ir.actions.act_window">
+            <field name="name">Variantes MEGASTOCK</field>
+            <field name="res_model">product.product</field>
+            <field name="view_mode">tree,form,kanban</field>
+            <field name="domain">[('megastock_category', '!=', False)]</field>
+            <field name="context">{
+                'search_default_filter_variants': 1
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    ¡Variantes de productos MEGASTOCK!
+                </p>
+                <p>
+                    Aquí puedes ver todas las variantes de productos con sus
+                    códigos específicos y especificaciones técnicas.
+                </p>
+            </field>
+        </record>
+
+    </data>
+</odoo>

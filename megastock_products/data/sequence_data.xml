@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== SECUENCIAS PARA CODIFICACIÓN MEGASTOCK ========== -->
+        
+        <!-- Secuencia para CAJAS -->
+        <record id="sequence_product_cajas" model="ir.sequence">
+            <field name="name">Código Productos - CAJAS MEGASTOCK</field>
+            <field name="code">megastock.product.cajas</field>
+            <field name="prefix">301</field>
+            <field name="padding">5</field>
+            <field name="number_next">70001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- Secuencia para LÁMINAS -->
+        <record id="sequence_product_laminas" model="ir.sequence">
+            <field name="name">Código Productos - LÁMINAS MEGASTOCK</field>
+            <field name="code">megastock.product.laminas</field>
+            <field name="prefix">302</field>
+            <field name="padding">5</field>
+            <field name="number_next">70001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- Secuencia para PAPEL PERIÓDICO -->
+        <record id="sequence_product_papel" model="ir.sequence">
+            <field name="name">Código Productos - PAPEL PERIÓDICO MEGASTOCK</field>
+            <field name="code">megastock.product.papel</field>
+            <field name="prefix">303</field>
+            <field name="padding">5</field>
+            <field name="number_next">70001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- Secuencia para PLANCHAS -->
+        <record id="sequence_product_planchas" model="ir.sequence">
+            <field name="name">Código Productos - PLANCHAS MEGASTOCK</field>
+            <field name="code">megastock.product.planchas</field>
+            <field name="prefix">304</field>
+            <field name="padding">5</field>
+            <field name="number_next">70001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- Secuencia para SEPARADORES -->
+        <record id="sequence_product_separadores" model="ir.sequence">
+            <field name="name">Código Productos - SEPARADORES MEGASTOCK</field>
+            <field name="code">megastock.product.separadores</field>
+            <field name="prefix">305</field>
+            <field name="padding">5</field>
+            <field name="number_next">70001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- Secuencia para MATERIAS PRIMAS -->
+        <record id="sequence_product_materias_primas" model="ir.sequence">
+            <field name="name">Código Productos - MATERIAS PRIMAS MEGASTOCK</field>
+            <field name="code">megastock.product.materias.primas</field>
+            <field name="prefix">400</field>
+            <field name="padding">5</field>
+            <field name="number_next">10001</field>
+            <field name="number_increment">1</field>
+            <field name="implementation">standard</field>
+            <field name="company_id" ref="base.main_company"/>
+        </record>
+
+        <!-- ========== CONFIGURACIÓN DE PARÁMETROS ========== -->
+        
+        <!-- Parámetro para habilitar codificación automática -->
+        <record id="param_auto_coding" model="ir.config_parameter">
+            <field name="key">megastock.auto_product_coding</field>
+            <field name="value">True</field>
+        </record>
+
+        <!-- Parámetro para formato de código por defecto -->
+        <record id="param_default_code_format" model="ir.config_parameter">
+            <field name="key">megastock.default_code_format</field>
+            <field name="value">{prefix}{sequence}</field>
+        </record>
+
+        <!-- Parámetro para validación de códigos existentes -->
+        <record id="param_validate_existing_codes" model="ir.config_parameter">
+            <field name="key">megastock.validate_existing_codes</field>
+            <field name="value">True</field>
+        </record>
+
+    </data>
+</odoo>

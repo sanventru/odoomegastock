@@ -1,0 +1,1 @@
+# MEGASTOCK Machines module

@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- ========== REPORTE: EFICIENCIA DE RUTAS ========== -->
+        
+        <record id="routing_efficiency_report_action" model="ir.actions.report">
+            <field name="name">Reporte de Eficiencia de Rutas</field>
+            <field name="model">mrp.routing</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">megastock_routing.routing_efficiency_report_template</field>
+            <field name="report_file">megastock_routing.routing_efficiency_report_template</field>
+            <field name="binding_model_id" ref="mrp.model_mrp_routing"/>
+            <field name="binding_type">report</field>
+        </record>
+        
+        <!-- Template del Reporte PDF -->
+        <template id="routing_efficiency_report_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="routing">
+                    <t t-call="web.external_layout">
+                        <div class="header">
+                            <div class="row">
+                                <div class="col-6">
+                                    <img src="/megastock_base/static/img/megastock_logo.png" alt="MEGASTOCK" style="height: 60px;"/>
+                                </div>
+                                <div class="col-6 text-right">
+                                    <h3>REPORTE DE EFICIENCIA DE RUTA</h3>
+                                    <p>Ruta: <strong t-field="routing.name"/></p>
+                                    <p>Fecha: <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y %H:%M')"/></p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="page">
+                            <!-- Información General de la Ruta -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h4 class="text-primary">1. INFORMACIÓN GENERAL</h4>
+                                    <table class="table table-bordered">
+                                        <tr>
+                                            <td width="25%"><strong>Código de Ruta:</strong></td>
+                                            <td width="25%"><span t-field="routing.code"/></td>
+                                            <td width="25%"><strong>Tipo de Ruta:</strong></td>
+                                            <td width="25%"><span t-field="routing.routing_type"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tamaño Mín. Lote:</strong></td>
+                                            <td><span t-field="routing.min_lot_size"/> unidades</td>
+                                            <td><strong>Tamaño Máx. Lote:</strong></td>
+                                            <td><span t-field="routing.max_lot_size"/> unidades</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Lead Time Estimado:</strong></td>
+                                            <td><span t-field="routing.estimated_lead_time"/> horas</td>
+                                            <td><strong>Costo Total/Unidad:</strong></td>
+                                            <td>$<span t-field="routing.total_cost_per_unit"/></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Rating Eficiencia:</strong></td>
+                                            <td><span t-field="routing.efficiency_rating"/>%</td>
+                                            <td><strong>Cuello de Botella:</strong></td>
+                                            <td><span t-field="routing.bottleneck_operation_id.name"/></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Análisis de Operaciones -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h4 class="text-primary">2. ANÁLISIS DETALLADO DE OPERACIONES</h4>
+                                    <table class="table table-bordered table-striped">
+                                        <thead class="table-active">
+                                            <tr>
+                                                <th>Secuencia</th>
+                                                <th>Operación</th>
+                                                <th>Centro de Trabajo</th>
+                                                <th>Tiempo Ciclo (min)</th>
+                                                <th>Setup (min)</th>
+                                                <th>Costo/Unidad</th>
+                                                <th>Riesgo Cuello</th>
+                                                <th>Capacidad/Hora</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="routing.operation_ids" t-as="operation">
+                                                <tr>
+                                                    <td><span t-field="operation.sequence"/></td>
+                                                    <td><span t-field="operation.name"/></td>
+                                                    <td><span t-field="operation.workcenter_id.name"/></td>
+                                                    <td class="text-right"><span t-field="operation.time_cycle"/></td>
+                                                    <td class="text-right"><span t-field="operation.time_mode_batch"/></td>
+                                                    <td class="text-right">$<span t-field="operation.total_cost_per_unit"/></td>
+                                                    <td class="text-center">
+                                                        <span t-field="operation.bottleneck_risk" 
+                                                              t-att-class="'badge bg-success' if operation.bottleneck_risk == 'low' else 
+                                                                           'badge bg-warning' if operation.bottleneck_risk == 'medium' else 
+                                                                           'badge bg-danger' if operation.bottleneck_risk == 'high' else 
+                                                                           'badge bg-dark'"/>
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <span t-field="operation.workcenter_id.real_capacity"/>
+                                                        <small class="text-muted"> <span t-field="operation.workcenter_id.capacity_unit"/></small>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Análisis de Costos -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h4 class="text-primary">3. ANÁLISIS DE ESTRUCTURA DE COSTOS</h4>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <table class="table table-bordered">
+                                                <thead class="table-active">
+                                                    <tr>
+                                                        <th>Componente de Costo</th>
+                                                        <th class="text-right">Valor (USD)</th>
+                                                        <th class="text-right">% del Total</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-set="total_labor_cost" t-value="0"/>
+                                                    <t t-set="total_energy_cost" t-value="0"/>
+                                                    <t t-set="total_overhead_cost" t-value="0"/>
+                                                    
+                                                    <t t-foreach="routing.operation_ids" t-as="operation">
+                                                        <t t-set="labor_cost" t-value="(operation.workcenter_id.costs_hour or 0) * (operation.time_cycle / 60.0)"/>
+                                                        <t t-set="energy_cost" t-value="(operation.workcenter_id.energy_cost_per_hour or 0) * (operation.time_cycle / 60.0)"/>
+                                                        <t t-set="total_labor_cost" t-value="total_labor_cost + labor_cost"/>
+                                                        <t t-set="total_energy_cost" t-value="total_energy_cost + energy_cost"/>
+                                                    </t>
+                                                    
+                                                    <tr>
+                                                        <td><strong>Mano de Obra</strong></td>
+                                                        <td class="text-right">$<span t-esc="'%.2f' % total_labor_cost"/></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % ((total_labor_cost / routing.total_cost_per_unit * 100) if routing.total_cost_per_unit else 0)"/>%
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Energía</strong></td>
+                                                        <td class="text-right">$<span t-esc="'%.2f' % total_energy_cost"/></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % ((total_energy_cost / routing.total_cost_per_unit * 100) if routing.total_cost_per_unit else 0)"/>%
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Gastos Generales</strong></td>
+                                                        <td class="text-right">$<span t-esc="'%.2f' % (routing.total_cost_per_unit - total_labor_cost - total_energy_cost)"/></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % (((routing.total_cost_per_unit - total_labor_cost - total_energy_cost) / routing.total_cost_per_unit * 100) if routing.total_cost_per_unit else 0)"/>%
+                                                        </td>
+                                                    </tr>
+                                                    <tr class="table-active">
+                                                        <td><strong>TOTAL</strong></td>
+                                                        <td class="text-right"><strong>$<span t-field="routing.total_cost_per_unit"/></strong></td>
+                                                        <td class="text-right"><strong>100.0%</strong></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="col-6">
+                                            <h5>Capacidades por Centro de Trabajo</h5>
+                                            <table class="table table-bordered table-sm">
+                                                <thead class="table-active">
+                                                    <tr>
+                                                        <th>Centro</th>
+                                                        <th>Capacidad Real</th>
+                                                        <th>OEE</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <t t-foreach="routing.operation_ids" t-as="operation">
+                                                        <tr>
+                                                            <td><span t-field="operation.workcenter_id.code"/></td>
+                                                            <td class="text-right">
+                                                                <span t-field="operation.workcenter_id.real_capacity"/>
+                                                                <small> <span t-field="operation.workcenter_id.capacity_unit"/>/h</small>
+                                                            </td>
+                                                            <td class="text-right">
+                                                                <span t-field="operation.workcenter_id.oee_overall"/>%
+                                                            </td>
+                                                        </tr>
+                                                    </t>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Análisis de Tiempos -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h4 class="text-primary">4. ANÁLISIS DE TIEMPOS DE PRODUCCIÓN</h4>
+                                    <div class="row">
+                                        <div class="col-8">
+                                            <table class="table table-bordered">
+                                                <thead class="table-active">
+                                                    <tr>
+                                                        <th>Lote de Producción</th>
+                                                        <th class="text-right">100 unidades</th>
+                                                        <th class="text-right">500 unidades</th>
+                                                        <th class="text-right">1000 unidades</th>
+                                                        <th class="text-right">5000 unidades</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td><strong>Tiempo Total (horas)</strong></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % (routing.estimated_lead_time * 100 / 1000)"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % (routing.estimated_lead_time * 500 / 1000)"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % routing.estimated_lead_time"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.1f' % (routing.estimated_lead_time * 5)"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Tiempo/Unidad (min)</strong></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.2f' % (routing.estimated_lead_time * 60 / 100)"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.2f' % (routing.estimated_lead_time * 60 / 500)"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.2f' % (routing.estimated_lead_time * 60 / 1000)"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="'%.2f' % (routing.estimated_lead_time * 60 / 5000)"/>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>Producción/Día (8h)</strong></td>
+                                                        <td class="text-right">
+                                                            <span t-esc="int(8 * 100 / routing.estimated_lead_time) if routing.estimated_lead_time else 0"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="int(8 * 500 / routing.estimated_lead_time) if routing.estimated_lead_time else 0"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="int(8 * 1000 / routing.estimated_lead_time) if routing.estimated_lead_time else 0"/>
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <span t-esc="int(8 * 5000 / routing.estimated_lead_time) if routing.estimated_lead_time else 0"/>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="col-4">
+                                            <h5>Indicadores Clave</h5>
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <p><strong>Cuello de Botella:</strong><br/>
+                                                        <span t-field="routing.bottleneck_operation_id.name"/><br/>
+                                                        <small class="text-muted">Capacidad: <span t-field="routing.bottleneck_capacity"/> unidades/hora</small>
+                                                    </p>
+                                                    
+                                                    <p><strong>Utilización Promedio:</strong><br/>
+                                                        <span t-esc="'%.1f' % routing.efficiency_rating"/>%
+                                                    </p>
+                                                    
+                                                    <p><strong>Tiempo Setup Total:</strong><br/>
+                                                        <t t-set="total_setup" t-value="sum(routing.operation_ids.mapped('time_mode_batch'))"/>
+                                                        <span t-esc="'%.0f' % total_setup"/> minutos
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recomendaciones de Mejora -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h4 class="text-primary">5. RECOMENDACIONES DE MEJORA</h4>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <h5>Oportunidades de Optimización</h5>
+                                            <ul>
+                                                <t t-if="routing.bottleneck_operation_id">
+                                                    <li><strong>Cuello de Botella:</strong> Optimizar operación 
+                                                        <span t-field="routing.bottleneck_operation_id.name"/> para aumentar capacidad general</li>
+                                                </t>
+                                                
+                                                <t t-foreach="routing.operation_ids.filtered(lambda op: op.bottleneck_risk in ['high', 'critical'])" t-as="risky_op">
+                                                    <li><strong>Riesgo Alto:</strong> Revisar configuración de 
+                                                        <span t-field="risky_op.name"/> - tiempo setup o capacidad limitada</li>
+                                                </t>
+                                                
+                                                <t t-if="routing.efficiency_rating < 80">
+                                                    <li><strong>Eficiencia Baja:</strong> La ruta tiene eficiencia menor a 80%. 
+                                                        Revisar tiempos de setup y paradas no programadas</li>
+                                                </t>
+                                                
+                                                <t t-if="routing.total_cost_per_unit > 1.0">
+                                                    <li><strong>Costos Elevados:</strong> Analizar oportunidades de reducción 
+                                                        de costos en operaciones más costosas</li>
+                                                </t>
+                                            </ul>
+                                        </div>
+                                        <div class="col-6">
+                                            <h5>Acciones Sugeridas</h5>
+                                            <ol>
+                                                <li>Implementar SMED (Single Minute Exchange of Die) para reducir tiempos de setup</li>
+                                                <li>Evaluar paralelización de operaciones no críticas</li>
+                                                <li>Considerar centros de trabajo alternativos para operaciones cuello de botella</li>
+                                                <li>Implementar mantenimiento preventivo más frecuente en equipos críticos</li>
+                                                <li>Capacitar operadores en técnicas de eficiencia</li>
+                                                <li>Analizar flujo de materiales para eliminar esperas</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Control de Calidad -->
+                            <div class="row" t-if="routing.operation_ids.filtered('quality_control_required')">
+                                <div class="col-12">
+                                    <h4 class="text-primary">6. PUNTOS DE CONTROL DE CALIDAD</h4>
+                                    <table class="table table-bordered">
+                                        <thead class="table-active">
+                                            <tr>
+                                                <th>Operación</th>
+                                                <th>Control Requerido</th>
+                                                <th>Tamaño Muestra</th>
+                                                <th>Tiempo Adicional</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="routing.operation_ids.filtered('quality_control_required')" t-as="qc_operation">
+                                                <tr>
+                                                    <td><span t-field="qc_operation.name"/></td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-success">Requerido</span>
+                                                    </td>
+                                                    <td class="text-center"><span t-field="qc_operation.quality_sample_size"/> piezas</td>
+                                                    <td class="text-right">
+                                                        <span t-esc="'%.1f' % (qc_operation.quality_sample_size * 0.1)"/> min
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+        
+        <!-- ========== VISTA DASHBOARD RUTAS ========== -->
+        
+        <record id="routing_efficiency_dashboard_action" model="ir.actions.act_window">
+            <field name="name">Dashboard Eficiencia de Rutas</field>
+            <field name="res_model">mrp.routing</field>
+            <field name="view_mode">kanban,tree,form</field>
+            <field name="domain">[]</field>
+            <field name="context">{
+                'search_default_active': 1,
+            }</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Dashboard de Eficiencia de Rutas de Producción
+                </p>
+                <p>
+                    Analice la eficiencia de sus rutas de manufactura:
+                    <ul>
+                        <li>Tiempos y costos por operación</li>
+                        <li>Identificación de cuellos de botella</li>
+                        <li>Análisis de capacidades y utilización</li>
+                        <li>Recomendaciones de mejora</li>
+                    </ul>
+                </p>
+            </field>
+        </record>
+        
+        <!-- Vista Kanban para Dashboard de Rutas -->
+        <record id="mrp_routing_efficiency_kanban_view" model="ir.ui.view">
+            <field name="name">mrp.routing.efficiency.kanban</field>
+            <field name="model">mrp.routing</field>
+            <field name="arch" type="xml">
+                <kanban>
+                    <field name="name"/>
+                    <field name="code"/>
+                    <field name="routing_type"/>
+                    <field name="efficiency_rating"/>
+                    <field name="total_cost_per_unit"/>
+                    <field name="estimated_lead_time"/>
+                    <field name="bottleneck_operation_id"/>
+                    <field name="bottleneck_capacity"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_global_click">
+                                <div class="oe_kanban_details">
+                                    <div class="o_kanban_record_top">
+                                        <div class="o_kanban_record_headings">
+                                            <strong class="o_kanban_record_title">
+                                                <field name="name"/>
+                                            </strong>
+                                            <small class="o_kanban_record_subtitle text-muted">
+                                                <field name="code"/> - <field name="routing_type"/>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="o_kanban_record_body">
+                                        <!-- Eficiencia -->
+                                        <div class="row mb-2">
+                                            <div class="col-12">
+                                                <div class="progress mb-1" style="height: 15px;">
+                                                    <div class="progress-bar" 
+                                                         t-att-class="record.efficiency_rating.raw_value >= 85 ? 'bg-success' : 
+                                                                      record.efficiency_rating.raw_value >= 70 ? 'bg-warning' : 'bg-danger'"
+                                                         t-att-style="'width: ' + record.efficiency_rating.raw_value + '%'">
+                                                        <small><strong>Eficiencia: <field name="efficiency_rating"/>%</strong></small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Métricas Clave -->
+                                        <div class="row">
+                                            <div class="col-6">
+                                                <small class="text-muted">Costo/Unidad:</small><br/>
+                                                <strong>$<field name="total_cost_per_unit"/></strong>
+                                            </div>
+                                            <div class="col-6">
+                                                <small class="text-muted">Lead Time:</small><br/>
+                                                <strong><field name="estimated_lead_time"/> h</strong>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Cuello de Botella -->
+                                        <div class="row mt-2" t-if="record.bottleneck_operation_id.raw_value">
+                                            <div class="col-12">
+                                                <small class="text-muted">Cuello de Botella:</small><br/>
+                                                <strong class="text-warning">
+                                                    <field name="bottleneck_operation_id"/>
+                                                </strong>
+                                                <br/>
+                                                <small>Capacidad: <field name="bottleneck_capacity"/> u/h</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+        
+        <!-- Menú -->
+        <menuitem id="routing_efficiency_dashboard_menu"
+                  name="Eficiencia de Rutas"
+                  parent="mrp.menu_mrp_reporting"
+                  action="routing_efficiency_dashboard_action"
+                  sequence="10"/>
+        
+    </data>
+</odoo>

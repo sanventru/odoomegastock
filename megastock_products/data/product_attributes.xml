@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== ATRIBUTOS DE DIMENSIONES ========== -->
+        
+        <!-- Atributo: Largo -->
+        <record id="attribute_largo" model="product.attribute">
+            <field name="name">Largo (cm)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <!-- Valores de Largo más comunes -->
+        <record id="value_largo_20" model="product.attribute.value">
+            <field name="name">20</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_largo_25" model="product.attribute.value">
+            <field name="name">25</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_largo_30" model="product.attribute.value">
+            <field name="name">30</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_largo_35" model="product.attribute.value">
+            <field name="name">35</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">4</field>
+        </record>
+        <record id="value_largo_40" model="product.attribute.value">
+            <field name="name">40</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">5</field>
+        </record>
+        <record id="value_largo_50" model="product.attribute.value">
+            <field name="name">50</field>
+            <field name="attribute_id" ref="attribute_largo"/>
+            <field name="sequence">6</field>
+        </record>
+
+        <!-- Atributo: Ancho -->
+        <record id="attribute_ancho" model="product.attribute">
+            <field name="name">Ancho (cm)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <!-- Valores de Ancho más comunes -->
+        <record id="value_ancho_15" model="product.attribute.value">
+            <field name="name">15</field>
+            <field name="attribute_id" ref="attribute_ancho"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_ancho_20" model="product.attribute.value">
+            <field name="name">20</field>
+            <field name="attribute_id" ref="attribute_ancho"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_ancho_25" model="product.attribute.value">
+            <field name="name">25</field>
+            <field name="attribute_id" ref="attribute_ancho"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_ancho_30" model="product.attribute.value">
+            <field name="name">30</field>
+            <field name="attribute_id" ref="attribute_ancho"/>
+            <field name="sequence">4</field>
+        </record>
+
+        <!-- Atributo: Alto -->
+        <record id="attribute_alto" model="product.attribute">
+            <field name="name">Alto (cm)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <!-- Valores de Alto más comunes -->
+        <record id="value_alto_10" model="product.attribute.value">
+            <field name="name">10</field>
+            <field name="attribute_id" ref="attribute_alto"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_alto_15" model="product.attribute.value">
+            <field name="name">15</field>
+            <field name="attribute_id" ref="attribute_alto"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_alto_20" model="product.attribute.value">
+            <field name="name">20</field>
+            <field name="attribute_id" ref="attribute_alto"/>
+            <field name="sequence">3</field>
+        </record>
+
+        <!-- Atributo: Ceja -->
+        <record id="attribute_ceja" model="product.attribute">
+            <field name="name">Ceja (cm)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <!-- Valores de Ceja -->
+        <record id="value_ceja_2" model="product.attribute.value">
+            <field name="name">2</field>
+            <field name="attribute_id" ref="attribute_ceja"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_ceja_3" model="product.attribute.value">
+            <field name="name">3</field>
+            <field name="attribute_id" ref="attribute_ceja"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_ceja_4" model="product.attribute.value">
+            <field name="name">4</field>
+            <field name="attribute_id" ref="attribute_ceja"/>
+            <field name="sequence">3</field>
+        </record>
+
+        <!-- ========== ESPECIFICACIONES CARTÓN ========== -->
+        
+        <!-- Atributo: Tipo de Flauta -->
+        <record id="attribute_flauta" model="product.attribute">
+            <field name="name">Flauta</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_flauta_c" model="product.attribute.value">
+            <field name="name">C</field>
+            <field name="attribute_id" ref="attribute_flauta"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_flauta_b" model="product.attribute.value">
+            <field name="name">B</field>
+            <field name="attribute_id" ref="attribute_flauta"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_flauta_e" model="product.attribute.value">
+            <field name="name">E</field>
+            <field name="attribute_id" ref="attribute_flauta"/>
+            <field name="sequence">3</field>
+        </record>
+
+        <!-- Atributo: Test -->
+        <record id="attribute_test" model="product.attribute">
+            <field name="name">Test</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_test_200" model="product.attribute.value">
+            <field name="name">200</field>
+            <field name="attribute_id" ref="attribute_test"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_test_250" model="product.attribute.value">
+            <field name="name">250</field>
+            <field name="attribute_id" ref="attribute_test"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_test_275" model="product.attribute.value">
+            <field name="name">275</field>
+            <field name="attribute_id" ref="attribute_test"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_test_300" model="product.attribute.value">
+            <field name="name">300</field>
+            <field name="attribute_id" ref="attribute_test"/>
+            <field name="sequence">4</field>
+        </record>
+
+        <!-- Atributo: KL (Kilolibras) -->
+        <record id="attribute_kl" model="product.attribute">
+            <field name="name">KL (Kilolibras)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_kl_32" model="product.attribute.value">
+            <field name="name">32</field>
+            <field name="attribute_id" ref="attribute_kl"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_kl_44" model="product.attribute.value">
+            <field name="name">44</field>
+            <field name="attribute_id" ref="attribute_kl"/>
+            <field name="sequence">2</field>
+        </record>
+
+        <!-- ========== MATERIALES ========== -->
+        
+        <!-- Atributo: Material -->
+        <record id="attribute_material" model="product.attribute">
+            <field name="name">Material</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_material_kraft" model="product.attribute.value">
+            <field name="name">KRAFT</field>
+            <field name="attribute_id" ref="attribute_material"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_material_interstock" model="product.attribute.value">
+            <field name="name">INTERSTOCK</field>
+            <field name="attribute_id" ref="attribute_material"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_material_monus" model="product.attribute.value">
+            <field name="name">MONUS</field>
+            <field name="attribute_id" ref="attribute_material"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_material_westrock" model="product.attribute.value">
+            <field name="name">WESTROCK</field>
+            <field name="attribute_id" ref="attribute_material"/>
+            <field name="sequence">4</field>
+        </record>
+
+        <!-- ========== COLORES IMPRESIÓN ========== -->
+        
+        <!-- Atributo: Colores -->
+        <record id="attribute_colores" model="product.attribute">
+            <field name="name">Colores Impresión</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_color_1" model="product.attribute.value">
+            <field name="name">1 Color</field>
+            <field name="attribute_id" ref="attribute_colores"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_color_2" model="product.attribute.value">
+            <field name="name">2 Colores</field>
+            <field name="attribute_id" ref="attribute_colores"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_color_3" model="product.attribute.value">
+            <field name="name">3 Colores</field>
+            <field name="attribute_id" ref="attribute_colores"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_color_4_cmyk" model="product.attribute.value">
+            <field name="name">4 Colores (CMYK)</field>
+            <field name="attribute_id" ref="attribute_colores"/>
+            <field name="sequence">4</field>
+        </record>
+        <record id="value_color_sin_impresion" model="product.attribute.value">
+            <field name="name">Sin Impresión</field>
+            <field name="attribute_id" ref="attribute_colores"/>
+            <field name="sequence">5</field>
+        </record>
+
+        <!-- ========== GRAMAJES ========== -->
+        
+        <!-- Atributo: Gramaje -->
+        <record id="attribute_gramaje" model="product.attribute">
+            <field name="name">Gramaje (g/m²)</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_gramaje_90" model="product.attribute.value">
+            <field name="name">90</field>
+            <field name="attribute_id" ref="attribute_gramaje"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_gramaje_125" model="product.attribute.value">
+            <field name="name">125</field>
+            <field name="attribute_id" ref="attribute_gramaje"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_gramaje_150" model="product.attribute.value">
+            <field name="name">150</field>
+            <field name="attribute_id" ref="attribute_gramaje"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_gramaje_175" model="product.attribute.value">
+            <field name="name">175</field>
+            <field name="attribute_id" ref="attribute_gramaje"/>
+            <field name="sequence">4</field>
+        </record>
+        <record id="value_gramaje_200" model="product.attribute.value">
+            <field name="name">200</field>
+            <field name="attribute_id" ref="attribute_gramaje"/>
+            <field name="sequence">5</field>
+        </record>
+
+        <!-- ========== TIPO DE PRODUCTO ========== -->
+        
+        <!-- Atributo: Tipo Caja -->
+        <record id="attribute_tipo_caja" model="product.attribute">
+            <field name="name">Tipo de Caja</field>
+            <field name="display_type">select</field>
+            <field name="create_variant">dynamic</field>
+        </record>
+
+        <record id="value_tipo_caja_tapa_fondo" model="product.attribute.value">
+            <field name="name">Tapa y Fondo</field>
+            <field name="attribute_id" ref="attribute_tipo_caja"/>
+            <field name="sequence">1</field>
+        </record>
+        <record id="value_tipo_caja_jumbo" model="product.attribute.value">
+            <field name="name">Jumbo</field>
+            <field name="attribute_id" ref="attribute_tipo_caja"/>
+            <field name="sequence">2</field>
+        </record>
+        <record id="value_tipo_caja_exportacion" model="product.attribute.value">
+            <field name="name">Exportación</field>
+            <field name="attribute_id" ref="attribute_tipo_caja"/>
+            <field name="sequence">3</field>
+        </record>
+        <record id="value_tipo_caja_americana" model="product.attribute.value">
+            <field name="name">Americana</field>
+            <field name="attribute_id" ref="attribute_tipo_caja"/>
+            <field name="sequence">4</field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reglas de Automatización de Alertas por Defecto -->
+
+    <!-- Regla 1: OEE Crítico -->
+    <record id="alert_automation_oee_critical" model="megastock.alert.automation">
+        <field name="name">OEE Crítico - Debajo del 70%</field>
+        <field name="sequence">10</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando el OEE cae por debajo del 70% crítico</field>
+        <field name="trigger_model">megastock.production.kpi</field>
+        <field name="trigger_condition">record.kpi_type == 'oee' and record.value &lt; 70</field>
+        <field name="alert_type">kpi</field>
+        <field name="alert_priority">4</field>
+        <field name="alert_severity">critical</field>
+        <field name="alert_title_template">🚨 OEE CRÍTICO: ${value}% en ${workcenter_id.name}</field>
+        <field name="alert_message_template">El OEE ha caído a ${value}% en ${workcenter_id.name}, por debajo del umbral crítico de 70%. 
+
+Componentes a revisar:
+- Disponibilidad: Verificar paradas no planificadas
+- Performance: Revisar velocidad de producción  
+- Calidad: Verificar rechazos y reprocesos
+
+Acción inmediata requerida.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">30</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">15</field>
+        <field name="only_working_hours" eval="False"/>
+        <field name="auto_action_code">
+# Crear análisis automático de componentes OEE
+if record.workcenter_id:
+    env['megastock.production.analysis'].create({
+        'name': f'Análisis OEE Crítico - {record.workcenter_id.name}',
+        'analysis_type': 'oee_breakdown',
+        'workcenter_id': record.workcenter_id.id,
+        'trigger_alert_id': alert.id,
+        'auto_generated': True
+    })
+_logger.info(f"Análisis OEE automático creado para alerta {alert.id}")
+        </field>
+    </record>
+
+    <!-- Regla 2: Cola de Trabajo Saturada -->
+    <record id="alert_automation_queue_saturated" model="megastock.alert.automation">
+        <field name="name">Cola de Trabajo Saturada</field>
+        <field name="sequence">20</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando una cola supera los 100 items</field>
+        <field name="trigger_model">megastock.work.queue</field>
+        <field name="trigger_condition">record.current_items_count > 100</field>
+        <field name="alert_type">capacity</field>
+        <field name="alert_priority">3</field>
+        <field name="alert_severity">warning</field>
+        <field name="alert_title_template">⚠️ Cola Saturada: ${name}</field>
+        <field name="alert_message_template">La cola ${name} tiene ${current_items_count} items pendientes (Límite recomendado: 100).
+
+Estado actual:
+- Items en cola: ${current_items_count}
+- Tiempo promedio espera: ${avg_wait_time} min
+- Línea de producción: ${production_line}
+
+Se recomienda optimizar o redistribuir carga.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">60</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">45</field>
+        <field name="auto_action_code">
+# Intentar optimización automática de la cola
+record.optimize_queue()
+_logger.info(f"Optimización automática ejecutada en cola {record.name}")
+        </field>
+    </record>
+
+    <!-- Regla 3: Producción Retrasada -->
+    <record id="alert_automation_production_delayed" model="megastock.alert.automation">
+        <field name="name">Producción Retrasada</field>
+        <field name="sequence">30</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando una producción está retrasada</field>
+        <field name="trigger_model">mrp.production</field>
+        <field name="trigger_condition">record.date_planned_start &lt; datetime.now() and record.state not in ['done', 'cancel']</field>
+        <field name="alert_type">schedule</field>
+        <field name="alert_priority">3</field>
+        <field name="alert_severity">warning</field>
+        <field name="alert_title_template">📅 Producción Retrasada: ${name}</field>
+        <field name="alert_message_template">La orden de producción ${name} está retrasada.
+
+Detalles:
+- Producto: ${product_id.name}
+- Cantidad: ${product_qty} ${product_uom_id.name}
+- Fecha programada: ${date_planned_start}
+- Estado actual: ${state}
+
+Revisar cronograma y reprogramar si es necesario.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">120</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">60</field>
+        <field name="only_working_hours" eval="True"/>
+        <field name="working_hours_start">6.0</field>
+        <field name="working_hours_end">22.0</field>
+    </record>
+
+    <!-- Regla 4: Calidad Baja -->
+    <record id="alert_automation_quality_low" model="megastock.alert.automation">
+        <field name="name">Calidad Baja - Debajo del 95%</field>
+        <field name="sequence">40</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando la calidad cae por debajo del 95%</field>
+        <field name="trigger_model">megastock.production.kpi</field>
+        <field name="trigger_condition">record.kpi_type == 'quality' and record.value &lt; 95</field>
+        <field name="alert_type">quality</field>
+        <field name="alert_priority">4</field>
+        <field name="alert_severity">error</field>
+        <field name="alert_title_template">🔴 Calidad Baja: ${value}% en ${workcenter_id.name}</field>
+        <field name="alert_message_template">La calidad ha bajado a ${value}% en ${workcenter_id.name} (Mínimo aceptable: 95%).
+
+Posibles causas:
+- Problema en materias primas
+- Desgaste de herramientas/moldes
+- Configuración incorrecta de máquina
+- Falta de capacitación del operador
+
+Revisar inmediatamente proceso de producción.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">20</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">10</field>
+        <field name="max_alerts_per_hour">3</field>
+        <field name="auto_action_code">
+# Para alertas críticas de calidad, marcar para revisión
+if record.value &lt; 90:
+    record.workcenter_id.message_post(
+        body=f"Alerta crítica de calidad: {record.value}%. Revisar antes de continuar producción.",
+        subject="⚠️ CALIDAD CRÍTICA"
+    )
+        </field>
+    </record>
+
+    <!-- Regla 5: Utilización Capacidad Alta -->
+    <record id="alert_automation_capacity_high" model="megastock.alert.automation">
+        <field name="name">Utilización de Capacidad Alta</field>
+        <field name="sequence">50</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando la utilización supera el 95%</field>
+        <field name="trigger_model">megastock.capacity.planning</field>
+        <field name="trigger_condition">record.utilization_rate > 95 and record.state == 'active'</field>
+        <field name="alert_type">capacity</field>
+        <field name="alert_priority">3</field>
+        <field name="alert_severity">warning</field>
+        <field name="alert_title_template">⚡ Capacidad al Límite: ${utilization_rate}%</field>
+        <field name="alert_message_template">La utilización de capacidad está al ${utilization_rate}%, cerca del límite máximo.
+
+Información del plan:
+- Plan: ${name}
+- Fecha: ${planning_date}
+- Capacidad total: ${total_capacity}h
+- Capacidad utilizada: ${utilized_capacity}h
+
+Considerar redistribución de carga o horas extra.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">240</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">120</field>
+    </record>
+
+    <!-- Regla 6: Disponibilidad Baja -->
+    <record id="alert_automation_availability_low" model="megastock.alert.automation">
+        <field name="name">Disponibilidad Baja - Debajo del 85%</field>
+        <field name="sequence">60</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando la disponibilidad cae por debajo del 85%</field>
+        <field name="trigger_model">megastock.production.kpi</field>
+        <field name="trigger_condition">record.kpi_type == 'availability' and record.value &lt; 85</field>
+        <field name="alert_type">downtime</field>
+        <field name="alert_priority">3</field>
+        <field name="alert_severity">warning</field>
+        <field name="alert_title_template">⏸️ Disponibilidad Baja: ${value}% en ${workcenter_id.name}</field>
+        <field name="alert_message_template">La disponibilidad ha caído a ${value}% en ${workcenter_id.name} (Mínimo recomendado: 85%).
+
+Posibles causas de tiempo muerto:
+- Paradas no planificadas
+- Mantenimiento correctivo
+- Falta de materiales
+- Cambios de producto/setup
+
+Revisar causas de paradas y planificar mantenimiento preventivo.</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">45</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">30</field>
+    </record>
+
+    <!-- Regla 7: Performance Baja -->
+    <record id="alert_automation_performance_low" model="megastock.alert.automation">
+        <field name="name">Performance Baja - Debajo del 80%</field>
+        <field name="sequence">70</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando el performance cae por debajo del 80%</field>
+        <field name="trigger_model">megastock.production.kpi</field>
+        <field name="trigger_condition">record.kpi_type == 'performance' and record.value &lt; 80</field>
+        <field name="alert_type">kpi</field>
+        <field name="alert_priority">3</field>
+        <field name="alert_severity">warning</field>
+        <field name="alert_title_template">🐌 Performance Bajo: ${value}% en ${workcenter_id.name}</field>
+        <field name="alert_message_template">El performance ha bajado a ${value}% en ${workcenter_id.name} (Mínimo recomendado: 80%).
+
+Posibles causas:
+- Velocidad de máquina reducida
+- Micro-paradas frecuentes
+- Falta de capacitación del operador
+- Problemas en materias primas
+
+Revisar velocidad de producción y optimizar proceso.</field>
+        <field name="line_filter">all</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">60</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">45</field>
+    </record>
+
+    <!-- Regla 8: Cuello de Botella Detectado -->
+    <record id="alert_automation_bottleneck" model="megastock.alert.automation">
+        <field name="name">Cuello de Botella Detectado</field>
+        <field name="sequence">80</field>
+        <field name="active" eval="True"/>
+        <field name="description">Genera alerta cuando se detecta un cuello de botella</field>
+        <field name="trigger_model">megastock.capacity.planning</field>
+        <field name="trigger_condition">hasattr(record, 'bottleneck_severity') and record.bottleneck_severity == 'high'</field>
+        <field name="alert_type">bottleneck</field>
+        <field name="alert_priority">4</field>
+        <field name="alert_severity">error</field>
+        <field name="alert_title_template">🚧 Cuello de Botella: ${name}</field>
+        <field name="alert_message_template">Se ha detectado un cuello de botella de alta severidad en el plan ${name}.
+
+Información:
+- Fecha: ${planning_date}
+- Utilización: ${utilization_rate}%
+- Capacidad limitante identificada
+
+Acciones recomendadas:
+- Revisar asignación de recursos
+- Considerar subcontratación
+- Reprogramar órdenes no críticas</field>
+        <field name="prevent_duplicates" eval="True"/>
+        <field name="duplicate_window">180</field>
+        <field name="auto_escalate" eval="True"/>
+        <field name="escalation_time">60</field>
+        <field name="auto_action_code">
+# Ejecutar análisis automático de cuellos de botella
+record.analyze_bottlenecks()
+_logger.info(f"Análisis de cuellos de botella ejecutado para plan {record.name}")
+        </field>
+    </record>
+
+    <!-- Reglas de Escalación por Defecto -->
+
+    <!-- Escalación para Alertas Críticas -->
+    <record id="escalation_rule_critical" model="megastock.alert.escalation.rule">
+        <field name="name">Escalación Alertas Críticas</field>
+        <field name="sequence">10</field>
+        <field name="active" eval="True"/>
+        <field name="severity">critical</field>
+        <field name="escalation_time">15</field>
+        <field name="max_escalations">3</field>
+        <field name="production_line">all</field>
+    </record>
+
+    <!-- Escalación para Alertas de Error -->
+    <record id="escalation_rule_error" model="megastock.alert.escalation.rule">
+        <field name="name">Escalación Alertas de Error</field>
+        <field name="sequence">20</field>
+        <field name="active" eval="True"/>
+        <field name="severity">error</field>
+        <field name="escalation_time">30</field>
+        <field name="max_escalations">2</field>
+        <field name="production_line">all</field>
+    </record>
+
+    <!-- Escalación para KPIs -->
+    <record id="escalation_rule_kpi" model="megastock.alert.escalation.rule">
+        <field name="name">Escalación Alertas KPI</field>
+        <field name="sequence">30</field>
+        <field name="active" eval="True"/>
+        <field name="alert_type">kpi</field>
+        <field name="escalation_time">20</field>
+        <field name="max_escalations">3</field>
+        <field name="production_line">all</field>
+    </record>
+
+    <!-- Canal de Notificación por Defecto -->
+    <record id="notification_channel_internal" model="megastock.alert.notification.channel">
+        <field name="name">Notificaciones Internas Odoo</field>
+        <field name="active" eval="True"/>
+        <field name="channel_type">internal</field>
+        <field name="alert_types">all</field>
+        <field name="min_priority">3</field>
+    </record>
+
+</odoo>

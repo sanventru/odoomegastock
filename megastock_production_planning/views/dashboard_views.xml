@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Dashboard de Control de Producción en Tiempo Real -->
+    
+    <!-- Action para Dashboard Principal -->
+    <record id="action_production_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard de Producción</field>
+        <field name="tag">megastock_production_dashboard</field>
+        <field name="target">fullscreen</field>
+    </record>
+
+    <!-- Dashboard de KPIs -->
+    <record id="action_kpi_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard KPIs</field>
+        <field name="tag">megastock_kpi_dashboard</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Dashboard de Capacidad -->
+    <record id="action_capacity_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard de Capacidad</field>
+        <field name="tag">megastock_capacity_dashboard</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Dashboard de Cronograma Gantt -->
+    <record id="action_schedule_gantt_dashboard" model="ir.actions.client">
+        <field name="name">Cronograma Gantt</field>
+        <field name="tag">megastock_schedule_gantt</field>
+        <field name="target">current</field>
+    </record>
+
+    <!-- Menú Principal del Dashboard -->
+    <menuitem id="menu_production_dashboard_root"
+              name="Dashboard Producción"
+              parent="mrp.menu_mrp_root"
+              sequence="5"/>
+
+    <!-- Submenús del Dashboard -->
+    <menuitem id="menu_production_dashboard_main"
+              name="Control en Tiempo Real"
+              parent="menu_production_dashboard_root"
+              action="action_production_dashboard"
+              sequence="1"/>
+
+    <menuitem id="menu_kpi_dashboard"
+              name="KPIs y Métricas"
+              parent="menu_production_dashboard_root"
+              action="action_kpi_dashboard"
+              sequence="2"/>
+
+    <menuitem id="menu_capacity_dashboard"
+              name="Capacidad y Recursos"
+              parent="menu_production_dashboard_root"
+              action="action_capacity_dashboard"
+              sequence="3"/>
+
+    <menuitem id="menu_schedule_gantt_dashboard"
+              name="Cronograma Gantt"
+              parent="menu_production_dashboard_root"
+              action="action_schedule_gantt_dashboard"
+              sequence="4"/>
+
+    <!-- Vista Kanben para análisis rápido -->
+    <record id="view_production_analysis_kanban" model="ir.ui.view">
+        <field name="name">Análisis Producción Kanban</field>
+        <field name="model">megastock.production.analysis</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="analysis_date"/>
+                <field name="overall_oee"/>
+                <field name="on_time_delivery_rate"/>
+                <field name="production_line_filter"/>
+                <field name="trend_direction"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong><field name="display_name"/></strong>
+                                    </div>
+                                    <div class="col-6 text-right">
+                                        <span t-attf-class="badge badge-#{record.trend_direction.raw_value == 'improving' ? 'success' : record.trend_direction.raw_value == 'declining' ? 'danger' : 'warning'}">
+                                            <field name="trend_direction"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <div class="text-muted">OEE</div>
+                                        <div class="h4">
+                                            <span t-attf-class="#{record.overall_oee.raw_value &lt; 70 ? 'text-danger' : record.overall_oee.raw_value &lt; 85 ? 'text-warning' : 'text-success'}">
+                                                <field name="overall_oee"/>%
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">Entregas</div>
+                                        <div class="h4">
+                                            <span t-attf-class="#{record.on_time_delivery_rate.raw_value &lt; 90 ? 'text-danger' : record.on_time_delivery_rate.raw_value &lt; 95 ? 'text-warning' : 'text-success'}">
+                                                <field name="on_time_delivery_rate"/>%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <div class="progress" style="height: 5px;">
+                                            <div class="progress-bar" 
+                                                 t-attf-class="bg-#{record.overall_oee.raw_value &lt; 70 ? 'danger' : record.overall_oee.raw_value &lt; 85 ? 'warning' : 'success'}"
+                                                 t-attf-style="width: #{record.overall_oee.raw_value}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Vista Tree mejorada para KPIs -->
+    <record id="view_production_kpi_tree_dashboard" model="ir.ui.view">
+        <field name="name">KPIs Producción Tree Dashboard</field>
+        <field name="model">megastock.production.kpi</field>
+        <field name="arch" type="xml">
+            <tree decoration-success="alert_level == 'green'" 
+                  decoration-warning="alert_level == 'yellow'" 
+                  decoration-danger="alert_level == 'red'"
+                  create="false" edit="false">
+                <field name="measurement_date"/>
+                <field name="workcenter_id"/>
+                <field name="production_line"/>
+                <field name="oee_percentage" widget="percentage"/>
+                <field name="availability_percentage" widget="percentage"/>
+                <field name="performance_percentage" widget="percentage"/>
+                <field name="quality_percentage" widget="percentage"/>
+                <field name="on_time_delivery_rate" widget="percentage"/>
+                <field name="utilization_rate" widget="percentage"/>
+                <field name="alert_level" widget="badge"/>
+                <field name="performance_trend" widget="badge"/>
+                <field name="target_met" widget="boolean_toggle"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Graph para tendencias -->
+    <record id="view_production_kpi_graph" model="ir.ui.view">
+        <field name="name">KPIs Producción Graph</field>
+        <field name="model">megastock.production.kpi</field>
+        <field name="arch" type="xml">
+            <graph string="Tendencia KPIs" type="line">
+                <field name="measurement_date" type="row"/>
+                <field name="oee_percentage" type="measure"/>
+                <field name="on_time_delivery_rate" type="measure"/>
+                <field name="utilization_rate" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Vista Pivot para análisis -->
+    <record id="view_production_kpi_pivot" model="ir.ui.view">
+        <field name="name">KPIs Producción Pivot</field>
+        <field name="model">megastock.production.kpi</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis KPIs">
+                <field name="production_line" type="row"/>
+                <field name="measurement_date" type="col"/>
+                <field name="oee_percentage" type="measure"/>
+                <field name="on_time_delivery_rate" type="measure"/>
+                <field name="utilization_rate" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Action para KPIs con vistas múltiples -->
+    <record id="action_production_kpi_dashboard_multi" model="ir.actions.act_window">
+        <field name="name">KPIs de Producción</field>
+        <field name="res_model">megastock.production.kpi</field>
+        <field name="view_mode">tree,graph,pivot,form</field>
+        <field name="view_id" ref="view_production_kpi_tree_dashboard"/>
+        <field name="domain">[('measurement_date', '>=', (context_today() - datetime.timedelta(days=30)).strftime('%Y-%m-%d'))]</field>
+        <field name="context">{
+            'group_by': ['production_line', 'measurement_date:day'],
+            'search_default_group_by_line': 1,
+            'search_default_this_month': 1
+        }</field>
+    </record>
+
+    <!-- Vistas para Work Queue Dashboard -->
+    <record id="view_work_queue_kanban_dashboard" model="ir.ui.view">
+        <field name="name">Work Queue Kanban Dashboard</field>
+        <field name="model">megastock.work.queue</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="name"/>
+                <field name="state"/>
+                <field name="current_items_count"/>
+                <field name="average_waiting_time"/>
+                <field name="production_line"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="row">
+                                    <div class="col-8">
+                                        <strong><field name="name"/></strong>
+                                        <br/>
+                                        <span class="text-muted"><field name="production_line"/></span>
+                                    </div>
+                                    <div class="col-4 text-right">
+                                        <span t-attf-class="badge badge-#{record.state.raw_value == 'active' ? 'success' : 'secondary'}">
+                                            <field name="state"/>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <div class="text-muted">Items en Cola</div>
+                                        <div class="h3"><field name="current_items_count"/></div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-muted">Espera Promedio</div>
+                                        <div class="h5"><field name="average_waiting_time"/> min</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Action para Vista de Colas -->
+    <record id="action_work_queue_dashboard" model="ir.actions.act_window">
+        <field name="name">Estado de Colas</field>
+        <field name="res_model">megastock.work.queue</field>
+        <field name="view_mode">kanban,tree,form</field>
+        <field name="view_id" ref="view_work_queue_kanban_dashboard"/>
+        <field name="domain">[('state', '=', 'active')]</field>
+    </record>
+
+    <!-- Menú adicional para colas -->
+    <menuitem id="menu_work_queue_dashboard"
+              name="Estado de Colas"
+              parent="menu_production_dashboard_root"
+              action="action_work_queue_dashboard"
+              sequence="5"/>
+
+</odoo>

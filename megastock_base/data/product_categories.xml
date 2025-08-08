@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- CATEGORÍA PRINCIPAL: CAJAS -->
+        <record id="product_category_cajas" model="product.category">
+            <field name="name">CAJAS</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- Subcategorías de CAJAS -->
+        <record id="product_category_cajas_tapa_fondo" model="product.category">
+            <field name="name">Cajas Tapa y Fondo</field>
+            <field name="parent_id" ref="product_category_cajas"/>
+        </record>
+
+        <record id="product_category_cajas_jumbo" model="product.category">
+            <field name="name">Cajas Jumbo</field>
+            <field name="parent_id" ref="product_category_cajas"/>
+        </record>
+
+        <record id="product_category_cajas_exportacion" model="product.category">
+            <field name="name">Cajas Exportación</field>
+            <field name="parent_id" ref="product_category_cajas"/>
+        </record>
+
+        <!-- CATEGORÍA PRINCIPAL: LÁMINAS -->
+        <record id="product_category_laminas" model="product.category">
+            <field name="name">LÁMINAS</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- Subcategorías de LÁMINAS por gramaje -->
+        <record id="product_category_laminas_125g" model="product.category">
+            <field name="name">Láminas 125g</field>
+            <field name="parent_id" ref="product_category_laminas"/>
+        </record>
+
+        <record id="product_category_laminas_150g" model="product.category">
+            <field name="name">Láminas 150g</field>
+            <field name="parent_id" ref="product_category_laminas"/>
+        </record>
+
+        <record id="product_category_laminas_175g" model="product.category">
+            <field name="name">Láminas 175g</field>
+            <field name="parent_id" ref="product_category_laminas"/>
+        </record>
+
+        <!-- CATEGORÍA PRINCIPAL: PAPEL PERIÓDICO -->
+        <record id="product_category_papel_periodico" model="product.category">
+            <field name="name">PAPEL PERIÓDICO</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- Subcategorías por tamaño de resma -->
+        <record id="product_category_papel_resma_500" model="product.category">
+            <field name="name">Resma 500 hojas</field>
+            <field name="parent_id" ref="product_category_papel_periodico"/>
+        </record>
+
+        <record id="product_category_papel_resma_1000" model="product.category">
+            <field name="name">Resma 1000 hojas</field>
+            <field name="parent_id" ref="product_category_papel_periodico"/>
+        </record>
+
+        <!-- CATEGORÍA PRINCIPAL: PLANCHAS -->
+        <record id="product_category_planchas" model="product.category">
+            <field name="name">PLANCHAS</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- CATEGORÍA PRINCIPAL: SEPARADORES -->
+        <record id="product_category_separadores" model="product.category">
+            <field name="name">SEPARADORES</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- CATEGORÍA PRINCIPAL: MATERIAS PRIMAS -->
+        <record id="product_category_materias_primas" model="product.category">
+            <field name="name">MATERIAS PRIMAS</field>
+            <field name="parent_id" ref="product.product_category_all"/>
+            <field name="property_cost_method">fifo</field>
+            <field name="property_valuation">real_time</field>
+        </record>
+
+        <!-- Subcategorías de Materias Primas -->
+        <record id="product_category_papel_kraft" model="product.category">
+            <field name="name">Papel KRAFT</field>
+            <field name="parent_id" ref="product_category_materias_primas"/>
+        </record>
+
+        <record id="product_category_papel_medium" model="product.category">
+            <field name="name">Papel Medium</field>
+            <field name="parent_id" ref="product_category_materias_primas"/>
+        </record>
+
+        <record id="product_category_papel_liner" model="product.category">
+            <field name="name">Papel Liner</field>
+            <field name="parent_id" ref="product_category_materias_primas"/>
+        </record>
+
+        <record id="product_category_tintas" model="product.category">
+            <field name="name">Tintas</field>
+            <field name="parent_id" ref="product_category_materias_primas"/>
+        </record>
+
+        <record id="product_category_adhesivos" model="product.category">
+            <field name="name">Adhesivos</field>
+            <field name="parent_id" ref="product_category_materias_primas"/>
+        </record>
+
+    </data>
+</odoo>

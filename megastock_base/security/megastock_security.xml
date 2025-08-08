@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- GRUPOS DE SEGURIDAD MEGASTOCK -->
+        
+        <!-- Grupo: Planificación (Gabriela Encarnación) -->
+        <record id="group_megastock_planning" model="res.groups">
+            <field name="name">MEGASTOCK - Planificación</field>
+            <field name="comment">Administrador de producción - Control total de planificación y manufactura</field>
+            <field name="category_id" ref="base.module_category_manufacturing"/>
+            <field name="implied_ids" eval="[(4, ref('mrp.group_mrp_manager')), 
+                                             (4, ref('stock.group_stock_manager')), 
+                                             (4, ref('purchase.group_purchase_manager'))]"/>
+        </record>
+
+        <!-- Grupo: Comercial -->
+        <record id="group_megastock_commercial" model="res.groups">
+            <field name="name">MEGASTOCK - Comercial</field>
+            <field name="comment">Gestión de pedidos y facturación</field>
+            <field name="category_id" ref="base.module_category_sales"/>
+            <field name="implied_ids" eval="[(4, ref('sales_team.group_sale_salesman')), 
+                                             (4, ref('account.group_account_invoice'))]"/>
+        </record>
+
+        <!-- Grupo: Operadores -->
+        <record id="group_megastock_operators" model="res.groups">
+            <field name="name">MEGASTOCK - Operadores</field>
+            <field name="comment">Acceso por estación de trabajo - Ejecución de órdenes</field>
+            <field name="category_id" ref="base.module_category_manufacturing"/>
+            <field name="implied_ids" eval="[(4, ref('mrp.group_mrp_user')), 
+                                             (4, ref('stock.group_stock_user'))]"/>
+        </record>
+
+        <!-- Grupo: Supervisores -->
+        <record id="group_megastock_supervisors" model="res.groups">
+            <field name="name">MEGASTOCK - Supervisores</field>
+            <field name="comment">Reportes y control - Supervisión de procesos</field>
+            <field name="category_id" ref="base.module_category_manufacturing"/>
+            <field name="implied_ids" eval="[(4, ref('mrp.group_mrp_user')), 
+                                             (4, ref('stock.group_stock_user')),
+                                             (4, ref('account.group_account_readonly'))]"/>
+        </record>
+
+        <!-- REGLAS DE ACCESO A DATOS -->
+
+        <!-- Regla: Planificación - Acceso total -->
+        <record id="mrp_production_planning_rule" model="ir.rule">
+            <field name="name">MRP Production: Planificación - Acceso Total</field>
+            <field name="model_id" ref="mrp.model_mrp_production"/>
+            <field name="groups" eval="[(4, ref('megastock_base.group_megastock_planning'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="1"/>
+            <field name="perm_unlink" eval="1"/>
+        </record>
+
+        <!-- Regla: Operadores - Solo sus estaciones -->
+        <record id="mrp_workorder_operators_rule" model="ir.rule">
+            <field name="name">MRP Workorder: Operadores - Solo sus estaciones</field>
+            <field name="model_id" ref="mrp.model_mrp_workorder"/>
+            <field name="groups" eval="[(4, ref('megastock_base.group_megastock_operators'))]"/>
+            <field name="domain_force">[('workcenter_id.name', 'in', ['PREPRINTER', 'CORRUGADORA', 'MICROCORRUGADO', 'TROQUELADORA', 'GUILLOTINA', 'DOBLADORA', 'SIERRA', 'EMPAQUE', 'CONVERTIDOR'])]</field>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="0"/>
+            <field name="perm_unlink" eval="0"/>
+        </record>
+
+        <!-- Regla: Comercial - Solo ventas -->
+        <record id="sale_order_commercial_rule" model="ir.rule">
+            <field name="name">Sale Order: Comercial - Gestión de ventas</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="groups" eval="[(4, ref('megastock_base.group_megastock_commercial'))]"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="perm_read" eval="1"/>
+            <field name="perm_write" eval="1"/>
+            <field name="perm_create" eval="1"/>
+            <field name="perm_unlink" eval="0"/>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista del Wizard de Migración -->
+        <record id="view_product_migration_wizard" model="ir.ui.view">
+            <field name="name">megastock.product.migration.wizard.form</field>
+            <field name="model">megastock.product.migration.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Migración de Códigos MEGASTOCK">
+                    <header>
+                        <button name="action_migrate_products" type="object" 
+                                string="Ejecutar Migración" class="btn-primary"/>
+                        <button name="action_download_template" type="object" 
+                                string="Descargar Plantilla CSV" class="btn-secondary"
+                                attrs="{'invisible': [('migration_type', '!=', 'csv_import')]}"/>
+                    </header>
+                    
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>Migración de Códigos de Productos</h1>
+                            <p>Herramienta para migrar códigos existentes al sistema MEGASTOCK</p>
+                        </div>
+                        
+                        <group>
+                            <field name="migration_type" widget="radio"/>
+                        </group>
+                        
+                        <!-- Migración Manual -->
+                        <group string="Migración Manual" 
+                               attrs="{'invisible': [('migration_type', '!=', 'manual')]}">
+                            <field name="old_code" required="1" 
+                                   attrs="{'required': [('migration_type', '=', 'manual')]}"/>
+                            <field name="new_code" placeholder="Se generará automáticamente si se deja vacío"/>
+                        </group>
+                        
+                        <!-- Importación CSV -->
+                        <group string="Importación desde CSV" 
+                               attrs="{'invisible': [('migration_type', '!=', 'csv_import')]}">
+                            <field name="csv_file" filename="csv_filename" required="1"
+                                   attrs="{'required': [('migration_type', '=', 'csv_import')]}"/>
+                            <field name="csv_filename" invisible="1"/>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Formato CSV esperado:</strong><br/>
+                                • codigo_antiguo: Código actual del producto<br/>
+                                • codigo_nuevo: Nuevo código MEGASTOCK (opcional)<br/>
+                                • categoria: cajas, laminas, papel, planchas, separadores, materias_primas
+                            </div>
+                        </group>
+                        
+                        <!-- Detección Automática -->
+                        <group string="Detección Automática" 
+                               attrs="{'invisible': [('migration_type', '!=', 'auto_detect')]}">
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Detección Automática:</strong><br/>
+                                Esta opción buscará todos los productos en categorías MEGASTOCK 
+                                que no tengan código asignado y generará códigos automáticamente.
+                            </div>
+                        </group>
+                        
+                        <!-- Log de Migración -->
+                        <group string="Resultado de la Migración" 
+                               attrs="{'invisible': [('migration_log', '=', False)]}">
+                            <field name="migration_log" nolabel="1" readonly="1" widget="text"/>
+                        </group>
+                        
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción del Wizard -->
+        <record id="action_product_migration_wizard" model="ir.actions.act_window">
+            <field name="name">Migración de Códigos</field>
+            <field name="res_model">megastock.product.migration.wizard</field>
+            <field name="view_mode">form</field>
+            <field name="target">new</field>
+            <field name="context">{}</field>
+        </record>
+
+    </data>
+</odoo>

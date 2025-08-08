@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- CENTRO DE TRABAJO: PREPRINTER -->
+        <record id="workcenter_preprinter" model="mrp.workcenter">
+            <field name="name">PREPRINTER</field>
+            <field name="code">PPR</field>
+            <field name="note">Impresión flexográfica - Proceso de impresión de diseños</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">15</field>  <!-- 15 minutos setup -->
+            <field name="time_stop">5</field>   <!-- 5 minutos limpieza -->
+            <field name="costs_hour">25.0</field>
+            <field name="default_capacity">100</field>   <!-- Unidades por hora -->
+            <field name="color">2</field>       <!-- Color naranja -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: CORRUGADORA -->
+        <record id="workcenter_corrugadora" model="mrp.workcenter">
+            <field name="name">CORRUGADORA</field>
+            <field name="code">CORR</field>
+            <field name="note">Producción de cartón corrugado - Proceso principal</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">30</field>  <!-- 30 minutos setup -->
+            <field name="time_stop">10</field>   <!-- 10 minutos limpieza -->
+            <field name="costs_hour">40.0</field>
+            <field name="default_capacity">150</field>   <!-- Metros por hora -->
+            <field name="color">3</field>       <!-- Color amarillo -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: MICROCORRUGADO -->
+        <record id="workcenter_microcorrugado" model="mrp.workcenter">
+            <field name="name">MICROCORRUGADO</field>
+            <field name="code">MICRO</field>
+            <field name="note">Proceso específico para cajas de microcorrugado</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">20</field>  <!-- 20 minutos setup -->
+            <field name="time_stop">8</field>    <!-- 8 minutos limpieza -->
+            <field name="costs_hour">35.0</field>
+            <field name="default_capacity">80</field>    <!-- Unidades por hora -->
+            <field name="color">5</field>       <!-- Color azul -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: TROQUELADORA -->
+        <record id="workcenter_troqueladora" model="mrp.workcenter">
+            <field name="name">TROQUELADORA</field>
+            <field name="code">TROQ</field>
+            <field name="note">Cortes especiales y troquelado de formas</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">25</field>  <!-- 25 minutos setup -->
+            <field name="time_stop">10</field>   <!-- 10 minutos limpieza -->
+            <field name="costs_hour">30.0</field>
+            <field name="default_capacity">120</field>   <!-- Unidades por hora -->
+            <field name="color">6</field>       <!-- Color violeta -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: GUILLOTINA -->
+        <record id="workcenter_guillotina" model="mrp.workcenter">
+            <field name="name">GUILLOTINA</field>
+            <field name="code">GUILL</field>
+            <field name="note">Cortes finales y dimensionado</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">10</field>  <!-- 10 minutos setup -->
+            <field name="time_stop">5</field>    <!-- 5 minutos limpieza -->
+            <field name="costs_hour">20.0</field>
+            <field name="default_capacity">200</field>   <!-- Cortes por hora -->
+            <field name="color">1</field>       <!-- Color rojo -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: DOBLADORA -->
+        <record id="workcenter_dobladora" model="mrp.workcenter">
+            <field name="name">DOBLADORA</field>
+            <field name="code">DOBL</field>
+            <field name="note">Proceso opcional para doblez de cajas</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">15</field>  <!-- 15 minutos setup -->
+            <field name="time_stop">5</field>    <!-- 5 minutos limpieza -->
+            <field name="costs_hour">22.0</field>
+            <field name="default_capacity">90</field>    <!-- Unidades por hora -->
+            <field name="color">4</field>       <!-- Color verde -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: SIERRA -->
+        <record id="workcenter_sierra" model="mrp.workcenter">
+            <field name="name">SIERRA</field>
+            <field name="code">SIER</field>
+            <field name="note">Corte y acabado especializado</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">12</field>  <!-- 12 minutos setup -->
+            <field name="time_stop">8</field>    <!-- 8 minutos limpieza -->
+            <field name="costs_hour">28.0</field>
+            <field name="default_capacity">110</field>   <!-- Unidades por hora -->
+            <field name="color">7</field>       <!-- Color gris -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: EMPAQUE -->
+        <record id="workcenter_empaque" model="mrp.workcenter">
+            <field name="name">EMPAQUE</field>
+            <field name="code">EMP</field>
+            <field name="note">Proceso final de empaque y preparación para entrega</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">5</field>   <!-- 5 minutos setup -->
+            <field name="time_stop">3</field>    <!-- 3 minutos limpieza -->
+            <field name="costs_hour">15.0</field>
+            <field name="default_capacity">180</field>   <!-- Unidades por hora -->
+            <field name="color">8</field>       <!-- Color celeste -->
+        </record>
+
+        <!-- CENTRO DE TRABAJO: CONVERTIDOR (para papel periódico) -->
+        <record id="workcenter_convertidor" model="mrp.workcenter">
+            <field name="name">CONVERTIDOR</field>
+            <field name="code">CONV</field>
+            <field name="note">Conversión de papel periódico en resmas</field>
+            <field name="time_efficiency">100</field>
+            <field name="time_start">20</field>  <!-- 20 minutos setup -->
+            <field name="time_stop">10</field>   <!-- 10 minutos limpieza -->
+            <field name="costs_hour">32.0</field>
+            <field name="default_capacity">60</field>    <!-- Resmas por hora -->
+            <field name="color">9</field>       <!-- Color rosa -->
+        </record>
+
+    </data>
+</odoo>

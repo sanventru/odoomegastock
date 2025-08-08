@@ -1,0 +1,12 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_mrp_production_planning,mrp.production.planning,mrp.model_mrp_production,megastock_base.group_megastock_planning,1,1,1,1
+access_mrp_production_operators,mrp.production.operators,mrp.model_mrp_production,megastock_base.group_megastock_operators,1,1,0,0
+access_mrp_production_supervisors,mrp.production.supervisors,mrp.model_mrp_production,megastock_base.group_megastock_supervisors,1,0,0,0
+access_mrp_workorder_planning,mrp.workorder.planning,mrp.model_mrp_workorder,megastock_base.group_megastock_planning,1,1,1,1
+access_mrp_workorder_operators,mrp.workorder.operators,mrp.model_mrp_workorder,megastock_base.group_megastock_operators,1,1,0,0
+access_mrp_workorder_supervisors,mrp.workorder.supervisors,mrp.model_mrp_workorder,megastock_base.group_megastock_supervisors,1,0,0,0
+access_sale_order_commercial,sale.order.commercial,sale.model_sale_order,megastock_base.group_megastock_commercial,1,1,1,0
+access_sale_order_planning,sale.order.planning,sale.model_sale_order,megastock_base.group_megastock_planning,1,1,1,1
+access_purchase_order_planning,purchase.order.planning,purchase.model_purchase_order,megastock_base.group_megastock_planning,1,1,1,1
+access_stock_picking_planning,stock.picking.planning,stock.model_stock_picking,megastock_base.group_megastock_planning,1,1,1,1
+access_stock_picking_operators,stock.picking.operators,stock.model_stock_picking,megastock_base.group_megastock_operators,1,1,0,0

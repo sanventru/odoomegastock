@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista extendida de transferencias -->
+        <record id="view_picking_form_megastock" model="ir.ui.view">
+            <field name="name">stock.picking.form.megastock</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar información MEGASTOCK -->
+                <xpath expr="//field[@name='origin']" position="after">
+                    <field name="megastock_transfer_type" readonly="1"/>
+                    <field name="requires_quality_check" readonly="1"/>
+                    <field name="quality_status" 
+                           attrs="{'invisible': [('requires_quality_check', '=', False)]}"/>
+                </xpath>
+
+                <!-- Botones de control de calidad -->
+                <xpath expr="//header" position="inside">
+                    <button name="action_quality_approve" type="object" 
+                            string="Aprobar Calidad" class="btn-success"
+                            attrs="{'invisible': ['|', ('requires_quality_check', '=', False), ('quality_status', '=', 'approved')]}"/>
+                    <button name="action_quality_reject" type="object" 
+                            string="Rechazar Calidad" class="btn-danger"
+                            attrs="{'invisible': ['|', ('requires_quality_check', '=', False), ('quality_status', '=', 'rejected')]}"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista tree con información MEGASTOCK -->
+        <record id="view_picking_tree_megastock" model="ir.ui.view">
+            <field name="name">stock.picking.tree.megastock</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.vpicktree"/>
+            <field name="arch" type="xml">
+                
+                <xpath expr="//field[@name='origin']" position="after">
+                    <field name="megastock_transfer_type" optional="show"/>
+                    <field name="quality_status" optional="show" 
+                           decoration-info="quality_status=='pending'"
+                           decoration-success="quality_status=='approved'"
+                           decoration-danger="quality_status=='rejected'"/>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

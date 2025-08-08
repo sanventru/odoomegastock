@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- ========== TURNOS DE TRABAJO ========== -->
+        
+        <!-- Turno Mañana -->
+        <record id="shift_morning" model="resource.calendar">
+            <field name="name">Turno Mañana</field>
+            <field name="hours_per_day">8</field>
+            <field name="tz">America/Guayaquil</field>
+        </record>
+        
+        <!-- Turno Tarde -->
+        <record id="shift_afternoon" model="resource.calendar">
+            <field name="name">Turno Tarde</field>
+            <field name="hours_per_day">8</field>
+            <field name="tz">America/Guayaquil</field>
+        </record>
+        
+        <!-- Turno Noche -->
+        <record id="shift_night" model="resource.calendar">
+            <field name="name">Turno Noche</field>
+            <field name="hours_per_day">8</field>
+            <field name="tz">America/Guayaquil</field>
+        </record>
+        
+        <!-- ========== HORARIOS TURNO MAÑANA ========== -->
+        
+        <record id="shift_morning_monday" model="resource.calendar.attendance">
+            <field name="name">Lunes Mañana</field>
+            <field name="dayofweek">0</field>
+            <field name="hour_from">6.0</field>  <!-- 06:00 -->
+            <field name="hour_to">14.0</field>   <!-- 14:00 -->
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <record id="shift_morning_tuesday" model="resource.calendar.attendance">
+            <field name="name">Martes Mañana</field>
+            <field name="dayofweek">1</field>
+            <field name="hour_from">6.0</field>
+            <field name="hour_to">14.0</field>
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <record id="shift_morning_wednesday" model="resource.calendar.attendance">
+            <field name="name">Miércoles Mañana</field>
+            <field name="dayofweek">2</field>
+            <field name="hour_from">6.0</field>
+            <field name="hour_to">14.0</field>
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <record id="shift_morning_thursday" model="resource.calendar.attendance">
+            <field name="name">Jueves Mañana</field>
+            <field name="dayofweek">3</field>
+            <field name="hour_from">6.0</field>
+            <field name="hour_to">14.0</field>
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <record id="shift_morning_friday" model="resource.calendar.attendance">
+            <field name="name">Viernes Mañana</field>
+            <field name="dayofweek">4</field>
+            <field name="hour_from">6.0</field>
+            <field name="hour_to">14.0</field>
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <record id="shift_morning_saturday" model="resource.calendar.attendance">
+            <field name="name">Sábado Mañana</field>
+            <field name="dayofweek">5</field>
+            <field name="hour_from">6.0</field>
+            <field name="hour_to">12.0</field>  <!-- Solo medio día sábado -->
+            <field name="calendar_id" ref="shift_morning"/>
+        </record>
+        
+        <!-- ========== HORARIOS TURNO TARDE ========== -->
+        
+        <record id="shift_afternoon_monday" model="resource.calendar.attendance">
+            <field name="name">Lunes Tarde</field>
+            <field name="dayofweek">0</field>
+            <field name="hour_from">14.0</field>  <!-- 14:00 -->
+            <field name="hour_to">22.0</field>   <!-- 22:00 -->
+            <field name="calendar_id" ref="shift_afternoon"/>
+        </record>
+        
+        <record id="shift_afternoon_tuesday" model="resource.calendar.attendance">
+            <field name="name">Martes Tarde</field>
+            <field name="dayofweek">1</field>
+            <field name="hour_from">14.0</field>
+            <field name="hour_to">22.0</field>
+            <field name="calendar_id" ref="shift_afternoon"/>
+        </record>
+        
+        <record id="shift_afternoon_wednesday" model="resource.calendar.attendance">
+            <field name="name">Miércoles Tarde</field>
+            <field name="dayofweek">2</field>
+            <field name="hour_from">14.0</field>
+            <field name="hour_to">22.0</field>
+            <field name="calendar_id" ref="shift_afternoon"/>
+        </record>
+        
+        <record id="shift_afternoon_thursday" model="resource.calendar.attendance">
+            <field name="name">Jueves Tarde</field>
+            <field name="dayofweek">3</field>
+            <field name="hour_from">14.0</field>
+            <field name="hour_to">22.0</field>
+            <field name="calendar_id" ref="shift_afternoon"/>
+        </record>
+        
+        <record id="shift_afternoon_friday" model="resource.calendar.attendance">
+            <field name="name">Viernes Tarde</field>
+            <field name="dayofweek">4</field>
+            <field name="hour_from">14.0</field>
+            <field name="hour_to">22.0</field>
+            <field name="calendar_id" ref="shift_afternoon"/>
+        </record>
+        
+        <!-- ========== OPERADORES ESPECIALIZADOS ========== -->
+        
+        <!-- Operador Principal PREPRINTER -->
+        <record id="operator_preprinter_main" model="hr.employee">
+            <field name="name">Carlos Mendoza</field>
+            <field name="work_email">carlos.mendoza@megastock.ec</field>
+            <field name="mobile_phone">+593 98 765 4321</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Impresión</field>
+            <field name="resource_calendar_id" ref="shift_morning"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_preprinter"/>
+            <field name="notes">
+                Operador especializado en PREPRINTER Martin
+                - 8 años de experiencia en flexografía
+                - Certificado en manejo de tintas y registros
+                - Especialista en mantenimiento de primer nivel
+                - Turno: Mañana (06:00 - 14:00)
+            </field>
+        </record>
+        
+        <!-- Operador PREPRINTER Turno Tarde -->
+        <record id="operator_preprinter_afternoon" model="hr.employee">
+            <field name="name">Miguel Vásquez</field>
+            <field name="work_email">miguel.vasquez@megastock.ec</field>
+            <field name="mobile_phone">+593 99 876 5432</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Impresión</field>
+            <field name="resource_calendar_id" ref="shift_afternoon"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_preprinter"/>
+            <field name="notes">
+                Operador PREPRINTER turno tarde
+                - 5 años de experiencia
+                - Especialista en setup rápido
+                - Turno: Tarde (14:00 - 22:00)
+            </field>
+        </record>
+        
+        <!-- Operador Principal CORRUGADORA -->
+        <record id="operator_corrugadora_main" model="hr.employee">
+            <field name="name">Roberto Jiménez</field>
+            <field name="work_email">roberto.jimenez@megastock.ec</field>
+            <field name="mobile_phone">+593 96 543 2109</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Corrugado</field>
+            <field name="resource_calendar_id" ref="shift_morning"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_corrugadora"/>
+            <field name="notes">
+                Operador principal CORRUGADORA BHS
+                - 12 años de experiencia en corrugado
+                - Certificado en control de calidad
+                - Especialista en calibración de rodillos
+                - Turno: Mañana (06:00 - 14:00)
+            </field>
+        </record>
+        
+        <!-- Operador CORRUGADORA Turno Tarde -->
+        <record id="operator_corrugadora_afternoon" model="hr.employee">
+            <field name="name">Luis Paredes</field>
+            <field name="work_email">luis.paredes@megastock.ec</field>
+            <field name="mobile_phone">+593 97 654 3210</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Corrugado</field>
+            <field name="resource_calendar_id" ref="shift_afternoon"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_corrugadora"/>
+            <field name="notes">
+                Operador CORRUGADORA turno tarde
+                - 7 años de experiencia
+                - Especialista en single facer
+                - Turno: Tarde (14:00 - 22:00)
+            </field>
+        </record>
+        
+        <!-- Operador Principal TROQUELADORA -->
+        <record id="operator_troqueladora_main" model="hr.employee">
+            <field name="name">David García</field>
+            <field name="work_email">david.garcia@megastock.ec</field>
+            <field name="mobile_phone">+593 95 432 1098</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Troquelado</field>
+            <field name="resource_calendar_id" ref="shift_morning"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_troqueladora"/>
+            <field name="notes">
+                Operador principal TROQUELADORA Bobst
+                - 6 años de experiencia en troquelado
+                - Especialista en formas complejas
+                - Certificado en seguridad industrial
+                - Turno: Mañana (06:00 - 14:00)
+            </field>
+        </record>
+        
+        <!-- Operador TROQUELADORA Turno Tarde -->
+        <record id="operator_troqueladora_afternoon" model="hr.employee">
+            <field name="name">Fernando López</field>
+            <field name="work_email">fernando.lopez@megastock.ec</field>
+            <field name="mobile_phone">+593 94 321 0987</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador de Troquelado</field>
+            <field name="resource_calendar_id" ref="shift_afternoon"/>
+            <field name="work_location_id" ref="megastock_base.workcenter_troqueladora"/>
+            <field name="notes">
+                Operador TROQUELADORA turno tarde
+                - 4 años de experiencia
+                - Especialista en mantenimiento de cuchillas
+                - Turno: Tarde (14:00 - 22:00)
+            </field>
+        </record>
+        
+        <!-- Operador Polivalente -->
+        <record id="operator_multifunction" model="hr.employee">
+            <field name="name">Ana María Silva</field>
+            <field name="work_email">ana.silva@megastock.ec</field>
+            <field name="mobile_phone">+593 93 210 9876</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Operador Polivalente</field>
+            <field name="resource_calendar_id" ref="shift_morning"/>
+            <field name="notes">
+                Operador polivalente - manejo múltiples máquinas
+                - 10 años de experiencia en producción
+                - Certificada en GUILLOTINA, DOBLADORA, SIERRA
+                - Especialista en acabados y empaque
+                - Cobertura para ausencias y picos de producción
+                - Turno: Mañana (06:00 - 14:00)
+            </field>
+        </record>
+        
+        <!-- Supervisor de Turno Mañana -->
+        <record id="supervisor_morning" model="hr.employee">
+            <field name="name">Ing. Patricia Morales</field>
+            <field name="work_email">patricia.morales@megastock.ec</field>
+            <field name="mobile_phone">+593 92 109 8765</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Supervisor de Producción</field>
+            <field name="resource_calendar_id" ref="shift_morning"/>
+            <field name="notes">
+                Supervisor de turno mañana
+                - Ingeniera Industrial
+                - 15 años de experiencia en manufactura
+                - Responsable de eficiencia y calidad
+                - Coordinación de mantenimientos
+                - Turno: Mañana (06:00 - 14:00)
+            </field>
+        </record>
+        
+        <!-- Supervisor de Turno Tarde -->
+        <record id="supervisor_afternoon" model="hr.employee">
+            <field name="name">Ing. Jorge Castillo</field>
+            <field name="work_email">jorge.castillo@megastock.ec</field>
+            <field name="mobile_phone">+593 91 098 7654</field>
+            <field name="department_id" ref="megastock_base.department_production"/>
+            <field name="job_id">Supervisor de Producción</field>
+            <field name="resource_calendar_id" ref="shift_afternoon"/>
+            <field name="notes">
+                Supervisor de turno tarde
+                - Ingeniero Mecánico
+                - 12 años de experiencia
+                - Especialista en mantenimiento correctivo
+                - Coordinación de producción nocturna
+                - Turno: Tarde (14:00 - 22:00)
+            </field>
+        </record>
+        
+        <!-- ========== ASIGNACIONES MÁQUINA-OPERADOR ========== -->
+        
+        <!-- Configuración de Skills/Competencias por máquina -->
+        <record id="skill_preprinter_operation" model="hr.skill.type">
+            <field name="name">Operación PREPRINTER</field>
+            <field name="skill_type_id">Técnico</field>
+        </record>
+        
+        <record id="skill_corrugadora_operation" model="hr.skill.type">
+            <field name="name">Operación CORRUGADORA</field>
+            <field name="skill_type_id">Técnico</field>
+        </record>
+        
+        <record id="skill_troqueladora_operation" model="hr.skill.type">
+            <field name="name">Operación TROQUELADORA</field>
+            <field name="skill_type_id">Técnico</field>
+        </record>
+        
+        <!-- ========== CALENDARIOS DE MANTENIMIENTO POR OPERADOR ========== -->
+        
+        <!-- Responsabilidad operadores en mantenimiento de primer nivel -->
+        <record id="maintenance_responsibility_carlos" model="maintenance.request">
+            <field name="name">Mantenimiento Diario - PREPRINTER (Carlos)</field>
+            <field name="equipment_id" ref="equipment_preprinter"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="user_id" ref="operator_preprinter_main"/>
+            <field name="priority">1</field>  <!-- Baja -->
+            <field name="duration">0.5</field>  <!-- 30 minutos -->
+            <field name="schedule_date">2025-08-01</field>
+            <field name="description">
+                Mantenimiento diario de primer nivel PREPRINTER:
+                - Limpieza general de máquina
+                - Verificación visual de cuchillas
+                - Control de niveles de tinta
+                - Lubricación puntos básicos
+                - Revisión de registros de impresión
+            </field>
+        </record>
+        
+        <record id="maintenance_responsibility_roberto" model="maintenance.request">
+            <field name="name">Mantenimiento Diario - CORRUGADORA (Roberto)</field>
+            <field name="equipment_id" ref="equipment_corrugadora"/>
+            <field name="maintenance_type">preventive</field>
+            <field name="user_id" ref="operator_corrugadora_main"/>
+            <field name="priority">1</field>  <!-- Baja -->
+            <field name="duration">0.75</field>  <!-- 45 minutos -->
+            <field name="schedule_date">2025-08-01</field>
+            <field name="description">
+                Mantenimiento diario de primer nivel CORRUGADORA:
+                - Limpieza de rodillos corrugadores
+                - Verificación de temperaturas
+                - Control de dosificación de adhesivo
+                - Lubricación cadenas principales
+                - Verificación de tensión de papeles
+                - Limpieza de sensores
+            </field>
+        </record>
+        
+    </data>
+</odoo>

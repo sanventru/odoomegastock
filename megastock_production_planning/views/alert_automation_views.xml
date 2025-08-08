@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista Tree de Automatización de Alertas -->
+    <record id="view_alert_automation_tree" model="ir.ui.view">
+        <field name="name">megastock.alert.automation.tree</field>
+        <field name="model">megastock.alert.automation</field>
+        <field name="arch" type="xml">
+            <tree string="Automatización de Alertas">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="trigger_model"/>
+                <field name="alert_type"/>
+                <field name="alert_priority"/>
+                <field name="alert_severity"/>
+                <field name="line_filter"/>
+                <field name="trigger_count" optional="hide"/>
+                <field name="alerts_created" optional="hide"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form de Automatización de Alertas -->
+    <record id="view_alert_automation_form" model="ir.ui.view">
+        <field name="name">megastock.alert.automation.form</field>
+        <field name="model">megastock.alert.automation</field>
+        <field name="arch" type="xml">
+            <form string="Automatización de Alerta">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_created_alerts" type="object" class="oe_stat_button" icon="fa-bell">
+                            <field name="alerts_created" string="Alertas" widget="statinfo"/>
+                        </button>
+                        <button name="action_test_condition" type="object" class="oe_stat_button" icon="fa-play" string="Probar Condición"/>
+                    </div>
+
+                    <div class="oe_title">
+                        <div class="oe_edit_only">
+                            <label for="name"/>
+                        </div>
+                        <h1>
+                            <field name="name" class="oe_inline"/>
+                        </h1>
+                        <div class="oe_edit_only">
+                            <label for="description"/>
+                        </div>
+                        <field name="description"/>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="sequence"/>
+                            <field name="active"/>
+                            <field name="trigger_model"/>
+                            <field name="line_filter"/>
+                        </group>
+                        <group>
+                            <field name="alert_type"/>
+                            <field name="alert_priority"/>
+                            <field name="alert_severity"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Condición Trigger">
+                            <group>
+                                <field name="trigger_condition" widget="ace" options="{'mode': 'python'}" placeholder="Ej: record.value &lt; 70 and record.kpi_type == 'oee'"/>
+                            </group>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Variables disponibles:</strong>
+                                <ul>
+                                    <li><code>record</code>: El registro que disparó la condición</li>
+                                    <li><code>env</code>: Environment de Odoo</li>
+                                    <li><code>datetime</code>: Módulo datetime de Python</li>
+                                    <li><code>timedelta</code>: Clase timedelta de Python</li>
+                                    <li><code>fields</code>: Módulo fields de Odoo</li>
+                                </ul>
+                            </div>
+                        </page>
+                        
+                        <page string="Plantillas de Mensaje">
+                            <group>
+                                <field name="alert_title_template" placeholder="Ej: OEE Crítico: ${value}% en ${workcenter_id.name}"/>
+                                <field name="alert_message_template" widget="text" placeholder="Ej: El OEE ha caído a ${value}% en ${workcenter_id.name}, por debajo del umbral crítico."/>
+                            </group>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Variables disponibles:</strong> Use <code>${field_name}</code> para insertar valores del registro.
+                            </div>
+                        </page>
+
+                        <page string="Control de Repetición">
+                            <group>
+                                <group>
+                                    <field name="prevent_duplicates"/>
+                                    <field name="duplicate_window" attrs="{'invisible': [('prevent_duplicates', '=', False)]}"/>
+                                    <field name="max_alerts_per_hour"/>
+                                </group>
+                                <group>
+                                    <field name="auto_escalate"/>
+                                    <field name="escalation_time" attrs="{'invisible': [('auto_escalate', '=', False)]}"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Horarios">
+                            <group>
+                                <group>
+                                    <field name="only_working_hours"/>
+                                    <field name="working_hours_start" widget="float_time" attrs="{'invisible': [('only_working_hours', '=', False)]}"/>
+                                    <field name="working_hours_end" widget="float_time" attrs="{'invisible': [('only_working_hours', '=', False)]}"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Acción Automática">
+                            <field name="auto_action_code" widget="ace" options="{'mode': 'python'}" placeholder="Código Python opcional a ejecutar cuando se crea la alerta"/>
+                            <div class="alert alert-warning" role="alert">
+                                <strong>Variables disponibles:</strong>
+                                <ul>
+                                    <li><code>record</code>: El registro que disparó la alerta</li>
+                                    <li><code>alert</code>: La alerta creada</li>
+                                    <li><code>env</code>: Environment de Odoo</li>
+                                    <li><code>_logger</code>: Logger para debugging</li>
+                                </ul>
+                            </div>
+                        </page>
+
+                        <page string="Estadísticas">
+                            <group>
+                                <group>
+                                    <field name="trigger_count" readonly="1"/>
+                                    <field name="alerts_created" readonly="1"/>
+                                    <field name="last_triggered" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Search de Automatización -->
+    <record id="view_alert_automation_search" model="ir.ui.view">
+        <field name="name">megastock.alert.automation.search</field>
+        <field name="model">megastock.alert.automation</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Automatizaciones">
+                <field name="name"/>
+                <field name="trigger_model"/>
+                <field name="alert_type"/>
+                
+                <filter string="Activas" name="active" domain="[('active', '=', True)]"/>
+                <filter string="Inactivas" name="inactive" domain="[('active', '=', False)]"/>
+                
+                <separator/>
+                <filter string="KPI" name="kpi_model" domain="[('trigger_model', '=', 'megastock.production.kpi')]"/>
+                <filter string="Producción" name="production_model" domain="[('trigger_model', '=', 'mrp.production')]"/>
+                <filter string="Colas" name="queue_model" domain="[('trigger_model', '=', 'megastock.work.queue')]"/>
+
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Modelo Trigger" name="group_model" context="{'group_by': 'trigger_model'}"/>
+                    <filter string="Tipo Alerta" name="group_type" context="{'group_by': 'alert_type'}"/>
+                    <filter string="Línea" name="group_line" context="{'group_by': 'line_filter'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Automatización -->
+    <record id="action_alert_automation" model="ir.actions.act_window">
+        <field name="name">Automatización de Alertas</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">megastock.alert.automation</field>
+        <field name="view_mode">tree,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay reglas de automatización configuradas
+            </p>
+            <p>
+                Configure reglas para generar alertas automáticamente cuando se cumplan ciertas condiciones.
+            </p>
+        </field>
+    </record>
+
+    <!-- Vista Tree de Canales de Notificación -->
+    <record id="view_alert_notification_channel_tree" model="ir.ui.view">
+        <field name="name">megastock.alert.notification.channel.tree</field>
+        <field name="model">megastock.alert.notification.channel</field>
+        <field name="arch" type="xml">
+            <tree string="Canales de Notificación">
+                <field name="name"/>
+                <field name="channel_type"/>
+                <field name="alert_types"/>
+                <field name="min_priority"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form de Canales de Notificación -->
+    <record id="view_alert_notification_channel_form" model="ir.ui.view">
+        <field name="name">megastock.alert.notification.channel.form</field>
+        <field name="model">megastock.alert.notification.channel</field>
+        <field name="arch" type="xml">
+            <form string="Canal de Notificación">
+                <sheet>
+                    <div class="oe_title">
+                        <div class="oe_edit_only">
+                            <label for="name"/>
+                        </div>
+                        <h1>
+                            <field name="name" class="oe_inline"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="active"/>
+                            <field name="channel_type"/>
+                            <field name="min_priority"/>
+                        </group>
+                        <group>
+                            <field name="alert_types"/>
+                            <field name="specific_alert_types" attrs="{'invisible': [('alert_types', '!=', 'specific')]}"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Configuración del Canal">
+                            <group attrs="{'invisible': [('channel_type', '!=', 'email')]}">
+                                <field name="email_template_id"/>
+                            </group>
+                            <group attrs="{'invisible': [('channel_type', '!=', 'webhook')]}">
+                                <field name="webhook_url"/>
+                                <field name="webhook_headers" widget="ace" options="{'mode': 'json'}"/>
+                            </group>
+                        </page>
+                        <page string="Destinatarios">
+                            <field name="user_ids" widget="many2many_tags"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción de Canales de Notificación -->
+    <record id="action_alert_notification_channel" model="ir.actions.act_window">
+        <field name="name">Canales de Notificación</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">megastock.alert.notification.channel</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay canales de notificación configurados
+            </p>
+            <p>Configure canales para enviar notificaciones cuando se generen alertas.</p>
+        </field>
+    </record>
+
+    <!-- Dashboard de Alertas -->
+    <record id="view_alert_dashboard" model="ir.ui.view">
+        <field name="name">Alert Dashboard</field>
+        <field name="model">megastock.production.alert</field>
+        <field name="arch" type="xml">
+            <form string="Dashboard de Alertas">
+                <sheet>
+                    <div class="o_form_sheet_bg">
+                        <div class="oe_dashboard">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="tile tile-primary">
+                                        <div class="tile-heading">Alertas Activas</div>
+                                        <div class="tile-body">
+                                            <span class="h1" id="active-alerts-count">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="tile tile-warning">
+                                        <div class="tile-heading">Escaladas</div>
+                                        <div class="tile-body">
+                                            <span class="h1" id="escalated-alerts-count">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="tile tile-success">
+                                        <div class="tile-heading">Resueltas Hoy</div>
+                                        <div class="tile-body">
+                                            <span class="h1" id="resolved-today-count">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="tile tile-info">
+                                        <div class="tile-heading">Tiempo Medio Resolución</div>
+                                        <div class="tile-body">
+                                            <span class="h1" id="avg-resolution-time">0</span>
+                                            <small>minutos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <h3>Alertas por Tipo</h3>
+                                    <canvas id="alertsByTypeChart"></canvas>
+                                </div>
+                                <div class="col-md-6">
+                                    <h3>Alertas por Severidad</h3>
+                                    <canvas id="alertsBySeverityChart"></canvas>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-md-12">
+                                    <h3>Alertas Recientes</h3>
+                                    <div id="recent-alerts-list">
+                                        <!-- Contenido dinámico -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción del Dashboard -->
+    <record id="action_alert_dashboard" model="ir.actions.act_window">
+        <field name="name">Dashboard de Alertas</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">megastock.production.alert</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_alert_dashboard"/>
+        <field name="target">current</field>
+    </record>
+
+</odoo>

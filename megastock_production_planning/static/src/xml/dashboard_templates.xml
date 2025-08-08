@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Dashboard Principal -->
+    <t t-name="ProductionDashboardMain">
+        <div class="o_dashboard_view">
+            <!-- Header -->
+            <div class="o_dashboard_header bg-primary text-white p-3 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h2><i class="fa fa-tachometer"></i> Dashboard de Producción MEGASTOCK</h2>
+                        <p class="mb-0">Control en Tiempo Real</p>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="btn-group mr-3">
+                            <select class="form-control line-filter">
+                                <option value="all">Todas las Líneas</option>
+                                <option value="papel_periodico">Papel Periódico</option>
+                                <option value="cajas">Cajas &amp; Planchas</option>
+                                <option value="lamina_micro">Lámina Micro</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-light refresh-dashboard mr-2">
+                            <i class="fa fa-refresh"></i> Actualizar
+                        </button>
+                        <button class="btn btn-success toggle-auto-refresh">
+                            <i class="fa fa-pause"></i> Auto
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12 text-right">
+                        <small>Última actualización: <span class="last-update-time">--</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container-fluid">
+                <!-- KPI Cards -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h4><i class="fa fa-bar-chart"></i> Indicadores Clave (KPIs)</h4>
+                        <div class="kpi-cards-container">
+                            <!-- Contenido dinámico -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-pie-chart"></i> OEE Componentes</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="oeeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-bar-chart"></i> Utilización Capacidad</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="capacityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-line-chart"></i> Tendencias</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secciones adicionales -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-exclamation-triangle"></i> Alertas Activas</h5>
+                            </div>
+                            <div class="card-body alerts-section" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-list"></i> Estado de Colas</h5>
+                            </div>
+                            <div class="card-body queue-section" style="max-height: 400px; overflow-y: auto;">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Capacidad -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-industry"></i> Estado de Capacidad</h5>
+                            </div>
+                            <div class="card-body capacity-section">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para KPI Cards -->
+    <t t-name="KpiCards">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="efficiency" style="cursor: pointer;">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.oee) &lt; 70 ? 'text-danger' : parseFloat(kpis.oee) &lt; 85 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.oee"/>%
+                        </div>
+                        <div class="text-muted">OEE Global</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar" 
+                                 t-attf-class="#{parseFloat(kpis.oee) &lt; 70 ? 'bg-danger' : parseFloat(kpis.oee) &lt; 85 ? 'bg-warning' : 'bg-success'}"
+                                 t-attf-style="width: #{kpis.oee}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="efficiency">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.availability) &lt; 85 ? 'text-danger' : parseFloat(kpis.availability) &lt; 95 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.availability"/>%
+                        </div>
+                        <div class="text-muted">Disponibilidad</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-success" t-attf-style="width: #{kpis.availability}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="efficiency">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.performance) &lt; 80 ? 'text-danger' : parseFloat(kpis.performance) &lt; 90 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.performance"/>%
+                        </div>
+                        <div class="text-muted">Performance</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-warning" t-attf-style="width: #{kpis.performance}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="quality">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.quality) &lt; 95 ? 'text-danger' : parseFloat(kpis.quality) &lt; 98 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.quality"/>%
+                        </div>
+                        <div class="text-muted">Calidad</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-info" t-attf-style="width: #{kpis.quality}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="delivery">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.delivery) &lt; 90 ? 'text-danger' : parseFloat(kpis.delivery) &lt; 95 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.delivery"/>%
+                        </div>
+                        <div class="text-muted">Entregas</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-primary" t-attf-style="width: #{kpis.delivery}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card kpi-card" data-kpi-type="capacity">
+                    <div class="card-body text-center">
+                        <div t-attf-class="h2 #{parseFloat(kpis.utilization) &gt; 95 ? 'text-danger' : parseFloat(kpis.utilization) &gt; 85 ? 'text-warning' : 'text-success'}">
+                            <t t-esc="kpis.utilization"/>%
+                        </div>
+                        <div class="text-muted">Utilización</div>
+                        <div class="progress mt-2" style="height: 4px;">
+                            <div class="progress-bar bg-secondary" t-attf-style="width: #{kpis.utilization}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para Alertas -->
+    <t t-name="AlertsSection">
+        <t t-if="alerts.length == 0">
+            <div class="alert alert-success">
+                <i class="fa fa-check-circle"></i> No hay alertas activas
+            </div>
+        </t>
+        <t t-else="">
+            <t t-foreach="alerts" t-as="alert">
+                <div t-attf-class="alert alert-#{alert.level} alert-dismissible fade show alert-item" 
+                     t-att-data-alert-id="alert.id"
+                     style="cursor: pointer;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><t t-esc="alert.title"/></strong><br/>
+                            <small><t t-esc="alert.message"/></small>
+                        </div>
+                        <div class="text-right">
+                            <small class="text-muted"><t t-esc="alert.timestamp"/></small>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </t>
+
+    <!-- Template para Colas -->
+    <t t-name="QueueSection">
+        <t t-if="queues.length == 0">
+            <div class="alert alert-info">
+                <i class="fa fa-info-circle"></i> No hay colas activas
+            </div>
+        </t>
+        <t t-else="">
+            <div class="row">
+                <t t-foreach="queues" t-as="queue">
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            <t t-esc="queue.name"/>
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                            <t t-esc="queue.items_count"/> items
+                                        </div>
+                                        <div class="text-xs text-muted">
+                                            Espera: <t t-esc="queue.avg_wait_time"/> min
+                                        </div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fa fa-list fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                                <div class="progress progress-sm mt-2">
+                                    <div class="progress-bar" 
+                                         t-attf-class="#{queue.utilization > 80 ? 'bg-danger' : queue.utilization > 60 ? 'bg-warning' : 'bg-success'}"
+                                         t-attf-style="width: #{queue.utilization}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </t>
+
+    <!-- Template para Capacidad -->
+    <t t-name="CapacitySection">
+        <t t-if="!capacity">
+            <div class="alert alert-warning">
+                <i class="fa fa-exclamation-triangle"></i> Datos de capacidad no disponibles
+            </div>
+        </t>
+        <t t-else="">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="h4"><t t-esc="capacity.total_capacity"/>h</div>
+                                    <div>Capacidad Total</div>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fa fa-industry fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="h4"><t t-esc="capacity.utilized_capacity"/>h</div>
+                                    <div>Capacidad Utilizada</div>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fa fa-cogs fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div t-attf-class="card #{capacity.utilization_rate > 90 ? 'bg-danger' : capacity.utilization_rate > 75 ? 'bg-warning' : 'bg-info'} text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="h4"><t t-esc="capacity.utilization_rate"/>%</div>
+                                    <div>Utilización</div>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fa fa-tachometer fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <div class="h4"><t t-esc="capacity.available_capacity"/>h</div>
+                                    <div>Disponible</div>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fa fa-clock-o fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Bottlenecks -->
+            <t t-if="capacity.bottlenecks and capacity.bottlenecks.length > 0">
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6><i class="fa fa-warning text-warning"></i> Cuellos de Botella Identificados</h6>
+                        <div class="list-group list-group-flush">
+                            <t t-foreach="capacity.bottlenecks" t-as="bottleneck">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong><t t-esc="bottleneck.workcenter_name"/></strong><br/>
+                                        <small class="text-muted"><t t-esc="bottleneck.reason"/></small>
+                                    </div>
+                                    <span t-attf-class="badge badge-#{bottleneck.severity} badge-pill">
+                                        <t t-esc="bottleneck.utilization"/>%
+                                    </span>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </t>
+
+    <!-- Template para Dashboard de KPIs -->
+    <t t-name="KpiDashboardMain">
+        <div class="o_kpi_dashboard_view">
+            <!-- Header KPI Dashboard -->
+            <div class="o_dashboard_header bg-info text-white p-3 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h2><i class="fa fa-bar-chart"></i> Dashboard KPIs MEGASTOCK</h2>
+                        <p class="mb-0">Indicadores Clave de Performance</p>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="btn-group mr-3">
+                            <select class="form-control kpi-period-filter">
+                                <option value="hourly">Por Hora</option>
+                                <option value="daily" selected>Diario</option>
+                                <option value="weekly">Semanal</option>
+                                <option value="monthly">Mensual</option>
+                            </select>
+                        </div>
+                        <div class="btn-group mr-3">
+                            <select class="form-control kpi-line-filter">
+                                <option value="all">Todas las Líneas</option>
+                                <option value="papel_periodico">Papel Periódico</option>
+                                <option value="cajas">Cajas &amp; Planchas</option>
+                                <option value="lamina_micro">Lámina Micro</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-light refresh-kpis mr-2">
+                            <i class="fa fa-refresh"></i> Actualizar
+                        </button>
+                        <button class="btn btn-success export-kpis">
+                            <i class="fa fa-download"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12 text-right">
+                        <small>Última actualización: <span class="kpi-last-update">--</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Summary Cards -->
+            <div class="container-fluid">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h4><i class="fa fa-tachometer"></i> Resumen de KPIs</h4>
+                        <div class="kpi-summary-cards">
+                            <!-- Contenido dinámico -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-pie-chart"></i> Componentes OEE</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="oeeComponentsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-line-chart"></i> Tendencias KPI</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="kpiTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-radar-chart"></i> Performance Global</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="kpiRadarChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Analysis Row -->
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-bar-chart"></i> Comparativo por Líneas</h5>
+                            </div>
+                            <div class="card-body" style="height: 350px;">
+                                <canvas id="kpiBenchmarkChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-exclamation-triangle"></i> Alertas KPI</h5>
+                            </div>
+                            <div class="card-body kpi-alerts-section" style="max-height: 350px; overflow-y: auto;">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para Dashboard de Capacidad -->
+    <t t-name="CapacityDashboardMain">
+        <div class="o_capacity_dashboard_view">
+            <!-- Header Capacity Dashboard -->
+            <div class="o_dashboard_header bg-warning text-dark p-3 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h2><i class="fa fa-industry"></i> Dashboard de Capacidad MEGASTOCK</h2>
+                        <p class="mb-0">Gestión y Análisis de Capacidad de Producción</p>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="btn-group mr-3">
+                            <select class="form-control capacity-line-filter">
+                                <option value="all">Todas las Líneas</option>
+                                <option value="papel_periodico">Papel Periódico</option>
+                                <option value="cajas">Cajas &amp; Planchas</option>
+                                <option value="lamina_micro">Lámina Micro</option>
+                            </select>
+                        </div>
+                        <div class="btn-group mr-3">
+                            <select class="form-control capacity-period-filter">
+                                <option value="current" selected>Actual</option>
+                                <option value="today">Hoy</option>
+                                <option value="week">Esta Semana</option>
+                                <option value="month">Este Mes</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-light refresh-capacity mr-2">
+                            <i class="fa fa-refresh"></i> Actualizar
+                        </button>
+                        <button class="btn btn-primary capacity-optimize">
+                            <i class="fa fa-cogs"></i> Optimizar
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12 text-right">
+                        <small>Última actualización: <span class="capacity-last-update">--</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Capacity Summary -->
+            <div class="container-fluid">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h4><i class="fa fa-tachometer"></i> Resumen de Capacidad</h4>
+                        <div class="capacity-summary-section">
+                            <!-- Contenido dinámico -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-bar-chart"></i> Utilización por Centro</h5>
+                            </div>
+                            <div class="card-body" style="height: 350px;">
+                                <canvas id="capacityUtilizationChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-line-chart"></i> Tendencia de Capacidad</h5>
+                            </div>
+                            <div class="card-body" style="height: 350px;">
+                                <canvas id="capacityTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid and Analysis Row -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-pie-chart"></i> Distribución de Carga</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="loadDistributionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-bar-chart"></i> Eficiencia</h5>
+                            </div>
+                            <div class="card-body" style="height: 300px;">
+                                <canvas id="efficiencyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-warning"></i> Cuellos de Botella</h5>
+                            </div>
+                            <div class="card-body bottleneck-analysis-section" style="max-height: 300px; overflow-y: auto;">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workcenter Grid -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card dashboard-card">
+                            <div class="card-header">
+                                <h5><i class="fa fa-th"></i> Estado de Centros de Trabajo</h5>
+                            </div>
+                            <div class="card-body workcenter-grid-section">
+                                <!-- Contenido dinámico -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para Gantt Dashboard -->
+    <t t-name="ScheduleGanttMain">
+        <div class="o_gantt_dashboard_view">
+            <!-- Header Gantt Dashboard -->
+            <div class="o_dashboard_header bg-success text-white p-3 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h2><i class="fa fa-calendar"></i> Cronograma Gantt MEGASTOCK</h2>
+                        <p class="mb-0">Programación Visual de Producción</p>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="btn-group mr-2">
+                            <input type="date" class="form-control gantt-date-filter gantt-date-from" data-filter-type="from"/>
+                        </div>
+                        <div class="btn-group mr-2">
+                            <input type="date" class="form-control gantt-date-filter gantt-date-to" data-filter-type="to"/>
+                        </div>
+                        <div class="btn-group mr-2">
+                            <select class="form-control gantt-line-filter">
+                                <option value="all">Todas las Líneas</option>
+                                <option value="papel_periodico">Papel Periódico</option>
+                                <option value="cajas">Cajas &amp; Planchas</option>
+                                <option value="lamina_micro">Lámina Micro</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-light refresh-gantt mr-2">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                        <button class="btn btn-info add-schedule mr-2">
+                            <i class="fa fa-plus"></i> Nuevo
+                        </button>
+                        <button class="btn btn-warning optimize-schedule">
+                            <i class="fa fa-magic"></i> Optimizar
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <div class="gantt-zoom-controls">
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-light zoom-btn" data-zoom="day">Día</button>
+                                <button class="btn btn-sm btn-outline-light zoom-btn active" data-zoom="week">Semana</button>
+                                <button class="btn btn-sm btn-outline-light zoom-btn" data-zoom="month">Mes</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-right">
+                        <div class="btn-group mr-2">
+                            <select class="form-control gantt-view-mode">
+                                <option value="day">Vista Día</option>
+                                <option value="week" selected>Vista Semana</option>
+                                <option value="month">Vista Mes</option>
+                            </select>
+                        </div>
+                        <small>Última actualización: <span class="gantt-last-update">--</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gantt Chart Area -->
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card dashboard-card">
+                            <div class="card-body p-0 gantt-chart-area" style="min-height: 600px;">
+                                <!-- Contenido dinámico del Gantt -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </t>
+
+    <!-- Templates adicionales para componentes -->
+    
+    <!-- Template para KPI Summary Cards -->
+    <t t-name="KpiSummaryCards">
+        <div class="row">
+            <t t-foreach="Object.keys(kpis)" t-as="kpiKey">
+                <div class="col-md-2">
+                    <div class="card kpi-card" t-att-data-kpi-type="kpiKey" style="cursor: pointer;">
+                        <div class="card-body text-center">
+                            <div t-attf-class="h2 #{parseFloat(kpis[kpiKey]) &lt; 70 ? 'text-danger' : parseFloat(kpis[kpiKey]) &lt; 85 ? 'text-warning' : 'text-success'}">
+                                <t t-esc="kpis[kpiKey]"/>%
+                            </div>
+                            <div class="text-muted"><t t-esc="kpiKey.replace('_', ' ').toUpperCase()"/></div>
+                            <div class="progress mt-2" style="height: 4px;">
+                                <div class="progress-bar" 
+                                     t-attf-class="#{parseFloat(kpis[kpiKey]) &lt; 70 ? 'bg-danger' : parseFloat(kpis[kpiKey]) &lt; 85 ? 'bg-warning' : 'bg-success'}"
+                                     t-attf-style="width: #{kpis[kpiKey]}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <!-- Template para Gantt Chart Structure -->
+    <t t-name="GanttChartStructure">
+        <div class="gantt-container">
+            <div class="gantt-header">
+                <!-- Header dinámico -->
+            </div>
+            <div class="gantt-rows">
+                <!-- Filas dinámicas -->
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para Gantt Context Menu -->
+    <t t-name="GanttContextMenu">
+        <div class="dropdown-menu show context-menu">
+            <h6 class="dropdown-header"><t t-esc="schedule.production_name"/></h6>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item context-menu-item" href="#" data-action="view">
+                <i class="fa fa-eye"></i> Ver Detalle
+            </a>
+            <a class="dropdown-item context-menu-item" href="#" data-action="edit">
+                <i class="fa fa-edit"></i> Editar
+            </a>
+            <a class="dropdown-item context-menu-item" href="#" data-action="reschedule">
+                <i class="fa fa-calendar"></i> Reprogramar
+            </a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item context-menu-item text-danger" href="#" data-action="cancel">
+                <i class="fa fa-times"></i> Cancelar
+            </a>
+        </div>
+    </t>
+
+</templates>

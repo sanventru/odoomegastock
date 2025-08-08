@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de formulario extendida para mrp.workorder -->
+    <record id="mrp_workorder_view_form_inherit" model="ir.ui.view">
+        <field name="name">mrp.workorder.form.inherit</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_workorder_view_form"/>
+        <field name="arch" type="xml">
+            
+            <!-- Agregar línea de producción después del centro de trabajo -->
+            <field name="workcenter_id" position="after">
+                <field name="production_line" readonly="1"/>
+            </field>
+            
+            <!-- Agregar página de información específica -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Información Específica" name="specific_info">
+                    <group>
+                        <group string="Información de Etiquetas">
+                            <field name="pallet_number"/>
+                            <field name="custom_product_code"/>
+                            <field name="operator_name"/>
+                            <field name="shift"/>
+                        </group>
+                        <group string="Datos Técnicos" attrs="{'invisible': [('production_line', '=', False)]}">
+                            <field name="grammage" attrs="{'invisible': [('production_line', '=', 'cajas')]}"/>
+                            <field name="weight" attrs="{'invisible': [('production_line', '=', 'cajas')]}"/>
+                            <field name="material_type" attrs="{'invisible': [('production_line', '!=', 'cajas')]}"/>
+                            <field name="test_value" attrs="{'invisible': [('production_line', '!=', 'cajas')]}"/>
+                            <field name="flute_type" attrs="{'invisible': [('production_line', '!=', 'cajas')]}"/>
+                            <field name="factor"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Información de Empaque">
+                            <field name="units_per_package"/>
+                            <field name="total_packages"/>
+                            <field name="customer_logo"/>
+                        </group>
+                        <group string="Estadísticas de Eficiencia">
+                            <field name="efficiency_percentage" widget="percentage"/>
+                            <field name="productive_time"/>
+                            <field name="total_stoppage_time"/>
+                            <field name="stoppage_count"/>
+                        </group>
+                    </group>
+                </page>
+                
+                <!-- Página de Control de Paradas -->
+                <page string="Control de Paradas" name="stoppages">
+                    <div class="oe_button_box" name="button_box_stoppages">
+                        <button name="action_register_stoppage" type="object" 
+                                class="btn-primary" string="Registrar Parada"
+                                attrs="{'invisible': [('has_active_stoppage', '=', True)]}"/>
+                        <button name="action_end_active_stoppage" type="object" 
+                                class="btn-warning" string="Finalizar Parada"
+                                attrs="{'invisible': [('has_active_stoppage', '=', False)]}"/>
+                        <button name="action_view_stoppages" type="object" 
+                                class="btn-secondary" string="Ver Todas las Paradas"/>
+                    </div>
+                    
+                    <div attrs="{'invisible': [('has_active_stoppage', '=', False)]}" 
+                         class="alert alert-warning" role="alert">
+                        <strong>Parada Activa:</strong> 
+                        <field name="active_stoppage_id" readonly="1"/>
+                    </div>
+                    
+                    <field name="stoppage_ids" readonly="1">
+                        <tree decoration-danger="is_active == True">
+                            <field name="start_time"/>
+                            <field name="end_time"/>
+                            <field name="stoppage_category_id"/>
+                            <field name="duration_minutes"/>
+                            <field name="is_active" invisible="1"/>
+                            <field name="operator_id"/>
+                            <field name="notes"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+            
+            <!-- Botones adicionales en el header -->
+            <div name="button_box" position="inside">
+                <button name="action_register_stoppage" type="object" 
+                        class="oe_stat_button" icon="fa-pause"
+                        string="Registrar Parada"
+                        attrs="{'invisible': [('has_active_stoppage', '=', True)]}"/>
+                <button name="action_end_active_stoppage" type="object" 
+                        class="oe_stat_button" icon="fa-play"
+                        string="Finalizar Parada"
+                        attrs="{'invisible': [('has_active_stoppage', '=', False)]}"/>
+                <button name="action_print_label" type="object" 
+                        class="oe_stat_button" icon="fa-tag"
+                        string="Imprimir Etiqueta"/>
+                <button name="action_efficiency_analysis" type="object" 
+                        class="oe_stat_button" icon="fa-line-chart"
+                        string="Análisis Eficiencia"/>
+            </div>
+            
+            <!-- También agregar en el header principal -->
+            <xpath expr="//header" position="inside">
+                <button name="action_register_stoppage" type="object" 
+                        string="Registrar Parada" class="btn-warning"
+                        attrs="{'invisible': ['|', ('state', 'not in', ['progress']), ('has_active_stoppage', '=', True)]}"/>
+                <button name="action_end_active_stoppage" type="object" 
+                        string="Finalizar Parada" class="btn-success"
+                        attrs="{'invisible': ['|', ('state', 'not in', ['progress']), ('has_active_stoppage', '=', False)]}"/>
+            </xpath>
+            
+        </field>
+    </record>
+
+    <!-- Vista de lista extendida -->
+    <record id="mrp_workorder_view_tree_inherit" model="ir.ui.view">
+        <field name="name">mrp.workorder.tree.inherit</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_workorder_view_tree"/>
+        <field name="arch" type="xml">
+            <field name="workcenter_id" position="after">
+                <field name="production_line" optional="show"/>
+                <field name="efficiency_percentage" widget="percentage" optional="show"/>
+                <field name="stoppage_count" optional="hide"/>
+                <field name="has_active_stoppage" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Vista Kanban extendida -->
+    <record id="mrp_workorder_view_kanban_inherit" model="ir.ui.view">
+        <field name="name">mrp.workorder.kanban.inherit</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.mrp_workorder_view_kanban"/>
+        <field name="arch" type="xml">
+            <xpath expr="//templates//t[@t-name='kanban-box']//div[hasclass('oe_kanban_bottom_right')]" position="inside">
+                <span t-if="record.has_active_stoppage.raw_value" class="badge badge-danger">
+                    Parada Activa
+                </span>
+                <span t-if="record.production_line.raw_value" class="badge badge-info">
+                    <t t-esc="record.production_line.value"/>
+                </span>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Filtros de búsqueda extendidos -->
+    <record id="mrp_workorder_view_search_inherit" model="ir.ui.view">
+        <field name="name">mrp.workorder.search.inherit</field>
+        <field name="model">mrp.workorder</field>
+        <field name="inherit_id" ref="mrp.view_mrp_workorder_filter"/>
+        <field name="arch" type="xml">
+            <filter name="late" position="after">
+                <separator/>
+                <filter name="active_stoppages" string="Con Paradas Activas" 
+                        domain="[('has_active_stoppage', '=', True)]"/>
+                <filter name="low_efficiency" string="Eficiencia Baja (&lt;80%)" 
+                        domain="[('efficiency_percentage', '&lt;', 80)]"/>
+                <separator/>
+                <filter name="papel_periodico" string="Papel Periódico" 
+                        domain="[('production_line', '=', 'papel_periodico')]"/>
+                <filter name="cajas" string="Cajas" 
+                        domain="[('production_line', '=', 'cajas')]"/>
+                <filter name="lamina_micro" string="Lámina Micro" 
+                        domain="[('production_line', '=', 'lamina_micro')]"/>
+            </filter>
+            
+            <group position="inside">
+                <filter name="group_production_line" string="Línea de Producción"
+                        context="{'group_by': 'production_line'}"/>
+            </group>
+        </field>
+    </record>
+
+</odoo>
