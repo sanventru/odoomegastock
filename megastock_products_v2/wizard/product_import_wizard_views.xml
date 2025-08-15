@@ -78,29 +78,13 @@
             <field name="view_id" ref="product_import_wizard_form"/>
         </record>
         
-        <!-- Crear submenú Productos bajo Fabricación -->
-        <menuitem 
-            id="menu_mrp_productos_megastock"
-            name="Productos"
-            parent="mrp.menu_mrp_root"
-            sequence="10"/>
-        
-        <!-- Menú Importar Excel bajo Productos -->
+        <!-- Menú único en el submenú Productos existente bajo Lista de Materiales -->
         <menuitem 
             id="menu_product_import_wizard"
-            name="Importar desde Excel"
-            parent="menu_mrp_productos_megastock"
-            action="action_product_import_wizard"
-            sequence="5"/>
-            
-        <!-- Acceso directo también en el menú BOM si existe -->
-        <menuitem 
-            id="menu_product_import_wizard_bom"
             name="Importar Productos"
             parent="mrp.menu_mrp_bom"
             action="action_product_import_wizard"
-            sequence="1"
-            groups="mrp.group_mrp_user"/>
+            sequence="1"/>
             
     </data>
 </odoo>
