@@ -15,17 +15,32 @@
 
                 <xpath expr="//notebook" position="inside">
                     <page string="MEGASTOCK">
-                        <group string="Dimensiones" col="3">
+                        <group string="Identificación" col="2">
+                            <field name="megastock_code"/>
+                        </group>
+                        
+                        <group string="Dimensiones" col="4">
                             <field name="largo_cm"/>
                             <field name="ancho_cm"/>
                             <field name="alto_cm"/>
+                            <field name="ceja_cm"/>
                         </group>
-                        <group string="Especificaciones" col="2">
+                        
+                        <group string="Especificaciones Técnicas" col="4">
                             <field name="flauta"/>
+                            <field name="test_value"/>
+                            <field name="kl_value"/>
                             <field name="material_type"/>
                         </group>
-                        <group string="Descripción">
-                            <field name="technical_description" nolabel="1"/>
+                        
+                        <group string="Impresión y Material" col="3">
+                            <field name="colors_printing"/>
+                            <field name="gramaje"/>
+                            <field name="tipo_caja"/>
+                        </group>
+                        
+                        <group string="Descripción Técnica">
+                            <field name="technical_description" nolabel="1" readonly="1"/>
                         </group>
                     </page>
                 </xpath>

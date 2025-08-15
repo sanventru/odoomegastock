@@ -28,6 +28,8 @@ Funcionalidades:
         'data/product_attributes.xml',
         'data/sequence_data.xml',
         'views/product_template_views.xml',
+        'wizard/product_import_wizard_views.xml',
+        'security/wizard_security.xml',
     ],
     'demo': [],
     'installable': True,
