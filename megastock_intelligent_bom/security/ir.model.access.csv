@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bom_calculation_rule_user,bom.calculation.rule.user,model_megastock_bom_calculation_rule,mrp.group_mrp_user,1,1,1,0
+access_bom_calculation_rule_manager,bom.calculation.rule.manager,model_megastock_bom_calculation_rule,mrp.group_mrp_manager,1,1,1,1
+access_material_substitution_rule_user,material.substitution.rule.user,model_megastock_material_substitution_rule,mrp.group_mrp_user,1,0,0,0
+access_material_substitution_rule_manager,material.substitution.rule.manager,model_megastock_material_substitution_rule,mrp.group_mrp_manager,1,1,1,1
+access_bom_cost_analysis_user,bom.cost.analysis.user,model_megastock_bom_cost_analysis,mrp.group_mrp_user,1,0,0,0
+access_bom_cost_analysis_manager,bom.cost.analysis.manager,model_megastock_bom_cost_analysis,mrp.group_mrp_manager,1,1,1,1

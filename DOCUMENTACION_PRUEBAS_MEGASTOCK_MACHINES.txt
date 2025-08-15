@@ -1,0 +1,261 @@
+====================================================================
+DOCUMENTACIÓN DE PRUEBAS - MEGASTOCK MACHINES
+Gestión de Paradas y Métricas OEE
+====================================================================
+
+DESCRIPCIÓN:
+Sistema completo para registrar, clasificar y analizar paradas de máquinas
+con métricas OEE automáticas en tiempo real.
+
+====================================================================
+MÓDULOS REQUERIDOS:
+====================================================================
+- megastock_base (configuración empresa y centros de trabajo)
+- megastock_machines (gestión paradas y métricas)
+
+====================================================================
+FUNCIONALIDADES IMPLEMENTADAS:
+====================================================================
+
+1. REGISTRO DE PARADAS DE MÁQUINAS
+   - Códigos automáticos secuenciales (PAR-0001, PAR-0002...)
+   - Clasificación por categorías y causas específicas
+   - Seguimiento de tiempos con duración automática
+   - Control de estados y acciones correctivas
+
+2. MÉTRICAS OEE EN TIEMPO REAL
+   - Conteo de paradas diarias por máquina
+   - Cálculo de tiempo parado total
+   - Porcentaje de disponibilidad automático
+   - Visualización de estado operacional
+
+====================================================================
+GUÍA DE PRUEBAS PASO A PASO:
+====================================================================
+
+PREPARACIÓN:
+-----------
+1. Reiniciar servidor Odoo
+2. Verificar que los módulos megastock_base y megastock_machines estén instalados
+3. Asegurarse de tener centros de trabajo configurados
+
+PRUEBA 1: CREAR PARADA DE MÁQUINA
+---------------------------------
+PASOS:
+1. Ir a menú: Fabricación → MEGASTOCK Máquinas → Paradas
+2. Hacer clic en "Crear"
+3. Completar campos:
+   - Centro de Trabajo: [Seleccionar cualquier centro disponible]
+   - Categoría: "Setup/Cambio"
+   - Causa Específica: "Cambio tesaprint"
+   - Operador: "Tu nombre"
+   - Descripción: "Cambio de tesaprint por nuevo pedido cliente XYZ"
+4. Hacer clic en "Guardar"
+
+RESULTADO ESPERADO:
+- Se genera código automático tipo "PAR-0001"
+- Estado inicial: "En Progreso"
+- Hora inicio se registra automáticamente
+- Duración muestra 0.0 (parada activa)
+
+PRUEBA 2: VERIFICAR MÉTRICAS OEE
+-------------------------------
+PASOS:
+1. Ir a menú: Fabricación → Centros de Trabajo
+2. Abrir el centro de trabajo usado en la parada
+3. Navegar a pestaña "MEGASTOCK - Básico"
+4. Revisar sección "Métricas OEE Hoy"
+
+RESULTADO ESPERADO:
+- Paradas Hoy: 1
+- Tiempo Parado Hoy: [valor > 0]
+- Disponibilidad (%): [menor a 100%]
+
+PRUEBA 3: RESOLVER PARADA
+-------------------------
+PASOS:
+1. Regresar a Fabricación → MEGASTOCK Máquinas → Paradas
+2. Abrir la parada creada (hacer clic en la fila)
+3. Hacer clic en botón "Resolver Parada"
+4. En campo "Acción Correctiva" escribir:
+   "Tesaprint reemplazado exitosamente. Sistema operativo normal."
+5. Hacer clic en "Guardar"
+
+RESULTADO ESPERADO:
+- Estado cambia a "Resuelto"
+- Se registra hora fin automáticamente
+- Se calcula duración total en minutos
+- Campo "Acción Correctiva" se vuelve visible y editable
+- Botón "Resolver Parada" desaparece
+
+PRUEBA 4: VERIFICAR CATEGORÍAS Y CAUSAS ESPECÍFICAS
+-------------------------------------------------
+PASOS:
+1. Crear nueva parada
+2. Probar diferentes combinaciones:
+   
+   MECÁNICA:
+   - Categoría: "Mecánica" 
+   - Causa: "Rodamientos"
+   - Descripción: "Rodamiento principal con ruido excesivo"
+   
+   CALIDAD:
+   - Categoría: "Calidad"
+   - Causa: "Dimensiones fuera spec"
+   - Descripción: "Producto fuera de tolerancia dimensional"
+   
+   MATERIAL:
+   - Categoría: "Material/Insumos"
+   - Causa: "Peso bobinas"
+   - Descripción: "Bobina con peso insuficiente para continuar"
+
+RESULTADO ESPERADO:
+- Todas las categorías funcionan correctamente
+- Las causas específicas están disponibles
+- Campos se guardan sin errores
+
+PRUEBA 5: LISTA Y FILTROS
+------------------------
+PASOS:
+1. Crear 3-4 paradas con diferentes categorías
+2. Ver lista en Fabricación → MEGASTOCK Máquinas → Paradas
+3. Verificar columnas mostradas:
+   - Referencia
+   - Centro de Trabajo
+   - Categoría
+   - Causa Específica
+   - Hora Inicio
+   - Duración
+   - Operador
+   - Estado
+
+RESULTADO ESPERADO:
+- Lista muestra todas las paradas
+- Columnas son legibles y completas
+- Se puede hacer clic en cualquier fila para editar
+
+PRUEBA 6: INTEGRACIÓN CON CENTROS DE TRABAJO
+-------------------------------------------
+PASOS:
+1. Crear paradas en diferentes centros de trabajo
+2. Verificar métricas individuales:
+   - Ir a cada centro de trabajo
+   - Revisar pestaña "MEGASTOCK - Básico"
+   - Verificar que cada centro muestre sus métricas específicas
+
+RESULTADO ESPERADO:
+- Cada centro de trabajo muestra solo sus paradas
+- Métricas son independientes entre centros
+- Disponibilidad se calcula correctamente por centro
+
+====================================================================
+CAMPOS Y FUNCIONES TÉCNICAS:
+====================================================================
+
+CAMPOS PRINCIPALES:
+------------------
+- name: Código automático (PAR-XXXX)
+- workcenter_id: Centro de trabajo afectado
+- category: Categoría de parada (7 opciones)
+- cause: Causa específica (25+ opciones MEGASTOCK)
+- start_time: Hora inicio automática
+- end_time: Hora fin (al resolver)
+- duration_minutes: Duración calculada automáticamente
+- state: Estado (in_progress/resolved/cancelled)
+- operator_name: Operador responsable
+- description: Descripción detallada
+- corrective_action: Acción tomada para resolver
+
+CAMPOS CALCULADOS OEE:
+--------------------
+- downtime_count_today: Número de paradas hoy
+- downtime_duration_today: Horas paradas totales hoy  
+- oee_availability: Porcentaje disponibilidad (operativo/programado)
+
+MÉTODOS IMPORTANTES:
+------------------
+- _get_next_reference(): Genera código secuencial
+- _compute_duration(): Calcula duración en tiempo real
+- _compute_oee_metrics(): Calcula métricas OEE diarias
+- action_resolve(): Resuelve parada con validaciones
+
+====================================================================
+CASOS DE ERROR COMUNES:
+====================================================================
+
+ERROR 1: "Campo requerido faltante"
+SOLUCIÓN: Completar campos obligatorios (Centro de Trabajo, Categoría, Descripción)
+
+ERROR 2: "No aparecen métricas OEE"
+SOLUCIÓN: Crear al menos una parada y revisar pestaña correcta en centro de trabajo
+
+ERROR 3: "No se puede resolver parada"
+SOLUCIÓN: Verificar que la parada esté en estado "En Progreso"
+
+ERROR 4: "Duración no se calcula"
+SOLUCIÓN: Verificar que start_time esté registrado, end_time se llena al resolver
+
+====================================================================
+PERSONALIZACIÓN Y CONFIGURACIÓN:
+====================================================================
+
+AGREGAR NUEVAS CAUSAS:
+1. Editar archivo: models/machine_downtime.py
+2. Modificar campo 'cause' con nuevas opciones
+3. Actualizar módulo
+
+CAMBIAR HORAS PROGRAMADAS:
+1. Editar método _compute_oee_metrics()
+2. Modificar variable programmed_hours (actualmente 8.0)
+3. Actualizar módulo
+
+AGREGAR NUEVAS CATEGORÍAS:
+1. Editar campo 'category' en models/machine_downtime.py
+2. Agregar nuevas opciones en tupla
+3. Actualizar módulo
+
+====================================================================
+REPORTES Y ANÁLISIS:
+====================================================================
+
+INFORMACIÓN DISPONIBLE:
+- Paradas por categoría y causa
+- Tiempos de parada por centro de trabajo
+- Tendencias de disponibilidad diaria
+- Operadores con más reportes
+- Acciones correctivas más efectivas
+
+EXPORTACIÓN:
+- Desde vista de lista: botón "Exportar"
+- Formatos disponibles: Excel, CSV
+- Campos exportables: todos los mostrados en lista
+
+====================================================================
+MANTENIMIENTO Y SOPORTE:
+====================================================================
+
+ARCHIVOS PRINCIPALES:
+- models/machine_downtime.py: Modelo principal de paradas
+- models/mrp_workcenter_simple.py: Extensión centros de trabajo con OEE
+- views/machine_downtime_views.xml: Interfaces usuario
+- views/mrp_workcenter_simple_views.xml: Vista métricas OEE
+
+LOGS Y DEBUGGING:
+- Activar modo desarrollador en Odoo
+- Revisar logs en consola servidor
+- Usar menú Técnico → Configuración → Usuarios → Campos calculados
+
+====================================================================
+PRÓXIMOS DESARROLLOS:
+====================================================================
+
+MEJORAS PLANEADAS:
+1. Dashboard gráfico de paradas
+2. Alertas automáticas por tiempo excesivo
+3. Integración con mantenimiento preventivo
+4. Reportes avanzados con tendencias
+5. Notificaciones automáticas a supervisores
+
+====================================================================
+FIN DE DOCUMENTACIÓN
+====================================================================

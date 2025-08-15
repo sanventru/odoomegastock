@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista de formulario simple para Product Product (Variantes) -->
+        <record id="product_product_form_view_megastock" model="ir.ui.view">
+            <field name="name">product.product.form.megastock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_normal_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar información MEGASTOCK -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="megastock_code" readonly="1"/>
+                    <field name="variant_code" readonly="1"/>
+                    <field name="megastock_category" readonly="1"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda extendida -->
+        <record id="product_product_search_view_megastock" model="ir.ui.view">
+            <field name="name">product.product.search.megastock</field>
+            <field name="model">product.product</field>
+            <field name="inherit_id" ref="product.product_search_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos de búsqueda -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="megastock_code" string="Código Base"/>
+                    <field name="variant_code" string="Código Variante"/>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

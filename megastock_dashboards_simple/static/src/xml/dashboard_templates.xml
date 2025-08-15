@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- Template Principal del Dashboard -->
+    <t t-name="MegastockDashboardMain">
+        <div class="megastock-dashboard">
+            <!-- Header -->
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Dashboard MEGASTOCK</h1>
+                <div class="dashboard-controls">
+                    <button class="btn btn-success toggle-auto-refresh" title="Auto-actualización">
+                        <i class="fa fa-pause"></i>
+                    </button>
+                    <button class="btn btn-primary refresh-dashboard" title="Actualizar">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filtro de Línea -->
+            <div class="line-filter">
+                <label for="lineSelect">Línea de Producción:</label>
+                <select id="lineSelect" class="line-filter-select">
+                    <option value="all">Todas las Líneas</option>
+                    <option value="cajas">Línea CAJAS</option>
+                    <option value="laminas">Línea LÁMINAS</option>
+                    <option value="papel">Línea PAPEL PERIÓDICO</option>
+                </select>
+            </div>
+
+            <!-- KPI Cards -->
+            <div class="dashboard-grid kpi-cards-container">
+                <!-- Será poblado dinámicamente -->
+            </div>
+
+            <!-- Charts Section -->
+            <div class="chart-container">
+                <h3 class="chart-title">OEE por Componentes</h3>
+                <div class="chart-canvas">
+                    <canvas id="oeeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Utilización de Centros de Trabajo</h3>
+                <div class="chart-canvas">
+                    <canvas id="capacityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Tendencia de Indicadores</h3>
+                <div class="chart-canvas">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section">
+                <h3 class="chart-title">Alertas Activas</h3>
+                <div class="alerts-container">
+                    <!-- Será poblado dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="last-update">
+                <small>Última actualización: <span class="last-update-time"></span></small>
+            </div>
+        </div>
+    </t>
+
+    <!-- Template para KPI Cards -->
+    <t t-name="KpiCards">
+        <t t-foreach="kpis" t-as="kpi">
+            <div t-attf-class="kpi-card alert-#{kpi.level or 'green'}" t-att-data-kpi-type="kpi.type">
+                <div class="kpi-title" t-esc="kpi.title"/>
+                <div class="kpi-value" t-esc="kpi.value"/>
+                <div t-if="kpi.change" t-attf-class="kpi-change #{kpi.change_class or ''}">
+                    <t t-esc="kpi.change"/>
+                </div>
+            </div>
+        </t>
+    </t>
+
+    <!-- Template para Alertas -->
+    <t t-name="AlertsSection">
+        <t t-if="alerts and alerts.length">
+            <t t-foreach="alerts" t-as="alert">
+                <div t-attf-class="alert-item level-#{alert.level}" t-att-data-alert-id="alert.id">
+                    <div class="alert-info">
+                        <span t-attf-class="alert-badge #{alert.level}" t-esc="alert.level"/>
+                        <span t-esc="alert.name"/>
+                        <small>(<t t-esc="alert.line"/>)</small>
+                    </div>
+                    <small t-esc="alert.date"/>
+                </div>
+            </t>
+        </t>
+        <t t-if="!alerts or !alerts.length">
+            <div class="alert alert-success">
+                <i class="fa fa-check-circle"></i> No hay alertas activas
+            </div>
+        </t>
+    </t>
+
+    <!-- Loading Spinner -->
+    <t t-name="LoadingSpinner">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+        </div>
+    </t>
+
+</templates>

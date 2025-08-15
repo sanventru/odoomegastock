@@ -8,7 +8,7 @@
         <record id="calculation_rule_box_surface_area" model="megastock.bom.calculation.rule">
             <field name="name">Cálculo Área Superficie Cajas</field>
             <field name="code">BOX_SURFACE_AREA</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_cajas'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">surface_area</field>
             <field name="formula">((length + width) * 2 + 10) * ((width + height) * 2 + 10) / 1000000</field>
@@ -27,7 +27,7 @@ Fórmula para calcular área de superficie de desarrollo de caja:
         <record id="calculation_rule_sheet_area" model="megastock.bom.calculation.rule">
             <field name="name">Cálculo Área Láminas</field>
             <field name="code">SHEET_AREA</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_laminas'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_laminas'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">surface_area</field>
             <field name="formula">length * width / 1000000</field>
@@ -45,7 +45,7 @@ Fórmula simple para láminas rectangulares:
         <record id="calculation_rule_adhesive_consumption" model="megastock.bom.calculation.rule">
             <field name="name">Consumo Adhesivo por m²</field>
             <field name="code">ADHESIVE_CONSUMPTION</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas')), (4, ref('megastock_products.category_laminas'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_cajas')), (4, ref('megastock_base.product_category_laminas'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">material_consumption</field>
             <field name="formula">surface_area * adhesive_rate * layers</field>
@@ -63,7 +63,7 @@ Consumo de adhesivo basado en:
         <record id="calculation_rule_ink_consumption" model="megastock.bom.calculation.rule">
             <field name="name">Consumo Tinta por Cobertura</field>
             <field name="code">INK_CONSUMPTION</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas')), (4, ref('megastock_products.category_microcorrugado'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_cajas')), (4, ref('megastock_base.product_category_microcorrugado'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">material_consumption</field>
             <field name="formula">surface_area * coverage_percentage * ink_density</field>
@@ -81,7 +81,7 @@ Consumo de tinta flexográfica:
         <record id="calculation_rule_microcorrugado_area" model="megastock.bom.calculation.rule">
             <field name="name">Área Microcorrugado con Precisión</field>
             <field name="code">MICRO_PRECISION_AREA</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_microcorrugado'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_microcorrugado'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">surface_area</field>
             <field name="formula">((length + width + 15) * 2) * ((width + height + 15) * 2) / 1000000</field>
@@ -99,7 +99,7 @@ Consumo de tinta flexográfica:
         <record id="calculation_rule_newspaper_sheets" model="megastock.bom.calculation.rule">
             <field name="name">Hojas Papel Periódico por Resma</field>
             <field name="code">NEWSPAPER_SHEETS</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_papel_periodico'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_papel_periodico'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">piece_count</field>
             <field name="formula">quantity * 500</field>  <!-- 500 hojas por resma -->
@@ -117,7 +117,7 @@ Cálculo hojas totales para papel periódico:
         <record id="calculation_rule_master_roll_optimization" model="megastock.bom.calculation.rule">
             <field name="name">Optimización Bobina Madre</field>
             <field name="code">MASTER_ROLL_OPTIMIZATION</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_papel_periodico'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_papel_periodico'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">roll_optimization</field>
             <field name="formula">ceil(total_area / roll_area) * utilization_factor</field>
@@ -135,7 +135,7 @@ Optimización uso de bobina madre:
         <record id="calculation_rule_variant_auto" model="megastock.bom.calculation.rule">
             <field name="name">Cálculo Automático Variantes</field>
             <field name="code">VARIANT_AUTO_CALC</field>
-            <field name="category_ids" eval="[(4, ref('megastock_products.category_cajas'))]"/>
+            <field name="category_ids" eval="[(4, ref('megastock_base.product_category_cajas'))]"/>
             <field name="active">True</field>
             <field name="calculation_type">variant_calculation</field>
             <field name="formula">base_consumption * dimension_factor * complexity_factor</field>
@@ -155,7 +155,7 @@ Cálculo automático para variantes de producto:
         <record id="substitution_rule_kraft_availability" model="megastock.material.substitution.rule">
             <field name="name">Sustitución KRAFT por Disponibilidad</field>
             <field name="code">KRAFT_AVAILABILITY</field>
-            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_150"/>
+            <field name="primary_material_id" ref="megastock_base.raw_material_papel_kraft_150"/>
             <field name="active">True</field>
             <field name="substitution_type">availability</field>
             <field name="trigger_condition">stock_below_minimum</field>
@@ -171,7 +171,7 @@ Sustitución automática cuando stock KRAFT 150g < 7 días:
         <!-- Líneas de Sustitución KRAFT -->
         <record id="substitution_line_kraft_175" model="megastock.material.substitution.line">
             <field name="substitution_rule_id" ref="substitution_rule_kraft_availability"/>
-            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_175"/>
+            <field name="substitute_material_id" ref="megastock_base.raw_material_papel_kraft_175"/>
             <field name="sequence">10</field>
             <field name="conversion_factor">0.85</field>  <!-- Menos cantidad por mayor gramaje -->
             <field name="quality_impact">0</field>  <!-- Sin impacto calidad -->
@@ -181,7 +181,7 @@ Sustitución automática cuando stock KRAFT 150g < 7 días:
         
         <record id="substitution_line_kraft_125" model="megastock.material.substitution.line">
             <field name="substitution_rule_id" ref="substitution_rule_kraft_availability"/>
-            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_papel_kraft_125"/>
+            <field name="substitute_material_id" ref="megastock_base.raw_material_papel_kraft_125"/>
             <field name="sequence">20</field>
             <field name="conversion_factor">1.15</field>  <!-- Más cantidad por menor gramaje -->
             <field name="quality_impact">-2</field>  <!-- -2% resistencia -->
@@ -193,7 +193,7 @@ Sustitución automática cuando stock KRAFT 150g < 7 días:
         <record id="substitution_rule_ink_cmyk" model="megastock.material.substitution.rule">
             <field name="name">Sustitución Tintas CMYK</field>
             <field name="code">INK_CMYK_SUBSTITUTION</field>
-            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_tinta_flexo_cyan"/>
+            <field name="primary_material_id" ref="megastock_base.raw_material_tinta_flexo_cyan"/>
             <field name="active">True</field>
             <field name="substitution_type">cost_optimization</field>
             <field name="trigger_condition">cost_variance_above</field>
@@ -210,7 +210,7 @@ Sustitución tintas CMYK cuando variación costo > 10%:
         <record id="substitution_rule_adhesive_type" model="megastock.material.substitution.rule">
             <field name="name">Sustitución Tipo Adhesivo</field>
             <field name="code">ADHESIVE_TYPE_SUBSTITUTION</field>
-            <field name="primary_material_id" ref="megastock_inventory_clean.raw_material_adhesivo_almidon"/>
+            <field name="primary_material_id" ref="megastock_base.raw_material_adhesivo_almidon"/>
             <field name="active">True</field>
             <field name="substitution_type">quality_requirement</field>
             <field name="trigger_condition">product_specification</field>
@@ -225,7 +225,7 @@ Sustitución adhesivo según especificaciones:
         <!-- Línea: Adhesivo PVA como alternativa -->
         <record id="substitution_line_adhesive_pva" model="megastock.material.substitution.line">
             <field name="substitution_rule_id" ref="substitution_rule_adhesive_type"/>
-            <field name="substitute_material_id" ref="megastock_inventory_clean.raw_material_adhesivo_pva"/>
+            <field name="substitute_material_id" ref="megastock_base.raw_material_adhesivo_pva"/>
             <field name="sequence">10</field>
             <field name="conversion_factor">0.8</field>  <!-- Menos cantidad por mayor adherencia -->
             <field name="quality_impact">15</field>  <!-- +15% adherencia -->

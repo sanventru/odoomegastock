@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista de formulario para productos MEGASTOCK -->
+        <record id="product_template_form_view_megastock_clean" model="ir.ui.view">
+            <field name="name">product.template.form.megastock.clean</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos MEGASTOCK después de la categoría principal -->
+                <field name="categ_id" position="after">
+                    <field name="megastock_category"/>
+                    <field name="megastock_code"/>
+                </field>
+
+                <!-- Agregar página MEGASTOCK en el notebook -->
+                <notebook position="inside">
+                    <page string="MEGASTOCK">
+                        <group>
+                            <group string="Dimensiones">
+                                <field name="largo_cm"/>
+                                <field name="ancho_cm"/>
+                                <field name="alto_cm"/>
+                            </group>
+                            <group string="Especificaciones">
+                                <field name="flauta"/>
+                                <field name="material_type"/>
+                            </group>
+                        </group>
+                        <group string="Descripción Técnica">
+                            <field name="technical_description" nolabel="1" readonly="1"/>
+                        </group>
+                    </page>
+                </notebook>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

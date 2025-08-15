@@ -18,6 +18,7 @@ Configuración principal del sistema:
     """,
     'author': 'MEGASTOCK',
     'website': 'https://megastock.com',
+    'license': 'LGPL-3',
     'depends': [
         'base',
         'sale',

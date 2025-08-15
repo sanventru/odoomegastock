@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Vista formulario simple extendida -->
+    <record id="mrp_workcenter_form_simple" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.simple</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+        <field name="arch" type="xml">
+            
+            <!-- Agregar estado de máquina después del campo de código -->
+            <field name="code" position="after">
+                <field name="machine_status" widget="badge" 
+                       decoration-success="machine_status == 'operational'"
+                       decoration-warning="machine_status in ['setup', 'standby']"
+                       decoration-danger="machine_status in ['breakdown', 'maintenance']"/>
+            </field>
+            
+            <!-- Agregar pestaña MEGASTOCK básica -->
+            <xpath expr="//notebook" position="inside">
+                <page string="MEGASTOCK - Básico">
+                    <group>
+                        <group string="Parámetros Básicos">
+                            <field name="power_consumption_kw"/>
+                            <field name="max_width_mm"/>
+                            <field name="theoretical_capacity"/>
+                        </group>
+                        
+                        <group string="Métricas OEE Hoy">
+                            <field name="downtime_count_today"/>
+                            <field name="downtime_duration_today"/>
+                            <field name="oee_availability" widget="percentage"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Acciones">
+                        <button name="action_start_maintenance" 
+                                string="Iniciar Mantenimiento"
+                                type="object"
+                                class="btn-warning"/>
+                    </group>
+                </page>
+            </xpath>
+            
+        </field>
+    </record>
+    
+</odoo>

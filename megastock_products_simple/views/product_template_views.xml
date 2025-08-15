@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista simple para productos MEGASTOCK -->
+        <record id="product_template_form_view_megastock_simple_v2" model="ir.ui.view">
+            <field name="name">product.template.form.megastock.simple.v2</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos básicos después de categoría -->
+                <field name="categ_id" position="after">
+                    <field name="megastock_category"/>
+                    <field name="largo_cm"/>
+                    <field name="ancho_cm"/>
+                    <field name="alto_cm"/>
+                    <field name="ceja_cm"/>
+                </field>
+
+                <!-- Agregar pestaña MEGASTOCK dinámica -->
+                <notebook position="inside">
+                    <page string="MEGASTOCK">
+                        
+                        <!-- Mensaje cuando no hay categoría -->
+                        <div attrs="{'invisible': [('megastock_category', '!=', False)]}">
+                            <p>Selecciona una Categoría MEGASTOCK para ver las especificaciones específicas.</p>
+                        </div>
+                        
+                        <!-- Contenido cuando hay categoría seleccionada -->
+                        <div attrs="{'invisible': [('megastock_category', '=', False)]}">
+                            
+                            <!-- Campos comunes para todas las categorías -->
+                            <group string="Especificaciones Generales">
+                                <group>
+                                    <field name="flauta"/>
+                                    <field name="material_type"/>
+                                </group>
+                                <group>
+                                    <field name="gramaje"/>
+                                    <field name="colores_impresion"/>
+                                </group>
+                            </group>
+                            
+                            <!-- Específico para CAJAS -->
+                            <group string="Especificaciones de Cajas" 
+                                   attrs="{'invisible': [('megastock_category', '!=', 'cajas')]}">
+                                <group>
+                                    <field name="test_value_lbs"/>
+                                    <field name="kl_value"/>
+                                    <field name="tipo_troquelado"/>
+                                </group>
+                            </group>
+                        
+                        </div>
+                        
+                    </page>
+                </notebook>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

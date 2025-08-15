@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vista de formulario extendida para Product Template -->
+        <record id="product_template_form_view_megastock" model="ir.ui.view">
+            <field name="name">product.template.form.megastock</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos MEGASTOCK después de la categoría -->
+                <xpath expr="//field[@name='categ_id']" position="after">
+                    <field name="megastock_category"/>
+                    <field name="megastock_code" readonly="1"/>
+                </xpath>
+
+                <!-- Agregar pestaña de Especificaciones Técnicas -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="Especificaciones MEGASTOCK">
+                        
+                        <!-- Sección de Dimensiones -->
+                        <group string="Dimensiones" col="4">
+                            <field name="largo_cm"/>
+                            <field name="ancho_cm"/>
+                            <field name="alto_cm"/>
+                            <field name="ceja_cm"/>
+                        </group>
+
+                        <!-- Sección de Especificaciones de Cartón -->
+                        <group string="Especificaciones de Cartón" col="4">
+                            <field name="flauta"/>
+                            <field name="test_value"/>
+                            <field name="kl_value"/>
+                            <field name="gramaje"/>
+                        </group>
+
+                        <!-- Sección de Material e Impresión -->
+                        <group string="Material e Impresión" col="4">
+                            <field name="material_type"/>
+                            <field name="colors_printing"/>
+                            <field name="tipo_caja"/>
+                        </group>
+
+                        <!-- Sección de Descripción Técnica -->
+                        <group string="Descripción Técnica Generada">
+                            <field name="technical_description" readonly="1" nolabel="1"/>
+                        </group>
+
+                        <!-- Botones de acción -->
+                        <div class="oe_button_box">
+                            <button name="action_generate_megastock_code" type="object" 
+                                    class="btn-primary" string="Generar Código"/>
+                            <button name="action_update_technical_description" type="object" 
+                                    class="btn-secondary" string="Actualizar Descripción"/>
+                        </div>
+
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de lista extendida -->
+        <record id="product_template_tree_view_megastock" model="ir.ui.view">
+            <field name="name">product.template.tree.megastock</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_tree_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar columnas MEGASTOCK -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="megastock_code" optional="show"/>
+                    <field name="megastock_category" optional="hide"/>
+                </xpath>
+
+            </field>
+        </record>
+
+        <!-- Vista de búsqueda extendida -->
+        <record id="product_template_search_view_megastock" model="ir.ui.view">
+            <field name="name">product.template.search.megastock</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_search_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar filtros de búsqueda -->
+                <xpath expr="//field[@name='name']" position="after">
+                    <field name="megastock_code" string="Código MEGASTOCK"/>
+                    <field name="megastock_category" string="Categoría MEGASTOCK"/>
+                </xpath>
+
+                <!-- Agregar filtros de grupo -->
+                <xpath expr="//filter[@name='consumable']" position="after">
+                    <separator/>
+                    <filter string="CAJAS" name="filter_cajas" domain="[('megastock_category', '=', 'cajas')]"/>
+                    <filter string="LÁMINAS" name="filter_laminas" domain="[('megastock_category', '=', 'laminas')]"/>
+                    <filter string="PAPEL PERIÓDICO" name="filter_papel" domain="[('megastock_category', '=', 'papel')]"/>
+                </xpath>
+
+                <!-- Agregar agrupaciones -->
+                <xpath expr="//filter[@name='categ_id']" position="after">
+                    <filter string="Categoría MEGASTOCK" name="group_megastock_category" context="{'group_by': 'megastock_category'}"/>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

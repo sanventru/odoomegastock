@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Tree para KPIs de Producción -->
+    <record id="view_production_kpi_tree" model="ir.ui.view">
+        <field name="name">megastock.production.kpi.tree</field>
+        <field name="model">megastock.production.kpi</field>
+        <field name="arch" type="xml">
+            <tree string="KPIs de Producción" decoration-danger="alert_level=='red'" decoration-warning="alert_level=='yellow'">
+                <field name="measurement_date"/>
+                <field name="production_line"/>
+                <field name="oee_percentage" widget="percentage"/>
+                <field name="availability_percentage" widget="percentage"/>
+                <field name="on_time_delivery_rate" widget="percentage"/>
+                <field name="alert_level"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Form para KPIs de Producción -->
+    <record id="view_production_kpi_form" model="ir.ui.view">
+        <field name="name">megastock.production.kpi.form</field>
+        <field name="model">megastock.production.kpi</field>
+        <field name="arch" type="xml">
+            <form string="KPI de Producción">
+                <header>
+                    <field name="alert_level" widget="statusbar" statusbar_colors="{'green': 'success', 'yellow': 'warning', 'red': 'danger'}"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="measurement_date"/>
+                            <field name="production_line"/>
+                        </group>
+                        <group>
+                            <field name="oee_percentage"/>
+                            <field name="availability_percentage"/>
+                            <field name="performance_percentage"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="quality_percentage"/>
+                            <field name="on_time_delivery_rate"/>
+                        </group>
+                        <group>
+                            <field name="utilization_rate"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="notes" placeholder="Observaciones adicionales..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+</odoo>

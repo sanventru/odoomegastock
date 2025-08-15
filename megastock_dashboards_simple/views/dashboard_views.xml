@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción para Dashboard de Producción -->
+    <record id="action_megastock_dashboard" model="ir.actions.client">
+        <field name="name">Dashboard MEGASTOCK</field>
+        <field name="tag">megastock_production_dashboard</field>
+    </record>
+
+    <!-- Acción para KPIs de Producción -->
+    <record id="action_production_kpi" model="ir.actions.act_window">
+        <field name="name">KPIs de Producción</field>
+        <field name="res_model">megastock.production.kpi</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Crear el primer KPI de producción!
+            </p>
+            <p>
+                Los KPIs permiten monitorear el rendimiento de las líneas de producción.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú Principal MEGASTOCK -->
+    <menuitem id="menu_megastock_main" 
+              name="MEGASTOCK" 
+              sequence="50"/>
+
+    <!-- Menú Dashboard -->
+    <menuitem id="menu_megastock_dashboard" 
+              name="Dashboard" 
+              parent="menu_megastock_main"
+              action="action_megastock_dashboard"
+              sequence="10"/>
+
+    <!-- Menú KPIs -->
+    <menuitem id="menu_megastock_kpis" 
+              name="KPIs de Producción" 
+              parent="menu_megastock_main"
+              action="action_production_kpi"
+              sequence="20"/>
+
+    <!-- Submenu Análisis -->
+    <menuitem id="menu_megastock_analysis" 
+              name="Análisis" 
+              parent="menu_megastock_main"
+              sequence="30"/>
+
+    <menuitem id="menu_megastock_kpis_analysis" 
+              name="Análisis de KPIs" 
+              parent="menu_megastock_analysis"
+              action="action_production_kpi"
+              sequence="10"/>
+
+</odoo>

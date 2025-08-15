@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vista de formulario básica para BOM Inteligente -->
+        <record id="mrp_bom_form_intelligent_simple" model="ir.ui.view">
+            <field name="name">mrp.bom.form.intelligent.simple</field>
+            <field name="model">mrp.bom</field>
+            <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar checkbox BOM Inteligente después del código -->
+                <field name="code" position="after">
+                    <field name="is_intelligent"/>
+                </field>
+
+                <!-- Agregar pestaña BOM Inteligente -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="BOM Inteligente" 
+                          attrs="{'invisible': [('is_intelligent', '=', False)]}">
+                        <group>
+                            <group string="Configuración Automática">
+                                <field name="auto_update_enabled"/>
+                                <field name="last_calculation_date"/>
+                            </group>
+                            <group string="Análisis de Costos">
+                                <field name="current_total_cost"/>
+                                <field name="standard_total_cost"/>
+                            </group>
+                        </group>
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

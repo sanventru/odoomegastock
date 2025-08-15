@@ -1,5 +1,0 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_mrp_stoppage_category_manager,mrp.stoppage.category manager,model_mrp_stoppage_category,mrp.group_mrp_manager,1,1,1,1
-access_mrp_stoppage_category_user,mrp.stoppage.category user,model_mrp_stoppage_category,mrp.group_mrp_user,1,0,0,0
-access_mrp_workorder_stoppage_manager,mrp.workorder.stoppage manager,model_mrp_workorder_stoppage,mrp.group_mrp_manager,1,1,1,1
-access_mrp_workorder_stoppage_user,mrp.workorder.stoppage user,model_mrp_workorder_stoppage,mrp.group_mrp_user,1,1,1,0

@@ -14,11 +14,8 @@
         'stock',
         'hr',
         'megastock_base',
-        'megastock_products',
-        'megastock_inventory_clean',
-        'megastock_machines',
-        'megastock_routing_basic',
-        'mrp_production_lines'
+        'megastock_products_simple',
+        'megastock_bom_simple',
     ],
     'data': [
         'security/production_planning_security.xml',
@@ -32,6 +29,11 @@
     ],
     'assets': {
         'web.assets_backend': [
+            # Librerías locales (sin dependencias CDN)
+            'megastock_production_planning/static/lib/moment.min.js',
+            'megastock_production_planning/static/lib/chart.min.js',
+            'megastock_production_planning/static/lib/d3.min.js',
+            # CSS y JS del módulo
             'megastock_production_planning/static/src/css/dashboard.css',
             'megastock_production_planning/static/src/js/production_dashboard.js',
             'megastock_production_planning/static/src/js/kpi_dashboard.js',

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vista BOM Inteligente MEGASTOCK -->
+        <record id="mrp_bom_form_megastock_intelligent" model="ir.ui.view">
+            <field name="name">mrp.bom.form.megastock.intelligent</field>
+            <field name="model">mrp.bom</field>
+            <field name="inherit_id" ref="mrp.mrp_bom_form_view"/>
+            <field name="arch" type="xml">
+                
+                <!-- Agregar campos inteligentes después del código -->
+                <field name="code" position="after">
+                    <field name="is_megastock_intelligent"/>
+                    <field name="auto_calculate" attrs="{'invisible': [('is_megastock_intelligent', '=', False)]}"/>
+                </field>
+
+                <!-- Agregar pestaña MEGASTOCK Inteligente -->
+                <xpath expr="//notebook" position="inside">
+                    <page string="MEGASTOCK Inteligente" 
+                          attrs="{'invisible': [('is_megastock_intelligent', '=', False)]}">
+                        
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_update_intelligent_quantities" 
+                                    string="Recalcular Cantidades"
+                                    type="object" 
+                                    class="oe_stat_button" 
+                                    icon="fa-refresh"/>
+                        </div>
+                        
+                        <group>
+                            <group string="Cálculos Automáticos">
+                                <field name="surface_area_m2"/>
+                                <field name="waste_percentage"/>
+                                <field name="estimated_material_cost" widget="monetary"/>
+                            </group>
+                            <group string="Información">
+                                <field name="last_auto_update"/>
+                            </group>
+                        </group>
+                        
+                        <group string="Instrucciones">
+                            <p>
+                                <strong>BOM Inteligente habilitado:</strong><br/>
+                                • Las cantidades se calculan automáticamente basadas en las dimensiones del producto<br/>
+                                • Papel/Cartón: Por área de superficie (m²)<br/>
+                                • Adhesivo: 8g por m²<br/>
+                                • Tinta: 15g por m² con 30% cobertura<br/>
+                                • Use "Recalcular Cantidades" para actualizar manualmente
+                            </p>
+                        </group>
+                        
+                    </page>
+                </xpath>
+
+            </field>
+        </record>
+
+    </data>
+</odoo>

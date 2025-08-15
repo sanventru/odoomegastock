@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Vista formulario extendida de Centro de Trabajo -->
+    <record id="mrp_workcenter_form_megastock" model="ir.ui.view">
+        <field name="name">mrp.workcenter.form.megastock</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_view"/>
+        <field name="arch" type="xml">
+            
+            <!-- Agregar estado de máquina después del campo de código -->
+            <field name="code" position="after">
+                <field name="machine_status" widget="badge" 
+                       decoration-success="machine_status == 'operational'"
+                       decoration-warning="machine_status in ['setup', 'standby']"
+                       decoration-danger="machine_status in ['breakdown', 'maintenance']"/>
+            </field>
+            
+            <!-- Agregar pestaña MEGASTOCK con información técnica -->
+            <xpath expr="//notebook" position="inside">
+                <page string="MEGASTOCK - Parámetros Técnicos">
+                    
+                    <group>
+                        <group string="Consumos Energéticos">
+                            <field name="power_consumption_kw"/>
+                            <field name="energy_cost_per_hour" readonly="1"/>
+                        </group>
+                        
+                        <group string="Consumos Materiales Auxiliares">
+                            <field name="compressed_air_consumption"/>
+                            <field name="hydraulic_oil_consumption"/>
+                            <field name="lubricant_consumption"/>
+                        </group>
+                    </group>
+                    
+                    <group>
+                        <group string="Dimensiones Técnicas">
+                            <field name="max_width_mm"/>
+                            <field name="max_length_mm"/>
+                            <field name="max_thickness_mm"/>
+                        </group>
+                        
+                        <group string="Capacidades de Producción">
+                            <field name="theoretical_capacity"/>
+                            <field name="real_capacity" readonly="1"/>
+                            <field name="capacity_unit"/>
+                        </group>
+                    </group>
+                    
+                </page>
+                
+                <page string="MEGASTOCK - OEE y Mantenimiento">
+                    
+                    <group>
+                        <group string="Métricas OEE">
+                            <field name="oee_availability" readonly="1"/>
+                            <field name="oee_performance" readonly="1"/>
+                            <field name="oee_quality" readonly="1"/>
+                            <field name="oee_overall" readonly="1" widget="percentage"/>
+                        </group>
+                        
+                        <group string="Información de Mantenimiento">
+                            <field name="maintenance_hours_interval"/>
+                            <field name="total_operation_hours"/>
+                            <field name="last_maintenance_date"/>
+                            <field name="next_maintenance_date"/>
+                        </group>
+                    </group>
+                    
+                    <group string="Operadores">
+                        <field name="main_operator_id"/>
+                        <field name="operator_ids" widget="many2many_tags"/>
+                    </group>
+                    
+                    <group>
+                        <button name="action_start_maintenance" 
+                                string="Iniciar Mantenimiento"
+                                type="object"
+                                class="btn-warning"
+                                attrs="{'invisible': [('machine_status', '=', 'maintenance')]}"/>
+                        
+                        <button name="action_complete_maintenance"
+                                string="Completar Mantenimiento"
+                                type="object"
+                                class="btn-success"
+                                attrs="{'invisible': [('machine_status', '!=', 'maintenance')]}"/>
+                        
+                        <button name="action_report_breakdown"
+                                string="Reportar Avería"
+                                type="object"
+                                class="btn-danger"
+                                attrs="{'invisible': [('machine_status', '=', 'breakdown')]}"/>
+                    </group>
+                    
+                </page>
+            </xpath>
+            
+        </field>
+    </record>
+    
+    <!-- Vista lista extendida -->
+    <record id="mrp_workcenter_tree_megastock" model="ir.ui.view">
+        <field name="name">mrp.workcenter.tree.megastock</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.mrp_workcenter_tree_view"/>
+        <field name="arch" type="xml">
+            
+            <!-- Agregar columnas MEGASTOCK -->
+            <field name="time_efficiency" position="after">
+                <field name="machine_status" widget="badge"
+                       decoration-success="machine_status == 'operational'"
+                       decoration-warning="machine_status in ['setup', 'standby']"
+                       decoration-danger="machine_status in ['breakdown', 'maintenance']"/>
+                <field name="oee_overall" widget="percentage"/>
+                <field name="theoretical_capacity"/>
+                <field name="capacity_unit"/>
+                <field name="energy_cost_per_hour"/>
+            </field>
+            
+        </field>
+    </record>
+    
+    <!-- Filtros y agrupaciones adicionales -->
+    <record id="mrp_workcenter_search_megastock" model="ir.ui.view">
+        <field name="name">mrp.workcenter.search.megastock</field>
+        <field name="model">mrp.workcenter</field>
+        <field name="inherit_id" ref="mrp.view_mrp_workcenter_filter"/>
+        <field name="arch" type="xml">
+            
+            <!-- Agregar filtros MEGASTOCK -->
+            <filter name="inactive" position="after">
+                <separator/>
+                <filter string="Operativas" name="operational" 
+                        domain="[('machine_status', '=', 'operational')]"/>
+                <filter string="En Mantenimiento" name="maintenance" 
+                        domain="[('machine_status', '=', 'maintenance')]"/>
+                <filter string="Averiadas" name="breakdown" 
+                        domain="[('machine_status', '=', 'breakdown')]"/>
+                <separator/>
+                <filter string="OEE Bajo (&lt; 60%)" name="low_oee" 
+                        domain="[('oee_overall', '&lt;', 60)]"/>
+                <filter string="Alto Consumo Energético" name="high_energy" 
+                        domain="[('power_consumption_kw', '&gt;', 50)]"/>
+            </filter>
+            
+            <!-- Agregar agrupaciones -->
+            <group position="inside">
+                <filter string="Estado de Máquina" name="group_machine_status" 
+                        context="{'group_by': 'machine_status'}"/>
+                <filter string="Operador Principal" name="group_main_operator" 
+                        context="{'group_by': 'main_operator_id'}"/>
+            </group>
+            
+        </field>
+    </record>
+    
+</odoo>
