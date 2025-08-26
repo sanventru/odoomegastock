@@ -478,7 +478,7 @@ class ProductionPlan(models.Model):
         # Implementación simplificada - en producción esto vendría de un módulo de pronósticos
         products = self.env['product.product'].search([
             ('type', '=', 'product'),
-            ('categ_id', 'in', self.env.ref('megastock_products.category_cajas').ids)
+            ('megastock_category', '=', 'cajas')
         ])
         
         forecast = {}

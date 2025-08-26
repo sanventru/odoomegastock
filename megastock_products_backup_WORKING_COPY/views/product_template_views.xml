@@ -32,6 +32,8 @@
                             <field name="flauta"/>
                             <field name="test_value"/>
                             <field name="kl_value"/>
+                            <field name="numero_troquel"/>
+                            <field name="empaque"/>
                             <field name="gramaje"/>
                         </group>
 

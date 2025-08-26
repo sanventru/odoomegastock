@@ -14,7 +14,7 @@
         'stock',
         'hr',
         'megastock_base',
-        'megastock_products_simple',
+        'megastock_products_v2',
         'megastock_bom_simple',
     ],
     'data': [
@@ -26,25 +26,15 @@
         'views/production_alert_views.xml',
         'views/alert_automation_views.xml',
         'views/dashboard_views.xml',
+        'views/production_order_views.xml',
+        'views/order_import_wizard_views.xml',
+        'views/production_order_menu.xml',
     ],
-    'assets': {
-        'web.assets_backend': [
-            # Librerías locales (sin dependencias CDN)
-            'megastock_production_planning/static/lib/moment.min.js',
-            'megastock_production_planning/static/lib/chart.min.js',
-            'megastock_production_planning/static/lib/d3.min.js',
-            # CSS y JS del módulo
-            'megastock_production_planning/static/src/css/dashboard.css',
-            'megastock_production_planning/static/src/js/production_dashboard.js',
-            'megastock_production_planning/static/src/js/kpi_dashboard.js',
-            'megastock_production_planning/static/src/js/capacity_dashboard.js',
-            'megastock_production_planning/static/src/js/schedule_gantt.js',
-            'megastock_production_planning/static/src/js/alert_dashboard.js',
-        ],
-        'web.assets_qweb': [
-            'megastock_production_planning/static/src/xml/dashboard_templates.xml',
-        ],
-    },
+    # 'assets': {
+    #     'web.assets_backend': [
+    #         # CSS y JS del módulo (comentado hasta que se creen los archivos)
+    #     ],
+    # },
     'external_dependencies': {
         'python': ['numpy', 'scipy', 'pandas'],
     },

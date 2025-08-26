@@ -10,7 +10,7 @@
         'base',
         'mrp',
         'megastock_base',
-        'megastock_products_backup',
+        'megastock_products_v2',
     ],
     'data': [
         'views/mrp_bom_views.xml',

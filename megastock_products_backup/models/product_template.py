@@ -71,6 +71,19 @@ class ProductTemplate(models.Model):
         ('200', '200'),
     ], string='Gramaje (g/m²)')
     
+    numero_troquel = fields.Char(
+        string='Número de troquel',
+        help='Número identificador del troquel utilizado'
+    )
+    
+    empaque = fields.Selection([
+        ('caja', 'Caja'),
+        ('pallet', 'Pallet'),
+        ('bulto', 'Bulto'),
+        ('unidad', 'Unidad'),
+        ('rollo', 'Rollo'),
+    ], string='Empaque')
+    
     tipo_caja = fields.Selection([
         ('tapa_fondo', 'Tapa y Fondo'),
         ('jumbo', 'Jumbo'),
@@ -86,7 +99,7 @@ class ProductTemplate(models.Model):
     )
     
     @api.depends('largo_cm', 'ancho_cm', 'alto_cm', 'ceja_cm', 'flauta', 'test_value', 
-                 'material_type', 'colors_printing', 'gramaje', 'tipo_caja')
+                 'material_type', 'colors_printing', 'gramaje', 'tipo_caja', 'numero_troquel', 'empaque')
     def _compute_technical_description(self):
         """Genera descripción técnica automática"""
         for record in self:
@@ -112,9 +125,18 @@ class ProductTemplate(models.Model):
             if record.kl_value:
                 desc_parts.append(f"KL: {record.kl_value}")
             
+            # Número de troquel
+            if record.numero_troquel:
+                desc_parts.append(f"Troquel: {record.numero_troquel}")
+            
             # Material
             if record.material_type:
                 desc_parts.append(f"Material: {record.material_type.upper()}")
+            
+            # Empaque
+            if record.empaque:
+                empaque_names = dict(record._fields['empaque'].selection)
+                desc_parts.append(f"Empaque: {empaque_names.get(record.empaque)}")
             
             # Impresión
             if record.colors_printing:

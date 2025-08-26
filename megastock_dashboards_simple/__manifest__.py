@@ -13,7 +13,7 @@
         'mrp',
         'stock',
         'megastock_base',
-        'megastock_products_simple',
+        'megastock_products_v2',
         'megastock_bom_simple',
     ],
     'data': [

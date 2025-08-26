@@ -11,3 +11,4 @@ from . import production_analysis
 from . import mrp_production_extended
 from . import production_alert
 from . import alert_automation
+from . import production_order

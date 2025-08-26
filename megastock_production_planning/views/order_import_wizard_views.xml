@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista del Wizard de Importación -->
+    <record id="view_order_import_wizard_form" model="ir.ui.view">
+        <field name="name">megastock.order.import.wizard.form</field>
+        <field name="model">megastock.order.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Pedidos desde CSV">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Importar Pedidos desde CSV</h1>
+                    </div>
+                    
+                    <group>
+                        <group name="file_info" string="Archivo">
+                            <field name="csv_file" filename="csv_filename"/>
+                            <field name="csv_filename" invisible="1"/>
+                            <field name="delimiter"/>
+                        </group>
+                        <group name="import_options" string="Opciones de Importación">
+                            <field name="skip_header"/>
+                            <field name="update_existing"/>
+                        </group>
+                    </group>
+
+                    <group name="statistics" string="Estadísticas de Importación" invisible="1" attrs="{'invisible': [('total_rows', '=', 0)]}">
+                        <group>
+                            <field name="total_rows" readonly="1"/>
+                            <field name="imported_count" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="updated_count" readonly="1"/>
+                            <field name="error_count" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group name="log_group" string="Log de Importación" invisible="1" attrs="{'invisible': [('import_log', '=', False)]}">
+                        <field name="import_log" nolabel="1" readonly="1" widget="text"/>
+                    </group>
+
+                    <div class="alert alert-info" role="alert">
+                        <strong>Formato esperado del CSV:</strong>
+                        <ul>
+                            <li>Delimitador: punto y coma (;) por defecto</li>
+                            <li>Las primeras 2 filas son encabezados (se omiten automáticamente)</li>
+                            <li>Columnas principales: Orden de Producción, Fecha Pedido, Cliente, Código, Descripción, etc.</li>
+                            <li>El archivo debe seguir el formato estándar de MEGASTOCK</li>
+                        </ul>
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_import_orders" type="object" string="Importar Pedidos" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción del Wizard -->
+    <record id="action_order_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Pedidos desde CSV</field>
+        <field name="res_model">megastock.order.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="view_order_import_wizard_form"/>
+    </record>
+</odoo>

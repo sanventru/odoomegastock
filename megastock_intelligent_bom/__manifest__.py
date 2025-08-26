@@ -32,7 +32,7 @@ Funcionalidades principales:
         'product',
         'sale',
         'megastock_base',
-        'megastock_products_simple',
+        'megastock_products_v2',
         'megastock_machines',
     ],
     'data': [

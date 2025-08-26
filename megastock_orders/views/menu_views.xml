@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menú Principal de Pedidos -->
+    <menuitem id="menu_megastock_orders_root"
+              name="Pedidos"
+              web_icon="megastock_orders,static/description/icon.png"
+              sequence="50"/>
+
+    <!-- Submenú de Pedidos de Producción -->
+    <menuitem id="menu_production_orders"
+              name="Pedidos de Producción"
+              parent="menu_megastock_orders_root"
+              action="action_production_order"
+              sequence="10"/>
+
+    <!-- Submenú de Importar Pedidos -->
+    <menuitem id="menu_import_orders"
+              name="Importar Pedidos CSV"
+              parent="menu_megastock_orders_root"
+              action="action_order_import_wizard"
+              sequence="20"/>
+</odoo>

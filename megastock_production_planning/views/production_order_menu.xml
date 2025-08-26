@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menú Principal de Pedidos -->
+    <menuitem id="menu_production_orders_main"
+              name="Pedidos"
+              parent="mrp.menu_mrp_root"
+              sequence="15"/>
+
+    <!-- Submenú de Pedidos de Producción -->
+    <menuitem id="menu_production_orders"
+              name="Pedidos de Producción"
+              parent="menu_production_orders_main"
+              action="action_production_order"
+              sequence="10"/>
+
+    <!-- Submenú de Importar Pedidos -->
+    <menuitem id="menu_import_orders"
+              name="Importar Pedidos CSV"
+              parent="menu_production_orders_main"
+              action="action_order_import_wizard"
+              sequence="20"/>
+</odoo>

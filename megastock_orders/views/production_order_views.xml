@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Lista de Pedidos -->
+    <record id="view_production_order_tree" model="ir.ui.view">
+        <field name="name">megastock.production.order.tree</field>
+        <field name="model">megastock.production.order</field>
+        <field name="arch" type="xml">
+            <tree string="Pedidos de Producción" decoration-success="estado=='entregado'" decoration-warning="estado=='proceso'" decoration-info="estado=='planchas'">
+                <field name="orden_produccion"/>
+                <field name="fecha_pedido_cliente"/>
+                <field name="cliente"/>
+                <field name="codigo"/>
+                <field name="descripcion"/>
+                <field name="cantidad"/>
+                <field name="cantidad_entregada"/>
+                <field name="porcentaje_cumplimiento" widget="percentage"/>
+                <field name="fecha_entrega_cliente"/>
+                <field name="fecha_produccion"/>
+                <field name="estado" widget="badge"/>
+                <field name="area_total"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de Formulario de Pedidos -->
+    <record id="view_production_order_form" model="ir.ui.view">
+        <field name="name">megastock.production.order.form</field>
+        <field name="model">megastock.production.order</field>
+        <field name="arch" type="xml">
+            <form string="Pedido de Producción">
+                <header>
+                    <field name="estado" widget="statusbar" statusbar_visible="pendiente,proceso,planchas,entregado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="orden_produccion" placeholder="Número de Orden"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group name="order_info" string="Información del Pedido">
+                            <field name="fecha_pedido_cliente"/>
+                            <field name="cliente"/>
+                            <field name="pedido"/>
+                            <field name="codigo"/>
+                            <field name="flauta"/>
+                        </group>
+                        <group name="delivery_info" string="Fechas y Entrega">
+                            <field name="fecha_entrega_cliente"/>
+                            <field name="fecha_produccion"/>
+                            <field name="cumplimiento"/>
+                            <field name="porcentaje_cumplimiento" widget="percentage"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group name="product_specs" string="Especificaciones del Producto">
+                            <field name="descripcion"/>
+                            <field name="largo"/>
+                            <field name="ancho"/>
+                            <field name="cantidad"/>
+                            <field name="cantidad_entregada"/>
+                            <field name="cavidad"/>
+                            <field name="area_total"/>
+                        </group>
+                        <group name="technical_specs" string="Especificaciones Técnicas">
+                            <field name="numero_troquel"/>
+                            <field name="ect_minimo"/>
+                            <field name="ect_real"/>
+                            <field name="peso"/>
+                            <field name="cortes"/>
+                            <field name="metros_lineales"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Materiales" name="materials">
+                            <group>
+                                <group string="Liner Interno">
+                                    <field name="liner_interno_proveedor"/>
+                                    <field name="liner_interno_ancho"/>
+                                    <field name="liner_interno_gm"/>
+                                    <field name="liner_interno_tipo"/>
+                                    <field name="cantidad_liner_interno"/>
+                                </group>
+                                <group string="Medium">
+                                    <field name="medium_proveedor"/>
+                                    <field name="medium_ancho"/>
+                                    <field name="medium_gm"/>
+                                    <field name="medium_tipo"/>
+                                    <field name="cantidad_medium"/>
+                                </group>
+                            </group>
+                            <group>
+                                <group string="Liner Externo">
+                                    <field name="liner_externo_proveedor"/>
+                                    <field name="liner_externo_ancho"/>
+                                    <field name="liner_externo_gm"/>
+                                    <field name="liner_externo_tipo"/>
+                                    <field name="cantidad_liner_externo"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_production_order_search" model="ir.ui.view">
+        <field name="name">megastock.production.order.search</field>
+        <field name="model">megastock.production.order</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Pedidos">
+                <field name="orden_produccion"/>
+                <field name="cliente"/>
+                <field name="codigo"/>
+                <field name="descripcion"/>
+                <field name="numero_troquel"/>
+                
+                <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
+                <filter string="En Proceso" name="proceso" domain="[('estado', '=', 'proceso')]"/>
+                <filter string="Planchas" name="planchas" domain="[('estado', '=', 'planchas')]"/>
+                <filter string="Entregados" name="entregados" domain="[('estado', '=', 'entregado')]"/>
+                
+                <separator/>
+                <filter string="Este Mes" name="este_mes" domain="[('fecha_pedido_cliente', '&gt;=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
+                <filter string="Próximas Entregas" name="proximas_entregas" domain="[('fecha_entrega_cliente', '&gt;=', context_today()), ('fecha_entrega_cliente', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente'}"/>
+                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                    <filter string="Fecha Pedido" name="group_fecha_pedido" context="{'group_by': 'fecha_pedido_cliente'}"/>
+                    <filter string="Fecha Entrega" name="group_fecha_entrega" context="{'group_by': 'fecha_entrega_cliente'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Kanban -->
+    <record id="view_production_order_kanban" model="ir.ui.view">
+        <field name="name">megastock.production.order.kanban</field>
+        <field name="model">megastock.production.order</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="estado" class="o_kanban_small_column">
+                <field name="orden_produccion"/>
+                <field name="cliente"/>
+                <field name="descripcion"/>
+                <field name="cantidad"/>
+                <field name="cantidad_entregada"/>
+                <field name="fecha_entrega_cliente"/>
+                <field name="estado"/>
+                <field name="porcentaje_cumplimiento"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="orden_produccion"/>
+                                        </strong>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <field name="cliente"/>
+                                    <br/>
+                                    <t t-if="record.descripcion.raw_value">
+                                        <span t-esc="record.descripcion.value.substring(0, 50)"/>
+                                        <t t-if="record.descripcion.value.length > 50">...</t>
+                                    </t>
+                                    <br/>
+                                    <strong>Cantidad: </strong><field name="cantidad"/>
+                                    <t t-if="record.cantidad_entregada.raw_value">
+                                        / <field name="cantidad_entregada"/> entregadas
+                                    </t>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.fecha_entrega_cliente.raw_value">
+                                            <i class="fa fa-calendar"/> <field name="fecha_entrega_cliente"/>
+                                        </t>
+                                    </div>
+                                    <div class="oe_kanban_bottom_right">
+                                        <field name="porcentaje_cumplimiento" widget="percentage"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_production_order" model="ir.actions.act_window">
+        <field name="name">Pedidos de Producción</field>
+        <field name="res_model">megastock.production.order</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="search_view_id" ref="view_production_order_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Crea tu primer pedido de producción!
+            </p>
+            <p>
+                Los pedidos de producción te permiten gestionar y hacer seguimiento
+                a todas las órdenes de fabricación de productos de cartón corrugado.
+            </p>
+        </field>
+    </record>
+</odoo>

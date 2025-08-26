@@ -26,10 +26,12 @@
                             <field name="ceja_cm"/>
                         </group>
                         
-                        <group string="Especificaciones Técnicas" col="4">
+                        <group string="Especificaciones de Cartón" col="4">
                             <field name="flauta"/>
                             <field name="test_value"/>
                             <field name="kl_value"/>
+                            <field name="numero_troquel"/>
+                            <field name="empaque"/>
                             <field name="material_type"/>
                         </group>
                         

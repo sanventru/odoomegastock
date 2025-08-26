@@ -32,6 +32,8 @@
                             <field name="flauta" attrs="{'readonly': [('megastock_category', 'not in', ['cajas', 'laminas'])]}"/>
                             <field name="test_value" attrs="{'readonly': [('megastock_category', '!=', 'cajas')]}"/>
                             <field name="kl_value" attrs="{'readonly': [('megastock_category', '!=', 'cajas')]}"/>
+                            <field name="numero_troquel"/>
+                            <field name="empaque"/>
                             <field name="gramaje" attrs="{'readonly': [('megastock_category', 'not in', ['papel', 'cajas'])]}"/>
                         </group>
 
