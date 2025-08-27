@@ -6,18 +6,54 @@
         <field name="model">megastock.production.order</field>
         <field name="arch" type="xml">
             <tree string="Pedidos de Producción" decoration-success="estado=='entregado'" decoration-warning="estado=='proceso'" decoration-info="estado=='planchas'">
-                <field name="orden_produccion"/>
-                <field name="fecha_pedido_cliente"/>
+                <!-- Campos principales siempre visibles -->
+                <field name="pedido"/>
+                <field name="orden_produccion" optional="show"/>
                 <field name="cliente"/>
-                <field name="codigo"/>
-                <field name="descripcion"/>
-                <field name="cantidad"/>
-                <field name="cantidad_entregada"/>
-                <field name="porcentaje_cumplimiento" widget="percentage"/>
-                <field name="fecha_entrega_cliente"/>
-                <field name="fecha_produccion"/>
                 <field name="estado" widget="badge"/>
-                <field name="area_total"/>
+
+                <!-- Campos opcionales - Fechas -->
+                <field name="fecha_pedido_cliente" optional="show"/>
+                <field name="fecha_entrega_cliente" optional="show"/>
+                <field name="fecha_produccion" optional="hide"/>
+
+                <!-- Campos opcionales - Producto -->
+                <field name="codigo" optional="show"/>
+                <field name="descripcion" optional="hide"/>
+
+                <field name="flauta" optional="hide"/>
+
+                <!-- Campos opcionales - Cantidades -->
+                <field name="cantidad" optional="show"/>
+                <field name="cantidad_entregada" optional="show"/>
+                <field name="porcentaje_cumplimiento" widget="percentage" optional="show"/>
+                <field name="cavidad" optional="hide"/>
+
+                <!-- Campos opcionales - Dimensiones -->
+                <field name="largo" optional="hide"/>
+                <field name="ancho" optional="hide"/>
+                <field name="area_total" optional="hide"/>
+
+                <!-- Campos opcionales - Materiales -->
+                <field name="liner_interno_proveedor" optional="hide"/>
+                <field name="medium_proveedor" optional="hide"/>
+                <field name="liner_externo_proveedor" optional="hide"/>
+
+                <!-- Campos opcionales - Especificaciones técnicas -->
+                <field name="numero_troquel" optional="hide"/>
+                <field name="ect_minimo" optional="hide"/>
+                <field name="ect_real" optional="hide"/>
+                <field name="peso" optional="hide"/>
+                <field name="cortes" optional="hide"/>
+                <field name="metros_lineales" optional="hide"/>
+
+                <!-- Campos opcionales - Cantidades de material -->
+                <field name="cantidad_liner_interno" optional="hide"/>
+                <field name="cantidad_medium" optional="hide"/>
+                <field name="cantidad_liner_externo" optional="hide"/>
+
+                <!-- Campos opcionales - Otros -->
+                <field name="cumplimiento" optional="hide"/>
             </tree>
         </field>
     </record>
@@ -37,7 +73,7 @@
                             <field name="orden_produccion" placeholder="Número de Orden"/>
                         </h1>
                     </div>
-                    
+
                     <group>
                         <group name="order_info" string="Información del Pedido">
                             <field name="fecha_pedido_cliente"/>
@@ -69,8 +105,8 @@
                             <field name="ect_minimo"/>
                             <field name="ect_real"/>
                             <field name="peso"/>
-                            <field name="cortes"/>
-                            <field name="metros_lineales"/>
+                            <field name="cortes" readonly="1"/>
+                            <field name="metros_lineales" readonly="1"/>
                         </group>
                     </group>
 
@@ -82,14 +118,14 @@
                                     <field name="liner_interno_ancho"/>
                                     <field name="liner_interno_gm"/>
                                     <field name="liner_interno_tipo"/>
-                                    <field name="cantidad_liner_interno"/>
+                                    <field name="cantidad_liner_interno" readonly="1"/>
                                 </group>
                                 <group string="Medium">
                                     <field name="medium_proveedor"/>
                                     <field name="medium_ancho"/>
                                     <field name="medium_gm"/>
                                     <field name="medium_tipo"/>
-                                    <field name="cantidad_medium"/>
+                                    <field name="cantidad_medium" readonly="1"/>
                                 </group>
                             </group>
                             <group>
@@ -98,7 +134,7 @@
                                     <field name="liner_externo_ancho"/>
                                     <field name="liner_externo_gm"/>
                                     <field name="liner_externo_tipo"/>
-                                    <field name="cantidad_liner_externo"/>
+                                    <field name="cantidad_liner_externo" readonly="1"/>
                                 </group>
                             </group>
                         </page>
@@ -114,21 +150,21 @@
         <field name="model">megastock.production.order</field>
         <field name="arch" type="xml">
             <search string="Buscar Pedidos">
-                <field name="orden_produccion"/>
+                <field name="pedido"/>
                 <field name="cliente"/>
                 <field name="codigo"/>
                 <field name="descripcion"/>
                 <field name="numero_troquel"/>
-                
+
                 <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
                 <filter string="En Proceso" name="proceso" domain="[('estado', '=', 'proceso')]"/>
                 <filter string="Planchas" name="planchas" domain="[('estado', '=', 'planchas')]"/>
                 <filter string="Entregados" name="entregados" domain="[('estado', '=', 'entregado')]"/>
-                
+
                 <separator/>
                 <filter string="Este Mes" name="este_mes" domain="[('fecha_pedido_cliente', '&gt;=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
                 <filter string="Próximas Entregas" name="proximas_entregas" domain="[('fecha_entrega_cliente', '&gt;=', context_today()), ('fecha_entrega_cliente', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-                
+
                 <group expand="0" string="Agrupar Por">
                     <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
@@ -172,15 +208,18 @@
                                         <t t-if="record.descripcion.value.length > 50">...</t>
                                     </t>
                                     <br/>
-                                    <strong>Cantidad: </strong><field name="cantidad"/>
+                                    <strong>Cantidad: </strong>
+                                    <field name="cantidad"/>
                                     <t t-if="record.cantidad_entregada.raw_value">
-                                        / <field name="cantidad_entregada"/> entregadas
+                                        /                                        <field name="cantidad_entregada"/>
+ entregadas
                                     </t>
                                 </div>
                                 <div class="o_kanban_record_bottom">
                                     <div class="oe_kanban_bottom_left">
                                         <t t-if="record.fecha_entrega_cliente.raw_value">
-                                            <i class="fa fa-calendar"/> <field name="fecha_entrega_cliente"/>
+                                            <i class="fa fa-calendar"/>
+                                            <field name="fecha_entrega_cliente"/>
                                         </t>
                                     </div>
                                     <div class="oe_kanban_bottom_right">

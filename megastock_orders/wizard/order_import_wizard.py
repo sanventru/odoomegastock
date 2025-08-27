@@ -63,8 +63,8 @@ class OrderImportWizard(models.TransientModel):
         
         for row_num, row in enumerate(data_rows, start=start_row + 1):
             try:
-                # Verificar que la fila tenga datos suficientes
-                if len(row) < 10 or not any(row[:10]):  # Si las primeras 10 columnas están vacías
+                # Verificar que la fila tenga al menos los 14 campos requeridos
+                if len(row) < 14 or not any(row[:14]):  # Si las primeras 14 columnas están vacías
                     continue
                 
                 # Mapear datos del CSV
@@ -158,7 +158,7 @@ class OrderImportWizard(models.TransientModel):
                 return 0
         
         # Mapear estado
-        estado_raw = safe_get(13).upper()
+        estado_raw = safe_get(13).upper()  # ESTADO está en posición 13 (0-indexed)
         estado = 'pendiente'
         if 'ENTREGADO' in estado_raw:
             estado = 'entregado'
@@ -167,50 +167,81 @@ class OrderImportWizard(models.TransientModel):
         elif 'PROCESO' in estado_raw:
             estado = 'proceso'
         
-        return {
-            'orden_produccion': safe_get(0),
-            'fecha_pedido_cliente': safe_date(safe_get(1)),
-            'flauta': safe_get(2),
-            'cliente': safe_get(3),
-            'pedido': safe_get(4),
-            'codigo': safe_get(5),
-            'descripcion': safe_get(6),
-            'largo': safe_float(safe_get(7)),
-            'ancho': safe_float(safe_get(8)),
-            'cantidad': safe_int(safe_get(9)),
-            'cavidad': safe_int(safe_get(10)),
-            'fecha_entrega_cliente': safe_date(safe_get(11)),
-            'fecha_produccion': safe_date(safe_get(12)),
-            'estado': estado,
-            'cumplimiento': safe_get(14),
-            
-            # Liner Interno (columnas 16-19)
-            'liner_interno_proveedor': safe_get(16),
-            'liner_interno_ancho': safe_float(safe_get(17)),
-            'liner_interno_gm': safe_float(safe_get(18)),
-            'liner_interno_tipo': safe_get(19),
-            
-            # Medium (columnas 20-23)
-            'medium_proveedor': safe_get(20),
-            'medium_ancho': safe_float(safe_get(21)),
-            'medium_gm': safe_float(safe_get(22)),
-            'medium_tipo': safe_get(23),
-            
-            # Liner Externo (columnas 24-27)
-            'liner_externo_proveedor': safe_get(24),
-            'liner_externo_ancho': safe_float(safe_get(25)),
-            'liner_externo_gm': safe_float(safe_get(26)),
-            'liner_externo_tipo': safe_get(27),
-            
-            # Otros campos
-            'cortes': safe_int(safe_get(28)),
-            'metros_lineales': safe_float(safe_get(29)),
-            'cantidad_liner_interno': safe_float(safe_get(30)),
-            'cantidad_medium': safe_float(safe_get(31)),
-            'cantidad_liner_externo': safe_float(safe_get(32)),
-            'numero_troquel': safe_get(33),
-            'ect_minimo': safe_float(safe_get(34)),
-            'ect_real': safe_float(safe_get(35)),
-            'peso': safe_float(safe_get(36)),
-            'cantidad_entregada': safe_int(safe_get(37)) if safe_get(37) else safe_int(safe_get(9)),  # Si no hay cantidad entregada, usar cantidad
+        # Campos requeridos según estructura real del CSV
+        order_data = {
+            'orden_produccion': safe_get(0),                 # ORDEN DE PRODUCCION
+            'fecha_pedido_cliente': safe_date(safe_get(1)),  # FECHA PEDIDO CLIENTE
+            'flauta': safe_get(2),                           # FLAUTA
+            'cliente': safe_get(3),                          # CLIENTE
+            'pedido': safe_get(4),                           # PEDIDO
+            'codigo': safe_get(5),                           # CODIGO
+            'descripcion': safe_get(6),                      # DESCRIPCIÓN
+            'largo': safe_float(safe_get(7)),                # LARGO
+            'ancho': safe_float(safe_get(8)),                # ANCHO
+            'cantidad': safe_int(safe_get(9)),               # CANTIDAD
+            'cavidad': safe_int(safe_get(10)),               # CAVIDAD
+            'fecha_entrega_cliente': safe_date(safe_get(11)), # FECHA ENTREGA CLIENTE VTAS
+            'fecha_produccion': safe_date(safe_get(12)),     # FECHA PRODUCCION
+            'estado': estado,                                # ESTADO (posición 13)
+            'cantidad_entregada': safe_int(safe_get(9)),     # Por defecto igual a cantidad
         }
+        
+        # Campos opcionales - solo agregar si existen en el CSV
+        if len(row) > 14:
+            # CUMPLIMIENTO (si existe)
+            if len(row) > 14 and safe_get(14):
+                order_data['cumplimiento'] = safe_get(14)
+            
+            # Liner Interno (si existe)
+            if len(row) > 16:
+                order_data['liner_interno_proveedor'] = safe_get(16)
+            if len(row) > 17:
+                order_data['liner_interno_ancho'] = safe_float(safe_get(17))
+            if len(row) > 18:
+                order_data['liner_interno_gm'] = safe_float(safe_get(18))
+            if len(row) > 19:
+                order_data['liner_interno_tipo'] = safe_get(19)
+            
+            # Medium (si existe)
+            if len(row) > 20:
+                order_data['medium_proveedor'] = safe_get(20)
+            if len(row) > 21:
+                order_data['medium_ancho'] = safe_float(safe_get(21))
+            if len(row) > 22:
+                order_data['medium_gm'] = safe_float(safe_get(22))
+            if len(row) > 23:
+                order_data['medium_tipo'] = safe_get(23)
+            
+            # Liner Externo (si existe)
+            if len(row) > 24:
+                order_data['liner_externo_proveedor'] = safe_get(24)
+            if len(row) > 25:
+                order_data['liner_externo_ancho'] = safe_float(safe_get(25))
+            if len(row) > 26:
+                order_data['liner_externo_gm'] = safe_float(safe_get(26))
+            if len(row) > 27:
+                order_data['liner_externo_tipo'] = safe_get(27)
+            
+            # Otros campos opcionales
+            if len(row) > 28:
+                order_data['cortes'] = safe_int(safe_get(28))
+            if len(row) > 29:
+                order_data['metros_lineales'] = safe_float(safe_get(29))
+            if len(row) > 30:
+                order_data['cantidad_liner_interno'] = safe_float(safe_get(30))
+            if len(row) > 31:
+                order_data['cantidad_medium'] = safe_float(safe_get(31))
+            if len(row) > 32:
+                order_data['cantidad_liner_externo'] = safe_float(safe_get(32))
+            if len(row) > 33:
+                order_data['numero_troquel'] = safe_get(33)
+            if len(row) > 34:
+                order_data['ect_minimo'] = safe_float(safe_get(34))
+            if len(row) > 35:
+                order_data['ect_real'] = safe_float(safe_get(35))
+            if len(row) > 36:
+                order_data['peso'] = safe_float(safe_get(36))
+            if len(row) > 37 and safe_get(37):
+                order_data['cantidad_entregada'] = safe_int(safe_get(37))
+        
+        return order_data
