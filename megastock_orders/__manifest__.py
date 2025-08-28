@@ -22,11 +22,13 @@ Funcionalidades:
         'sale',
         'stock',
         'mrp',
+        'mail',
         'megastock_base',
     ],
     'data': [
         'security/ir.model.access.csv',
         'views/production_order_views.xml',
+        'views/work_order_views.xml',
         'views/order_import_wizard_views.xml',
         'views/menu_views.xml',
     ],

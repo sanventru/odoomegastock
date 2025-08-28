@@ -29,6 +29,7 @@ class ProductionOrder(models.Model):
     fecha_produccion = fields.Date(string='Fecha Producción')
     estado = fields.Selection([
         ('pendiente', 'Pendiente'),
+        ('ot', 'OT'),
         ('planchas', 'Planchas'),
         ('entregado', 'Entregado'),
         ('proceso', 'En Proceso'),
@@ -84,6 +85,9 @@ class ProductionOrder(models.Model):
     eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
+    
+    # Relación con orden de trabajo
+    work_order_id = fields.Many2one('megastock.work.order', string='Orden de Trabajo')
     
     # Campos calculados
     area_total = fields.Float(string='Área Total (m²)', compute='_compute_area_total', store=True)
@@ -186,8 +190,8 @@ class ProductionOrder(models.Model):
                 product = self.env['product.template'].search([
                     ('default_code', '=', record.codigo)
                 ], limit=1)
-                if product and hasattr(product, 'numero_troquel'):
-                    record.numero_troquel = product.numero_troquel
+                if product and 'numero_troquel' in product._fields:
+                    record.numero_troquel = product.numero_troquel or ''
                 else:
                     record.numero_troquel = ''
             else:
@@ -208,8 +212,8 @@ class ProductionOrder(models.Model):
             product = self.env['product.template'].search([
                 ('default_code', '=', self.codigo)
             ], limit=1)
-            if product and hasattr(product, 'numero_troquel'):
-                self.numero_troquel = product.numero_troquel
+            if product and 'numero_troquel' in product._fields:
+                self.numero_troquel = product.numero_troquel or ''
             else:
                 self.numero_troquel = ''
         else:
@@ -448,3 +452,76 @@ class ProductionOrder(models.Model):
                 'metros_lineales_planificados': combinacion.get('metros_lineales', 0),
                 'cortes_planificados': combinacion.get('cortes_totales', 0),
             })
+
+    def action_generar_ordenes_trabajo(self):
+        """Acción para generar órdenes de trabajo desde grupos planificados"""
+        # Buscar todas las órdenes que tienen grupo de planificación pero no tienen orden de trabajo
+        ordenes_planificadas = self.search([
+            ('grupo_planificacion', '!=', False),
+            ('work_order_id', '=', False)
+        ])
+        
+        if not ordenes_planificadas:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin órdenes planificadas',
+                    'message': 'No hay órdenes planificadas sin orden de trabajo para procesar.',
+                    'type': 'warning',
+                }
+            }
+        
+        # Agrupar por grupo_planificacion
+        grupos = {}
+        for orden in ordenes_planificadas:
+            grupo = orden.grupo_planificacion
+            if grupo not in grupos:
+                grupos[grupo] = []
+            grupos[grupo].append(orden)
+        
+        # Crear órdenes de trabajo para cada grupo
+        ordenes_trabajo_creadas = []
+        WorkOrder = self.env['megastock.work.order']
+        
+        for grupo_nombre, ordenes_grupo in grupos.items():
+            # Calcular datos del grupo
+            primer_orden = ordenes_grupo[0]
+            metros_lineales_totales = sum(orden.metros_lineales_planificados for orden in ordenes_grupo)
+            cortes_totales = sum(orden.cortes_planificados for orden in ordenes_grupo)
+            
+            # Crear la orden de trabajo
+            work_order = WorkOrder.create({
+                'grupo_planificacion': grupo_nombre,
+                'tipo_combinacion': primer_orden.tipo_combinacion,
+                'bobina_utilizada': primer_orden.bobina_utilizada,
+                'ancho_utilizado': primer_orden.ancho_utilizado,
+                'sobrante': primer_orden.sobrante,
+                'eficiencia': primer_orden.eficiencia,
+                'metros_lineales_totales': metros_lineales_totales,
+                'cortes_totales': cortes_totales,
+                'fecha_programada': primer_orden.fecha_produccion,
+                'observaciones': f'Generada automáticamente desde {len(ordenes_grupo)} órdenes de producción del grupo {grupo_nombre}',
+            })
+            
+            # Asignar la orden de trabajo a todas las órdenes del grupo y cambiar estado
+            for orden in ordenes_grupo:
+                orden.write({
+                    'work_order_id': work_order.id,
+                    'estado': 'ot'
+                })
+            
+            ordenes_trabajo_creadas.append(work_order)
+        
+        # Mostrar resultado
+        mensaje = f'Se han creado {len(ordenes_trabajo_creadas)} órdenes de trabajo desde {len(grupos)} grupos planificados.'
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Órdenes de trabajo generadas',
+                'message': mensaje,
+                'type': 'success',
+            }
+        }

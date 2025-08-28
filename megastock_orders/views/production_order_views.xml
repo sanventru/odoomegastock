@@ -5,7 +5,7 @@
         <field name="name">megastock.production.order.tree</field>
         <field name="model">megastock.production.order</field>
         <field name="arch" type="xml">
-            <tree string="Pedidos de Producción" decoration-success="estado=='entregado'" decoration-warning="estado=='proceso'" decoration-info="estado=='planchas'">
+            <tree string="Pedidos de Producción" decoration-success="estado=='entregado'" decoration-warning="estado=='proceso'" decoration-info="estado=='planchas'" decoration-muted="estado=='ot'">
                 <!-- Campos principales siempre visibles -->
                 <field name="pedido"/>
                 <field name="orden_produccion" optional="show"/>
@@ -56,6 +56,7 @@
                 <field name="grupo_planificacion" optional="show"/>
                 <field name="tipo_combinacion" optional="show"/>
                 <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="work_order_id" optional="show"/>
                 <field name="ancho_utilizado" optional="hide"/>
                 <field name="bobina_utilizada" optional="hide"/>
                 <field name="sobrante" optional="hide"/>
@@ -76,7 +77,10 @@
                     <button name="action_planificar_ordenes" string="Planificar Órdenes" type="object" 
                             class="oe_highlight" icon="fa-cogs" 
                             attrs="{'invisible': [('estado', '!=', 'pendiente')]}"/>
-                    <field name="estado" widget="statusbar" statusbar_visible="pendiente,proceso,planchas,entregado"/>
+                    <button name="action_generar_ordenes_trabajo" string="Generar Órdenes de Trabajo" type="object" 
+                            class="oe_highlight" icon="fa-industry" 
+                            attrs="{'invisible': ['|', ('grupo_planificacion', '=', False), ('work_order_id', '!=', False)]}"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="pendiente,ot,proceso,planchas,entregado"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -174,6 +178,15 @@
                                 </ul>
                             </div>
                         </page>
+                        <page string="Orden de Trabajo" name="work_order" attrs="{'invisible': [('work_order_id', '=', False)]}">
+                            <group>
+                                <field name="work_order_id" readonly="1"/>
+                            </group>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Información de Orden de Trabajo:</strong>
+                                <p>Esta orden de producción está asignada a una orden de trabajo. Puedes ver los detalles completos haciendo clic en el enlace de arriba.</p>
+                            </div>
+                        </page>
                     </notebook>
                 </sheet>
             </form>
@@ -193,6 +206,7 @@
                 <field name="numero_troquel"/>
 
                 <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
+                <filter string="OT" name="ot" domain="[('estado', '=', 'ot')]"/>
                 <filter string="En Proceso" name="proceso" domain="[('estado', '=', 'proceso')]"/>
                 <filter string="Planchas" name="planchas" domain="[('estado', '=', 'planchas')]"/>
                 <filter string="Entregados" name="entregados" domain="[('estado', '=', 'entregado')]"/>

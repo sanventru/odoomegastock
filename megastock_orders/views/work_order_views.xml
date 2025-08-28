@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Lista de Órdenes de Trabajo -->
+    <record id="view_work_order_tree" model="ir.ui.view">
+        <field name="name">megastock.work.order.tree</field>
+        <field name="model">megastock.work.order</field>
+        <field name="arch" type="xml">
+            <tree string="Órdenes de Trabajo" decoration-success="estado=='completada'" decoration-warning="estado=='en_proceso'" decoration-info="estado=='programada'" decoration-muted="estado=='cancelada'">
+                <field name="numero_orden"/>
+                <field name="grupo_planificacion"/>
+                <field name="tipo_combinacion" widget="badge"/>
+                <field name="cantidad_ordenes"/>
+                <field name="fecha_programada"/>
+                <field name="estado" widget="badge"/>
+                <field name="eficiencia" widget="percentage"/>
+                <field name="progreso" widget="progressbar"/>
+                <field name="operador" optional="show"/>
+                <field name="maquina" optional="show"/>
+                <field name="turno" optional="hide"/>
+                <field name="bobina_utilizada" optional="hide"/>
+                <field name="ancho_utilizado" optional="hide"/>
+                <field name="metros_lineales_totales" optional="hide"/>
+                <field name="duracion_estimada" optional="hide"/>
+                <field name="duracion_real" optional="hide"/>
+                <field name="fecha_creacion" optional="hide"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de Formulario de Órdenes de Trabajo -->
+    <record id="view_work_order_form" model="ir.ui.view">
+        <field name="name">megastock.work.order.form</field>
+        <field name="model">megastock.work.order</field>
+        <field name="arch" type="xml">
+            <form string="Orden de Trabajo">
+                <header>
+                    <button name="action_programar" string="Programar" type="object" 
+                            class="oe_highlight" icon="fa-calendar"
+                            attrs="{'invisible': [('estado', '!=', 'borrador')]}"/>
+                    <button name="action_iniciar" string="Iniciar" type="object" 
+                            class="oe_highlight" icon="fa-play"
+                            attrs="{'invisible': [('estado', '!=', 'programada')]}"/>
+                    <button name="action_pausar" string="Pausar" type="object" 
+                            icon="fa-pause"
+                            attrs="{'invisible': [('estado', '!=', 'en_proceso')]}"/>
+                    <button name="action_completar" string="Completar" type="object" 
+                            class="oe_highlight" icon="fa-check"
+                            attrs="{'invisible': [('estado', 'not in', ['en_proceso', 'pausada'])]}"/>
+                    <button name="action_cancelar" string="Cancelar" type="object" 
+                            icon="fa-times"
+                            attrs="{'invisible': [('estado', 'in', ['completada', 'cancelada'])]}"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,en_proceso,completada"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="numero_orden" readonly="1"/>
+                        </h1>
+                        <h2>
+                            <field name="grupo_planificacion" readonly="1"/>
+                        </h2>
+                    </div>
+
+                    <group>
+                        <group name="general_info" string="Información General">
+                            <field name="fecha_creacion" readonly="1"/>
+                            <field name="fecha_programada"/>
+                            <field name="tipo_combinacion" readonly="1"/>
+                            <field name="cantidad_ordenes" readonly="1"/>
+                            <field name="progreso" widget="progressbar" readonly="1"/>
+                        </group>
+                        <group name="assignment_info" string="Asignación">
+                            <field name="operador"/>
+                            <field name="maquina"/>
+                            <field name="turno"/>
+                            <field name="fecha_inicio" readonly="1"/>
+                            <field name="fecha_fin" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group name="technical_specs" string="Especificaciones Técnicas">
+                            <field name="bobina_utilizada" readonly="1"/>
+                            <field name="ancho_utilizado" readonly="1"/>
+                            <field name="sobrante" readonly="1"/>
+                            <field name="eficiencia" widget="percentage" readonly="1"/>
+                        </group>
+                        <group name="production_data" string="Datos de Producción">
+                            <field name="metros_lineales_totales" readonly="1"/>
+                            <field name="cortes_totales" readonly="1"/>
+                            <field name="duracion_estimada" readonly="1"/>
+                            <field name="duracion_real" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Órdenes de Producción" name="production_orders">
+                            <field name="production_order_ids" readonly="1">
+                                <tree string="Órdenes Incluidas" decoration-success="estado=='entregado'">
+                                    <field name="orden_produccion"/>
+                                    <field name="cliente"/>
+                                    <field name="codigo"/>
+                                    <field name="descripcion"/>
+                                    <field name="cantidad"/>
+                                    <field name="largo"/>
+                                    <field name="ancho"/>
+                                    <field name="estado" widget="badge"/>
+                                    <field name="fecha_produccion"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Observaciones" name="notes">
+                            <group>
+                                <field name="observaciones" nolabel="1" placeholder="Observaciones generales..."/>
+                            </group>
+                            <separator string="Notas de Producción"/>
+                            <group>
+                                <field name="notas_produccion" nolabel="1" placeholder="Notas durante la producción..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_work_order_search" model="ir.ui.view">
+        <field name="name">megastock.work.order.search</field>
+        <field name="model">megastock.work.order</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Órdenes de Trabajo">
+                <field name="numero_orden"/>
+                <field name="grupo_planificacion"/>
+                <field name="operador"/>
+                <field name="maquina"/>
+
+                <filter string="Borrador" name="borrador" domain="[('estado', '=', 'borrador')]"/>
+                <filter string="Programadas" name="programadas" domain="[('estado', '=', 'programada')]"/>
+                <filter string="En Proceso" name="en_proceso" domain="[('estado', '=', 'en_proceso')]"/>
+                <filter string="Pausadas" name="pausadas" domain="[('estado', '=', 'pausada')]"/>
+                <filter string="Completadas" name="completadas" domain="[('estado', '=', 'completada')]"/>
+                <filter string="Canceladas" name="canceladas" domain="[('estado', '=', 'cancelada')]"/>
+
+                <separator/>
+                <filter string="Individuales" name="individuales" domain="[('tipo_combinacion', '=', 'individual')]"/>
+                <filter string="Duplas" name="duplas" domain="[('tipo_combinacion', '=', 'dupla')]"/>
+                <filter string="Triplas" name="triplas" domain="[('tipo_combinacion', '=', 'tripla')]"/>
+                <filter string="Alta Eficiencia" name="alta_eficiencia" domain="[('eficiencia', '&gt;=', 80)]"/>
+
+                <separator/>
+                <filter string="Hoy" name="hoy" domain="[('fecha_programada', '=', context_today())]"/>
+                <filter string="Esta Semana" name="esta_semana" domain="[('fecha_programada', '&gt;=', (context_today() - relativedelta(days=context_today().weekday())).strftime('%Y-%m-%d')), ('fecha_programada', '&lt;=', (context_today() + relativedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <filter string="Próximas" name="proximas" domain="[('fecha_programada', '&gt;=', context_today())]"/>
+
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                    <filter string="Tipo Combinación" name="group_tipo_combinacion" context="{'group_by': 'tipo_combinacion'}"/>
+                    <filter string="Operador" name="group_operador" context="{'group_by': 'operador'}"/>
+                    <filter string="Máquina" name="group_maquina" context="{'group_by': 'maquina'}"/>
+                    <filter string="Turno" name="group_turno" context="{'group_by': 'turno'}"/>
+                    <filter string="Fecha Programada" name="group_fecha_programada" context="{'group_by': 'fecha_programada'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Kanban -->
+    <record id="view_work_order_kanban" model="ir.ui.view">
+        <field name="name">megastock.work.order.kanban</field>
+        <field name="model">megastock.work.order</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="estado" class="o_kanban_small_column">
+                <field name="numero_orden"/>
+                <field name="grupo_planificacion"/>
+                <field name="tipo_combinacion"/>
+                <field name="cantidad_ordenes"/>
+                <field name="fecha_programada"/>
+                <field name="estado"/>
+                <field name="eficiencia"/>
+                <field name="progreso"/>
+                <field name="operador"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="numero_orden"/>
+                                        </strong>
+                                        <span class="o_kanban_record_subtitle">
+                                            <field name="grupo_planificacion"/>
+                                        </span>
+                                    </div>
+                                    <span class="badge badge-pill">
+                                        <field name="tipo_combinacion"/>
+                                    </span>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <strong>Órdenes: </strong><field name="cantidad_ordenes"/><br/>
+                                    <strong>Eficiencia: </strong><field name="eficiencia" widget="percentage"/><br/>
+                                    <t t-if="record.operador.raw_value">
+                                        <strong>Operador: </strong><field name="operador"/><br/>
+                                    </t>
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar" role="progressbar" t-att-style="'width: ' + record.progreso.raw_value + '%'">
+                                            <field name="progreso"/>%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_bottom">
+                                    <div class="oe_kanban_bottom_left">
+                                        <t t-if="record.fecha_programada.raw_value">
+                                            <i class="fa fa-calendar"/>
+                                            <field name="fecha_programada"/>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Acción para Generar Órdenes de Trabajo -->
+    <record id="action_generar_ordenes_trabajo" model="ir.actions.server">
+        <field name="name">Generar Órdenes de Trabajo</field>
+        <field name="model_id" ref="model_megastock_production_order"/>
+        <field name="binding_model_id" ref="model_megastock_production_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = records[0].action_generar_ordenes_trabajo()
+        </field>
+    </record>
+
+    <!-- Acción de Ventana para Órdenes de Trabajo -->
+    <record id="action_work_order" model="ir.actions.act_window">
+        <field name="name">Órdenes de Trabajo</field>
+        <field name="res_model">megastock.work.order</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="search_view_id" ref="view_work_order_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay órdenes de trabajo creadas!
+            </p>
+            <p>
+                Las órdenes de trabajo se generan automáticamente desde las órdenes de producción planificadas.
+                Primero planifica las órdenes de producción y luego genera las órdenes de trabajo.
+            </p>
+        </field>
+    </record>
+</odoo>

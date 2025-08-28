@@ -1,5 +1,7 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_production_order_user,megastock.production.order user,model_megastock_production_order,base.group_user,1,1,1,0
 access_production_order_manager,megastock.production.order manager,model_megastock_production_order,base.group_system,1,1,1,1
+access_work_order_user,megastock.work.order user,model_megastock_work_order,base.group_user,1,1,1,0
+access_work_order_manager,megastock.work.order manager,model_megastock_work_order,base.group_system,1,1,1,1
 access_order_import_wizard_user,megastock.order.import.wizard user,model_megastock_order_import_wizard,base.group_user,1,1,1,1
 access_order_import_wizard_manager,megastock.order.import.wizard manager,model_megastock_order_import_wizard,base.group_system,1,1,1,1
