@@ -93,6 +93,10 @@ class ProductImportWizard(models.TransientModel):
             'gramaje': 'Gramaje (90/125/150/175/200)',
             'tipo_caja': 'Tipo de Caja (tapa_fondo/jumbo/exportacion/americana)',
             
+            # Campos adicionales MEGASTOCK
+            'numero_troquel': 'Número de Troquel',
+            'empaque': 'Empaque (caja/pallet/bulto/unidad/rollo)',
+            
             # Campos adicionales
             'uom_id': 'Unidad de Medida',
             'uom_po_id': 'Unidad de Compra',
@@ -161,10 +165,22 @@ class ProductImportWizard(models.TransientModel):
                     'largo_cm': 40.0,
                     'ancho_cm': 30.0,
                     'alto_cm': 20.0,
+                    'ceja_cm': 2.0,
                     'flauta': 'c',
                     'test_value': '275',
+                    'kl_value': '32',
                     'material_type': 'kraft',
+                    'colors_printing': '0',
+                    'gramaje': '125',
                     'tipo_caja': 'americana',
+                    'numero_troquel': 'TR-001',
+                    'empaque': 'caja',
+                    'uom_id': 'Unidades',
+                    'uom_po_id': 'Unidades',
+                    'description': 'Caja de cartón corrugado',
+                    'barcode': '',
+                    'weight': 0.5,
+                    'volume': 0.024,
                     'active': 'Verdadero',
                     'sale_ok': 'Verdadero',
                     'purchase_ok': 'Verdadero'
@@ -216,15 +232,16 @@ class ProductImportWizard(models.TransientModel):
                         validation_sheet.write(row_idx, col_idx, cell_value, header_format)
                     else:
                         validation_sheet.write(row_idx, col_idx, cell_value)
-            
+            # Cerrar workbook y obtener datos
             workbook.close()
-            output.seek(0)
+            excel_data = output.getvalue()
+            output.close()
             
             # Crear attachment
             attachment = self.env['ir.attachment'].create({
                 'name': 'plantilla_productos_megastock.xlsx',
                 'type': 'binary',
-                'datas': base64.b64encode(output.read()),
+                'datas': base64.b64encode(excel_data),
                 'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'res_model': self._name,
                 'res_id': self.id,
