@@ -52,6 +52,14 @@
                 <field name="cantidad_medium" optional="hide"/>
                 <field name="cantidad_liner_externo" optional="hide"/>
 
+                <!-- Campos opcionales - Planificación -->
+                <field name="grupo_planificacion" optional="show"/>
+                <field name="tipo_combinacion" optional="show"/>
+                <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="ancho_utilizado" optional="hide"/>
+                <field name="bobina_utilizada" optional="hide"/>
+                <field name="sobrante" optional="hide"/>
+
                 <!-- Campos opcionales - Otros -->
                 <field name="cumplimiento" optional="hide"/>
             </tree>
@@ -65,6 +73,9 @@
         <field name="arch" type="xml">
             <form string="Pedido de Producción">
                 <header>
+                    <button name="action_planificar_ordenes" string="Planificar Órdenes" type="object" 
+                            class="oe_highlight" icon="fa-cogs" 
+                            attrs="{'invisible': [('estado', '!=', 'pendiente')]}"/>
                     <field name="estado" widget="statusbar" statusbar_visible="pendiente,proceso,planchas,entregado"/>
                 </header>
                 <sheet>
@@ -138,6 +149,31 @@
                                 </group>
                             </group>
                         </page>
+                        <page string="Planificación" name="planning" attrs="{'invisible': [('grupo_planificacion', '=', False)]}">
+                            <group>
+                                <group string="Optimización de Material">
+                                    <field name="grupo_planificacion" readonly="1"/>
+                                    <field name="tipo_combinacion" readonly="1"/>
+                                    <field name="eficiencia" widget="percentage" readonly="1"/>
+                                </group>
+                                <group string="Detalles de Bobina">
+                                    <field name="ancho_utilizado" readonly="1"/>
+                                    <field name="bobina_utilizada" readonly="1"/>
+                                    <field name="sobrante" readonly="1"/>
+                                    <field name="metros_lineales_planificados" readonly="1"/>
+                                    <field name="cortes_planificados" readonly="1"/>
+                                </group>
+                            </group>
+                            <div class="alert alert-info" role="alert">
+                                <strong>Información de Planificación:</strong>
+                                <p>Esta orden ha sido optimizada mediante el algoritmo de trimado para minimizar el desperdicio de material.</p>
+                                <ul>
+                                    <li><strong>Grupo:</strong> Identifica qué órdenes se procesan juntas</li>
+                                    <li><strong>Tipo:</strong> Individual, Dupla o Tripla según la combinación</li>
+                                    <li><strong>Eficiencia:</strong> Porcentaje de aprovechamiento del material</li>
+                                </ul>
+                            </div>
+                        </page>
                     </notebook>
                 </sheet>
             </form>
@@ -162,12 +198,21 @@
                 <filter string="Entregados" name="entregados" domain="[('estado', '=', 'entregado')]"/>
 
                 <separator/>
+                <filter string="Planificadas" name="planificadas" domain="[('grupo_planificacion', '!=', False)]"/>
+                <filter string="Sin Planificar" name="sin_planificar" domain="[('grupo_planificacion', '=', False), ('estado', '=', 'pendiente')]"/>
+                <filter string="Duplas" name="duplas" domain="[('tipo_combinacion', '=', 'dupla')]"/>
+                <filter string="Triplas" name="triplas" domain="[('tipo_combinacion', '=', 'tripla')]"/>
+                <filter string="Alta Eficiencia" name="alta_eficiencia" domain="[('eficiencia', '&gt;=', 80)]"/>
+
+                <separator/>
                 <filter string="Este Mes" name="este_mes" domain="[('fecha_pedido_cliente', '&gt;=', (context_today() - relativedelta(months=1)).strftime('%Y-%m-01'))]"/>
                 <filter string="Próximas Entregas" name="proximas_entregas" domain="[('fecha_entrega_cliente', '&gt;=', context_today()), ('fecha_entrega_cliente', '&lt;=', (context_today() + relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
 
                 <group expand="0" string="Agrupar Por">
                     <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                    <filter string="Grupo Planificación" name="group_planificacion" context="{'group_by': 'grupo_planificacion'}"/>
+                    <filter string="Tipo Combinación" name="group_tipo_combinacion" context="{'group_by': 'tipo_combinacion'}"/>
                     <filter string="Fecha Pedido" name="group_fecha_pedido" context="{'group_by': 'fecha_pedido_cliente'}"/>
                     <filter string="Fecha Entrega" name="group_fecha_entrega" context="{'group_by': 'fecha_entrega_cliente'}"/>
                 </group>
@@ -231,6 +276,41 @@
                     </t>
                 </templates>
             </kanban>
+        </field>
+    </record>
+
+    <!-- Acción de Planificación Masiva -->
+    <record id="action_planificar_ordenes_masivo" model="ir.actions.server">
+        <field name="name">Planificar Órdenes Seleccionadas</field>
+        <field name="model_id" ref="model_megastock_production_order"/>
+        <field name="binding_model_id" ref="model_megastock_production_order"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    # Filtrar solo órdenes pendientes
+    ordenes_pendientes = records.filtered(lambda r: r.estado == 'pendiente')
+    if ordenes_pendientes:
+        resultado = ordenes_pendientes[0]._optimizar_ordenes(ordenes_pendientes)
+        action = {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Planificación Masiva Completada',
+                'message': f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos. Eficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%',
+                'type': 'success',
+            }
+        }
+    else:
+        action = {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Sin órdenes válidas',
+                'message': 'Solo se pueden planificar órdenes en estado pendiente.',
+                'type': 'warning',
+            }
+        }
         </field>
     </record>
 

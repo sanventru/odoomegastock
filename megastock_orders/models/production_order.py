@@ -71,6 +71,20 @@ class ProductionOrder(models.Model):
     # Cantidad entregada
     cantidad_entregada = fields.Integer(string='Cantidad Entregada')
     
+    # Campos de planificación
+    grupo_planificacion = fields.Char(string='Grupo de Planificación', help='Grupo asignado por el algoritmo de optimización')
+    tipo_combinacion = fields.Selection([
+        ('individual', 'Individual'),
+        ('dupla', 'Dupla'),
+        ('tripla', 'Tripla'),
+    ], string='Tipo de Combinación', default='individual')
+    ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina')
+    bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada')
+    sobrante = fields.Float(string='Sobrante (mm)', help='Material sobrante después del corte')
+    eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado')
+    metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
+    cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
+    
     # Campos calculados
     area_total = fields.Float(string='Área Total (m²)', compute='_compute_area_total', store=True)
     porcentaje_cumplimiento = fields.Float(string='% Cumplimiento', compute='_compute_porcentaje_cumplimiento', store=True)
@@ -212,3 +226,228 @@ class ProductionOrder(models.Model):
                 name += f" ({record.descripcion[:50]}...)" if len(record.descripcion) > 50 else f" ({record.descripcion})"
             result.append((record.id, name))
         return result
+
+    def action_planificar_ordenes(self):
+        """Acción para planificar órdenes pendientes optimizando el uso de material"""
+        # Buscar todas las órdenes pendientes
+        ordenes_pendientes = self.search([('estado', '=', 'pendiente')])
+        
+        if not ordenes_pendientes:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin órdenes pendientes',
+                    'message': 'No hay órdenes pendientes para planificar.',
+                    'type': 'warning',
+                }
+            }
+        
+        # Ejecutar algoritmo de optimización
+        resultado = self._optimizar_ordenes(ordenes_pendientes)
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Planificación completada',
+                'message': f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos. Eficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%',
+                'type': 'success',
+            }
+        }
+
+    def _optimizar_ordenes(self, ordenes):
+        """Algoritmo de optimización basado en el archivo Excel de trimado"""
+        # Anchos de bobina disponibles (basado en datos típicos de la industria)
+        BOBINAS_DISPONIBLES = [1600, 1400, 1200, 1000, 800]
+        
+        # Agrupar órdenes por características similares
+        grupos_optimizados = []
+        ordenes_procesadas = set()
+        grupo_counter = 1
+        
+        for orden in ordenes:
+            if orden.id in ordenes_procesadas:
+                continue
+                
+            # Buscar combinaciones óptimas
+            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, BOBINAS_DISPONIBLES)
+            
+            if mejor_combinacion:
+                # Aplicar la combinación encontrada
+                self._aplicar_combinacion(mejor_combinacion, grupo_counter)
+                grupos_optimizados.append(mejor_combinacion)
+                
+                # Marcar órdenes como procesadas
+                for orden_comb in mejor_combinacion['ordenes']:
+                    ordenes_procesadas.add(orden_comb.id)
+                
+                grupo_counter += 1
+        
+        # Calcular estadísticas
+        eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_optimizados)
+        eficiencia_promedio = eficiencia_total / len(grupos_optimizados) if grupos_optimizados else 0
+        
+        return {
+            'grupos': len(grupos_optimizados),
+            'eficiencia_promedio': eficiencia_promedio
+        }
+
+    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas):
+        """Encuentra la mejor combinación para una orden principal"""
+        mejor_combinacion = None
+        mejor_eficiencia = 0
+        
+        # Probar combinación individual
+        for bobina in bobinas:
+            if orden_principal.ancho <= bobina:
+                resultado = self._calcular_eficiencia_real([orden_principal], bobina)
+                
+                if resultado['eficiencia'] > mejor_eficiencia:
+                    mejor_eficiencia = resultado['eficiencia']
+                    mejor_combinacion = {
+                        'ordenes': [orden_principal],
+                        'tipo': 'individual',
+                        'bobina': bobina,
+                        'ancho_utilizado': orden_principal.ancho,
+                        'sobrante': resultado['sobrante'],
+                        'eficiencia': resultado['eficiencia'],
+                        'metros_lineales': resultado['metros_lineales'],
+                        'cortes_totales': resultado['cortes_totales']
+                    }
+        
+        # Probar duplas
+        for orden2 in todas_ordenes:
+            if orden2.id == orden_principal.id or orden2.id in procesadas:
+                continue
+                
+            ordenes_dupla = [orden_principal, orden2]
+            ancho_total = sum(orden.ancho for orden in ordenes_dupla)
+            
+            for bobina in bobinas:
+                if ancho_total <= bobina:
+                    resultado = self._calcular_eficiencia_real(ordenes_dupla, bobina)
+                    
+                    if resultado['eficiencia'] > mejor_eficiencia:
+                        mejor_eficiencia = resultado['eficiencia']
+                        mejor_combinacion = {
+                            'ordenes': ordenes_dupla,
+                            'tipo': 'dupla',
+                            'bobina': bobina,
+                            'ancho_utilizado': ancho_total,
+                            'sobrante': resultado['sobrante'],
+                            'eficiencia': resultado['eficiencia'],
+                            'metros_lineales': resultado['metros_lineales'],
+                            'cortes_totales': resultado['cortes_totales']
+                        }
+        
+        # Probar triplas
+        for orden2 in todas_ordenes:
+            if orden2.id == orden_principal.id or orden2.id in procesadas:
+                continue
+                
+            for orden3 in todas_ordenes:
+                if orden3.id in [orden_principal.id, orden2.id] or orden3.id in procesadas:
+                    continue
+                    
+                ordenes_tripla = [orden_principal, orden2, orden3]
+                ancho_total = sum(orden.ancho for orden in ordenes_tripla)
+                
+                for bobina in bobinas:
+                    if ancho_total <= bobina:
+                        resultado = self._calcular_eficiencia_real(ordenes_tripla, bobina)
+                        
+                        if resultado['eficiencia'] > mejor_eficiencia:
+                            mejor_eficiencia = resultado['eficiencia']
+                            mejor_combinacion = {
+                                'ordenes': ordenes_tripla,
+                                'tipo': 'tripla',
+                                'bobina': bobina,
+                                'ancho_utilizado': ancho_total,
+                                'sobrante': resultado['sobrante'],
+                                'eficiencia': resultado['eficiencia'],
+                                'metros_lineales': resultado['metros_lineales'],
+                                'cortes_totales': resultado['cortes_totales']
+                            }
+        
+        return mejor_combinacion
+
+    def _calcular_eficiencia_real(self, ordenes, bobina_ancho):
+        """Calcula la eficiencia real basada en el algoritmo del Excel de trimado"""
+        # Calcular totales de las órdenes
+        ancho_total_utilizado = sum(orden.ancho for orden in ordenes)
+        cantidad_total = sum(orden.cantidad for orden in ordenes)
+        cortes_totales = sum(orden.cortes for orden in ordenes)
+        
+        # Verificar que las órdenes caben en la bobina
+        if ancho_total_utilizado > bobina_ancho:
+            return {
+                'eficiencia': 0,
+                'sobrante': bobina_ancho,
+                'metros_lineales': 0,
+                'cortes_totales': 0
+            }
+        
+        # Calcular sobrante en ancho
+        sobrante_ancho = bobina_ancho - ancho_total_utilizado
+        
+        # Calcular metros lineales necesarios
+        # Basado en la fórmula del Excel: cantidad / cavidad * largo (convertido a metros)
+        metros_lineales = 0
+        for orden in ordenes:
+            if orden.cavidad and orden.cavidad > 0:
+                cortes_necesarios = orden.cantidad / orden.cavidad
+                metros_por_orden = (cortes_necesarios * orden.largo) / 1000  # mm a metros
+                metros_lineales += metros_por_orden
+        
+        # Calcular eficiencia basada en múltiples factores
+        # Factor 1: Eficiencia de ancho (aprovechamiento de la bobina)
+        eficiencia_ancho = (ancho_total_utilizado / bobina_ancho) * 100
+        
+        # Factor 2: Eficiencia de producción (considerando cavidades)
+        eficiencia_produccion = 100  # Base
+        for orden in ordenes:
+            if orden.cavidad and orden.cavidad > 1:
+                # Bonus por múltiples cavidades (más eficiente)
+                eficiencia_produccion += (orden.cavidad - 1) * 5
+        
+        # Factor 3: Penalización por sobrante excesivo
+        porcentaje_sobrante = (sobrante_ancho / bobina_ancho) * 100
+        if porcentaje_sobrante > 20:  # Si el sobrante es > 20%
+            penalizacion = (porcentaje_sobrante - 20) * 2
+            eficiencia_ancho -= penalizacion
+        
+        # Factor 4: Bonus por combinaciones (duplas/triplas son más eficientes)
+        if len(ordenes) == 2:  # Dupla
+            eficiencia_ancho *= 1.1  # 10% bonus
+        elif len(ordenes) == 3:  # Tripla
+            eficiencia_ancho *= 1.15  # 15% bonus
+        
+        # Calcular eficiencia final (promedio ponderado)
+        eficiencia_final = (eficiencia_ancho * 0.7) + (min(eficiencia_produccion, 100) * 0.3)
+        
+        # Limitar entre 0 y 100
+        eficiencia_final = max(0, min(100, eficiencia_final))
+        
+        return {
+            'eficiencia': eficiencia_final,
+            'sobrante': sobrante_ancho,
+            'metros_lineales': metros_lineales,
+            'cortes_totales': cortes_totales
+        }
+
+    def _aplicar_combinacion(self, combinacion, grupo_id):
+        """Aplica la combinación encontrada a las órdenes"""
+        grupo_nombre = f"GRUPO-{grupo_id:03d}"
+        
+        for orden in combinacion['ordenes']:
+            orden.write({
+                'grupo_planificacion': grupo_nombre,
+                'tipo_combinacion': combinacion['tipo'],
+                'ancho_utilizado': combinacion['ancho_utilizado'],
+                'bobina_utilizada': combinacion['bobina'],
+                'sobrante': combinacion['sobrante'],
+                'eficiencia': combinacion['eficiencia'],
+                'metros_lineales_planificados': combinacion.get('metros_lineales', 0),
+                'cortes_planificados': combinacion.get('cortes_totales', 0),
+            })
