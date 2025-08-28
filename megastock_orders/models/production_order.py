@@ -400,31 +400,28 @@ class ProductionOrder(models.Model):
                 metros_por_orden = (cortes_necesarios * orden.largo) / 1000  # mm a metros
                 metros_lineales += metros_por_orden
         
-        # Calcular eficiencia basada en múltiples factores
-        # Factor 1: Eficiencia de ancho (aprovechamiento de la bobina)
-        eficiencia_ancho = (ancho_total_utilizado / bobina_ancho) * 100
+        # Calcular eficiencia base (aprovechamiento de la bobina)
+        eficiencia_base = (ancho_total_utilizado / bobina_ancho) * 100
         
-        # Factor 2: Eficiencia de producción (considerando cavidades)
-        eficiencia_produccion = 100  # Base
+        # Aplicar ajustes aditivos (no multiplicativos)
+        eficiencia_final = eficiencia_base
+        
+        # Factor 1: Bonus por combinaciones (aditivo, no multiplicativo)
+        if len(ordenes) == 2:  # Dupla
+            eficiencia_final += 5  # +5% bonus
+        elif len(ordenes) == 3:  # Tripla
+            eficiencia_final += 8  # +8% bonus
+        
+        # Factor 2: Bonus por cavidades múltiples
         for orden in ordenes:
             if orden.cavidad and orden.cavidad > 1:
-                # Bonus por múltiples cavidades (más eficiente)
-                eficiencia_produccion += (orden.cavidad - 1) * 5
+                eficiencia_final += min((orden.cavidad - 1) * 2, 10)  # Max +10%
         
         # Factor 3: Penalización por sobrante excesivo
         porcentaje_sobrante = (sobrante_ancho / bobina_ancho) * 100
-        if porcentaje_sobrante > 20:  # Si el sobrante es > 20%
-            penalizacion = (porcentaje_sobrante - 20) * 2
-            eficiencia_ancho -= penalizacion
-        
-        # Factor 4: Bonus por combinaciones (duplas/triplas son más eficientes)
-        if len(ordenes) == 2:  # Dupla
-            eficiencia_ancho *= 1.1  # 10% bonus
-        elif len(ordenes) == 3:  # Tripla
-            eficiencia_ancho *= 1.15  # 15% bonus
-        
-        # Calcular eficiencia final (promedio ponderado)
-        eficiencia_final = (eficiencia_ancho * 0.7) + (min(eficiencia_produccion, 100) * 0.3)
+        if porcentaje_sobrante > 30:  # Si el sobrante es > 30%
+            penalizacion = (porcentaje_sobrante - 30) * 0.5
+            eficiencia_final -= penalizacion
         
         # Limitar entre 0 y 100
         eficiencia_final = max(0, min(100, eficiencia_final))
