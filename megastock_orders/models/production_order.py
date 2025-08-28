@@ -63,7 +63,7 @@ class ProductionOrder(models.Model):
     cantidad_liner_externo = fields.Float(string='Cantidad Liner Externo', compute='_compute_cantidad_liner_externo', store=True)
     
     # Troquel y especificaciones técnicas
-    numero_troquel = fields.Char(string='Número de Troquel')
+    numero_troquel = fields.Char(string='Número de Troquel', compute='_compute_numero_troquel', store=True)
     ect_minimo = fields.Float(string='ECT Mínimo')
     ect_real = fields.Float(string='ECT Real')
     peso = fields.Float(string='Peso')
@@ -165,6 +165,20 @@ class ProductionOrder(models.Model):
         else:
             self.cantidad_medium = 0.0
     
+    @api.depends('codigo')
+    def _compute_numero_troquel(self):
+        for record in self:
+            if record.codigo:
+                product = self.env['product.template'].search([
+                    ('default_code', '=', record.codigo)
+                ], limit=1)
+                if product and hasattr(product, 'numero_troquel'):
+                    record.numero_troquel = product.numero_troquel
+                else:
+                    record.numero_troquel = ''
+            else:
+                record.numero_troquel = ''
+    
     @api.onchange('liner_externo_ancho', 'liner_externo_gm', 'metros_lineales')
     def _onchange_liner_externo(self):
         """Actualizar cantidad liner externo cuando cambien sus parámetros"""
@@ -172,6 +186,20 @@ class ProductionOrder(models.Model):
             self.cantidad_liner_externo = (self.liner_externo_ancho * self.liner_externo_gm) * (self.metros_lineales / 1000000)
         else:
             self.cantidad_liner_externo = 0.0
+    
+    @api.onchange('codigo')
+    def _onchange_codigo(self):
+        """Actualizar numero_troquel cuando cambie el código"""
+        if self.codigo:
+            product = self.env['product.template'].search([
+                ('default_code', '=', self.codigo)
+            ], limit=1)
+            if product and hasattr(product, 'numero_troquel'):
+                self.numero_troquel = product.numero_troquel
+            else:
+                self.numero_troquel = ''
+        else:
+            self.numero_troquel = ''
     
     def name_get(self):
         result = []

@@ -101,7 +101,7 @@
                             <field name="area_total"/>
                         </group>
                         <group name="technical_specs" string="Especificaciones Técnicas">
-                            <field name="numero_troquel"/>
+                            <field name="numero_troquel" readonly="1"/>
                             <field name="ect_minimo"/>
                             <field name="ect_real"/>
                             <field name="peso"/>
