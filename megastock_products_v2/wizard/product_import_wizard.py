@@ -516,6 +516,8 @@ DETALLES:
             'Colores Impresión (0/1/2/3/4)': 'colors_printing',
             'Gramaje (90/125/150/175/200)': 'gramaje',
             'Tipo de Caja (tapa_fondo/jumbo/exportacion/americana)': 'tipo_caja',
+            'Número de Troquel': 'numero_troquel',
+            'Empaque (caja/pallet/bulto/unidad/rollo)': 'empaque',
             'Unidad de Medida': 'uom_id',
             'Unidad de Compra': 'uom_po_id',
             'Descripción': 'description',
@@ -580,7 +582,7 @@ DETALLES:
                     else:
                         vals[odoo_field] = False
                 
-                elif odoo_field in ['flauta', 'material_type', 'tipo_caja', 'megastock_category']:
+                elif odoo_field in ['flauta', 'material_type', 'tipo_caja', 'megastock_category', 'empaque']:
                     # Campos de selección de texto
                     vals[odoo_field] = str(value).lower() if value else False
                 
@@ -599,6 +601,10 @@ DETALLES:
                     else:
                         vals[odoo_field] = ''
                         
+                elif odoo_field == 'numero_troquel':
+                    # Campo de texto para número de troquel
+                    vals[odoo_field] = str(value) if value else ''
+                
                 else:
                     # Campos de texto simples
                     vals[odoo_field] = str(value) if value else ''
