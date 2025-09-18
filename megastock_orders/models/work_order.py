@@ -32,7 +32,6 @@ class WorkOrder(models.Model):
     tipo_combinacion = fields.Selection([
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
-        ('tripla', 'Tripla'),
     ], string='Tipo de Combinación', required=True)
     
     # Especificaciones técnicas
@@ -108,9 +107,7 @@ class WorkOrder(models.Model):
                 if record.tipo_combinacion == 'individual':
                     velocidad = velocidad_base * 1.2  # Más rápido para individuales
                 elif record.tipo_combinacion == 'dupla':
-                    velocidad = velocidad_base
-                else:  # tripla
-                    velocidad = velocidad_base * 0.8  # Más lento para triplas
+                    velocidad = velocidad_base  # Velocidad estándar para duplas
                 
                 record.duracion_estimada = record.metros_lineales_totales / velocidad
             else:

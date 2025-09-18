@@ -150,7 +150,6 @@
                 <separator/>
                 <filter string="Individuales" name="individuales" domain="[('tipo_combinacion', '=', 'individual')]"/>
                 <filter string="Duplas" name="duplas" domain="[('tipo_combinacion', '=', 'dupla')]"/>
-                <filter string="Triplas" name="triplas" domain="[('tipo_combinacion', '=', 'tripla')]"/>
                 <filter string="Alta Eficiencia" name="alta_eficiencia" domain="[('eficiencia', '&gt;=', 80)]"/>
 
                 <separator/>

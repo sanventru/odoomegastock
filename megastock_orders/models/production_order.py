@@ -77,7 +77,6 @@ class ProductionOrder(models.Model):
     tipo_combinacion = fields.Selection([
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
-        ('tripla', 'Tripla'),
     ], string='Tipo de Combinación', default='individual')
     ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina')
     bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada')
@@ -262,8 +261,14 @@ class ProductionOrder(models.Model):
 
     def _optimizar_ordenes(self, ordenes):
         """Algoritmo de optimización basado en el archivo Excel de trimado"""
-        # Anchos de bobina disponibles (basado en datos típicos de la industria)
-        BOBINAS_DISPONIBLES = [1600, 1400, 1200, 1000, 800]
+        # Obtener anchos de bobina disponibles desde la configuración
+        Bobina = self.env['megastock.bobina']
+        bobinas_disponibles = Bobina.get_bobinas_activas()
+
+        # Si no hay bobinas configuradas, usar valores por defecto
+        if not bobinas_disponibles:
+            Bobina.create_default_bobinas()
+            bobinas_disponibles = Bobina.get_bobinas_activas()
         
         # Agrupar órdenes por características similares
         grupos_optimizados = []
@@ -275,7 +280,7 @@ class ProductionOrder(models.Model):
                 continue
                 
             # Buscar combinaciones óptimas
-            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, BOBINAS_DISPONIBLES)
+            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, bobinas_disponibles)
             
             if mejor_combinacion:
                 # Aplicar la combinación encontrada
@@ -304,7 +309,7 @@ class ProductionOrder(models.Model):
         
         # Probar combinación individual
         for bobina in bobinas:
-            if orden_principal.ancho <= bobina:
+            if orden_principal.ancho <= (bobina - 30):
                 resultado = self._calcular_eficiencia_real([orden_principal], bobina)
                 
                 if resultado['eficiencia'] > mejor_eficiencia:
@@ -345,34 +350,8 @@ class ProductionOrder(models.Model):
                             'cortes_totales': resultado['cortes_totales']
                         }
         
-        # Probar triplas
-        for orden2 in todas_ordenes:
-            if orden2.id == orden_principal.id or orden2.id in procesadas:
-                continue
-                
-            for orden3 in todas_ordenes:
-                if orden3.id in [orden_principal.id, orden2.id] or orden3.id in procesadas:
-                    continue
-                    
-                ordenes_tripla = [orden_principal, orden2, orden3]
-                ancho_total = sum(orden.ancho for orden in ordenes_tripla)
-                
-                for bobina in bobinas:
-                    if ancho_total <= bobina:
-                        resultado = self._calcular_eficiencia_real(ordenes_tripla, bobina)
-                        
-                        if resultado['eficiencia'] > mejor_eficiencia:
-                            mejor_eficiencia = resultado['eficiencia']
-                            mejor_combinacion = {
-                                'ordenes': ordenes_tripla,
-                                'tipo': 'tripla',
-                                'bobina': bobina,
-                                'ancho_utilizado': ancho_total,
-                                'sobrante': resultado['sobrante'],
-                                'eficiencia': resultado['eficiencia'],
-                                'metros_lineales': resultado['metros_lineales'],
-                                'cortes_totales': resultado['cortes_totales']
-                            }
+        # Las triplas no son posibles debido a limitaciones de las máquinas corrugadoras
+        # que solo tienen máximo 2 cuchillas
         
         return mejor_combinacion
 
@@ -413,8 +392,7 @@ class ProductionOrder(models.Model):
         # Factor 1: Bonus por combinaciones (aditivo, no multiplicativo)
         if len(ordenes) == 2:  # Dupla
             eficiencia_final += 5  # +5% bonus
-        elif len(ordenes) == 3:  # Tripla
-            eficiencia_final += 8  # +8% bonus
+        # Las triplas no son posibles debido a limitaciones de máquinas corrugadoras
         
         # Factor 2: Bonus por cavidades múltiples
         for orden in ordenes:

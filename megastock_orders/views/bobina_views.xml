@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Lista de Bobinas -->
+    <record id="view_bobina_tree" model="ir.ui.view">
+        <field name="name">megastock.bobina.tree</field>
+        <field name="model">megastock.bobina</field>
+        <field name="arch" type="xml">
+            <tree string="Bobinas Disponibles" decoration-muted="not activa">
+                <field name="ancho"/>
+                <field name="activa" widget="boolean_toggle"/>
+                <field name="proveedor"/>
+                <field name="stock_actual"/>
+                <field name="stock_minimo"/>
+                <field name="costo"/>
+                <field name="notas"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de Formulario de Bobinas -->
+    <record id="view_bobina_form" model="ir.ui.view">
+        <field name="name">megastock.bobina.form</field>
+        <field name="model">megastock.bobina</field>
+        <field name="arch" type="xml">
+            <form string="Configuración de Bobina">
+                <header>
+                    <field name="activa" widget="boolean_button"
+                           options="{'terminology': {'string_true': 'Activa', 'string_false': 'Inactiva'}}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="display_name" readonly="1"/>
+                        </h1>
+                    </div>
+
+                    <group>
+                        <group name="basic_info" string="Información Básica">
+                            <field name="ancho" widget="float"/>
+                            <field name="proveedor"/>
+                        </group>
+                        <group name="stock_info" string="Información de Stock">
+                            <field name="stock_actual"/>
+                            <field name="stock_minimo"/>
+                            <field name="costo"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <field name="notas" placeholder="Observaciones adicionales sobre esta bobina..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_bobina_search" model="ir.ui.view">
+        <field name="name">megastock.bobina.search</field>
+        <field name="model">megastock.bobina</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Bobinas">
+                <field name="ancho"/>
+                <field name="proveedor"/>
+
+                <filter string="Activas" name="activas" domain="[('activa', '=', True)]"/>
+                <filter string="Inactivas" name="inactivas" domain="[('activa', '=', False)]"/>
+
+                <separator/>
+                <filter string="Stock Bajo" name="stock_bajo" domain="[('stock_actual', '&lt;', 'stock_minimo')]"/>
+
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_activa" context="{'group_by': 'activa'}"/>
+                    <filter string="Proveedor" name="group_proveedor" context="{'group_by': 'proveedor'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Vista Kanban -->
+    <record id="view_bobina_kanban" model="ir.ui.view">
+        <field name="name">megastock.bobina.kanban</field>
+        <field name="model">megastock.bobina</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="activa" class="o_kanban_small_column">
+                <field name="ancho"/>
+                <field name="activa"/>
+                <field name="proveedor"/>
+                <field name="stock_actual"/>
+                <field name="stock_minimo"/>
+                <field name="costo"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card oe_kanban_global_click">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title">
+                                            <field name="ancho"/> mm
+                                        </strong>
+                                        <span t-if="record.activa.raw_value" class="badge badge-success">Activa</span>
+                                        <span t-else="" class="badge badge-secondary">Inactiva</span>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <t t-if="record.proveedor.raw_value">
+                                        <strong>Proveedor: </strong><field name="proveedor"/>
+                                        <br/>
+                                    </t>
+                                    <t t-if="record.stock_actual.raw_value">
+                                        <strong>Stock: </strong><field name="stock_actual"/>
+                                        <t t-if="record.stock_minimo.raw_value">
+                                            / <field name="stock_minimo"/> min
+                                        </t>
+                                        <br/>
+                                    </t>
+                                    <t t-if="record.costo.raw_value">
+                                        <strong>Costo: </strong>$<field name="costo"/>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_bobina" model="ir.actions.act_window">
+        <field name="name">Bobinas Disponibles</field>
+        <field name="res_model">megastock.bobina</field>
+        <field name="view_mode">tree,kanban,form</field>
+        <field name="search_view_id" ref="view_bobina_search"/>
+        <field name="context">{'search_default_activas': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Configura tus primeras bobinas disponibles!
+            </p>
+            <p>
+                Las bobinas disponibles son utilizadas por el algoritmo de optimización
+                para planificar las órdenes de producción de manera eficiente.
+            </p>
+            <p>
+                Define los anchos de bobina que tienes disponibles en tu planta
+                y el sistema las utilizará automáticamente durante la planificación.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú principal -->
+    <menuitem id="menu_bobinas_root"
+              name="Configuración"
+              parent="megastock_orders.menu_megastock_orders_root"
+              sequence="100"/>
+
+    <menuitem id="menu_bobinas"
+              name="Bobinas Disponibles"
+              parent="menu_bobinas_root"
+              action="action_bobina"
+              sequence="10"/>
+
+    <!-- Acción para crear bobinas por defecto -->
+    <record id="action_crear_bobinas_default" model="ir.actions.server">
+        <field name="name">Crear Bobinas por Defecto</field>
+        <field name="model_id" ref="model_megastock_bobina"/>
+        <field name="state">code</field>
+        <field name="code">
+action = model.create_default_bobinas()
+        </field>
+    </record>
+
+    <menuitem id="menu_crear_bobinas_default"
+              name="Crear Bobinas por Defecto"
+              parent="menu_bobinas_root"
+              action="action_crear_bobinas_default"
+              sequence="20"/>
+</odoo>

@@ -3,5 +3,7 @@ access_production_order_user,megastock.production.order user,model_megastock_pro
 access_production_order_manager,megastock.production.order manager,model_megastock_production_order,base.group_system,1,1,1,1
 access_work_order_user,megastock.work.order user,model_megastock_work_order,base.group_user,1,1,1,0
 access_work_order_manager,megastock.work.order manager,model_megastock_work_order,base.group_system,1,1,1,1
+access_bobina_user,megastock.bobina user,model_megastock_bobina,base.group_user,1,1,1,0
+access_bobina_manager,megastock.bobina manager,model_megastock_bobina,base.group_system,1,1,1,1
 access_order_import_wizard_user,megastock.order.import.wizard user,model_megastock_order_import_wizard,base.group_user,1,1,1,1
 access_order_import_wizard_manager,megastock.order.import.wizard manager,model_megastock_order_import_wizard,base.group_system,1,1,1,1

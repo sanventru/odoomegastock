@@ -173,7 +173,7 @@
                                 <p>Esta orden ha sido optimizada mediante el algoritmo de trimado para minimizar el desperdicio de material.</p>
                                 <ul>
                                     <li><strong>Grupo:</strong> Identifica qué órdenes se procesan juntas</li>
-                                    <li><strong>Tipo:</strong> Individual, Dupla o Tripla según la combinación</li>
+                                    <li><strong>Tipo:</strong> Individual o Dupla según la combinación (máximo 2 cuchillas)</li>
                                     <li><strong>Eficiencia:</strong> Porcentaje de aprovechamiento del material</li>
                                 </ul>
                             </div>
@@ -214,8 +214,8 @@
                 <separator/>
                 <filter string="Planificadas" name="planificadas" domain="[('grupo_planificacion', '!=', False)]"/>
                 <filter string="Sin Planificar" name="sin_planificar" domain="[('grupo_planificacion', '=', False), ('estado', '=', 'pendiente')]"/>
+                <filter string="Individuales" name="individuales" domain="[('tipo_combinacion', '=', 'individual')]"/>
                 <filter string="Duplas" name="duplas" domain="[('tipo_combinacion', '=', 'dupla')]"/>
-                <filter string="Triplas" name="triplas" domain="[('tipo_combinacion', '=', 'tripla')]"/>
                 <filter string="Alta Eficiencia" name="alta_eficiencia" domain="[('eficiencia', '&gt;=', 80)]"/>
 
                 <separator/>
