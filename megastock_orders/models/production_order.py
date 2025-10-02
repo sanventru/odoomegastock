@@ -619,39 +619,50 @@ class ProductionOrder(models.Model):
         """Encuentra la mejor combinación para una orden principal"""
         mejor_combinacion = None
         mejor_eficiencia = 0
-        
+        menor_sobrante = float('inf')
+
+        # Margen de seguridad para cortes (30mm)
+        MARGEN_SEGURIDAD = 30
+
         # Probar combinación individual
         for bobina in bobinas:
-            if orden_principal.ancho <= (bobina - 30):
+            ancho_util = orden_principal.ancho_calculado
+            if ancho_util <= (bobina - MARGEN_SEGURIDAD):
                 resultado = self._calcular_eficiencia_real([orden_principal], bobina)
-                
-                if resultado['eficiencia'] > mejor_eficiencia:
+
+                # Priorizar menor sobrante, luego mayor eficiencia
+                if (resultado['sobrante'] < menor_sobrante or
+                    (resultado['sobrante'] == menor_sobrante and resultado['eficiencia'] > mejor_eficiencia)):
                     mejor_eficiencia = resultado['eficiencia']
+                    menor_sobrante = resultado['sobrante']
                     mejor_combinacion = {
                         'ordenes': [orden_principal],
                         'tipo': 'individual',
                         'bobina': bobina,
-                        'ancho_utilizado': orden_principal.ancho,
+                        'ancho_utilizado': ancho_util,
                         'sobrante': resultado['sobrante'],
                         'eficiencia': resultado['eficiencia'],
                         'metros_lineales': resultado['metros_lineales'],
                         'cortes_totales': resultado['cortes_totales']
                     }
-        
-        # Probar duplas
+
+        # Probar duplas - objetivo principal: minimizar sobrante
         for orden2 in todas_ordenes:
             if orden2.id == orden_principal.id or orden2.id in procesadas:
                 continue
-                
+
             ordenes_dupla = [orden_principal, orden2]
-            ancho_total = sum(orden.ancho for orden in ordenes_dupla)
-            
+            ancho_total = sum(orden.ancho_calculado for orden in ordenes_dupla)
+
             for bobina in bobinas:
-                if ancho_total <= bobina:
+                if ancho_total <= (bobina - MARGEN_SEGURIDAD):
                     resultado = self._calcular_eficiencia_real(ordenes_dupla, bobina)
-                    
-                    if resultado['eficiencia'] > mejor_eficiencia:
+
+                    # Priorizar duplas que reduzcan el sobrante
+                    if (resultado['sobrante'] < menor_sobrante or
+                        (resultado['sobrante'] == menor_sobrante and resultado['eficiencia'] > mejor_eficiencia)):
                         mejor_eficiencia = resultado['eficiencia']
+                        menor_sobrante = resultado['sobrante']
                         mejor_combinacion = {
                             'ordenes': ordenes_dupla,
                             'tipo': 'dupla',
@@ -662,19 +673,19 @@ class ProductionOrder(models.Model):
                             'metros_lineales': resultado['metros_lineales'],
                             'cortes_totales': resultado['cortes_totales']
                         }
-        
+
         # Las triplas no son posibles debido a limitaciones de las máquinas corrugadoras
         # que solo tienen máximo 2 cuchillas
-        
+
         return mejor_combinacion
 
     def _calcular_eficiencia_real(self, ordenes, bobina_ancho):
         """Calcula la eficiencia real basada en el algoritmo del Excel de trimado"""
-        # Calcular totales de las órdenes
-        ancho_total_utilizado = sum(orden.ancho for orden in ordenes)
+        # Calcular totales de las órdenes usando ancho_calculado
+        ancho_total_utilizado = sum(orden.ancho_calculado for orden in ordenes)
         cantidad_total = sum(orden.cantidad for orden in ordenes)
         cortes_totales = sum(orden.cortes for orden in ordenes)
-        
+
         # Verificar que las órdenes caben en la bobina
         if ancho_total_utilizado > bobina_ancho:
             return {
@@ -683,42 +694,42 @@ class ProductionOrder(models.Model):
                 'metros_lineales': 0,
                 'cortes_totales': 0
             }
-        
+
         # Calcular sobrante en ancho
         sobrante_ancho = bobina_ancho - ancho_total_utilizado
-        
-        # Calcular metros lineales necesarios
-        # Basado en la fórmula del Excel: cantidad / cavidad * largo (convertido a metros)
+
+        # Calcular metros lineales necesarios usando largo_calculado
+        # Basado en la fórmula del Excel: cantidad / cavidad * largo_calculado (convertido a metros)
         metros_lineales = 0
         for orden in ordenes:
             if orden.cavidad and orden.cavidad > 0:
                 cortes_necesarios = orden.cantidad / orden.cavidad
-                metros_por_orden = (cortes_necesarios * orden.largo) / 1000  # mm a metros
+                metros_por_orden = (cortes_necesarios * orden.largo_calculado) / 1000  # mm a metros
                 metros_lineales += metros_por_orden
-        
+
         # Calcular eficiencia base (aprovechamiento de la bobina)
         eficiencia_base = (ancho_total_utilizado / bobina_ancho) * 100
-        
+
         # Aplicar ajustes aditivos (no multiplicativos)
         eficiencia_final = eficiencia_base
-        
+
         # Eficiencia base sin bonificaciones artificiales
         # Fórmula correcta según especificaciones: (ANCHO_TOTAL_UTILIZADO / BOBINA_UTILIZADA) * 100
-        
+
         # Factor 2: Bonus por cavidades múltiples
         for orden in ordenes:
             if orden.cavidad and orden.cavidad > 1:
                 eficiencia_final += min((orden.cavidad - 1) * 2, 10)  # Max +10%
-        
+
         # Factor 3: Penalización por sobrante excesivo
         porcentaje_sobrante = (sobrante_ancho / bobina_ancho) * 100
         if porcentaje_sobrante > 30:  # Si el sobrante es > 30%
             penalizacion = (porcentaje_sobrante - 30) * 0.5
             eficiencia_final -= penalizacion
-        
+
         # Limitar entre 0 y 100
         eficiencia_final = max(0, min(100, eficiencia_final))
-        
+
         return {
             'eficiencia': eficiencia_final,
             'sobrante': sobrante_ancho,
