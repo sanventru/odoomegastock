@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista de formulario para Weight Calculator -->
+    <record id="view_weight_calculator_form_v2" model="ir.ui.view">
+        <field name="name">megastock.weight.calculator.form.v2</field>
+        <field name="model">megastock.weight.calculator</field>
+        <field name="arch" type="xml">
+            <form string="MEGASTOCK - Calculador de Pesos">
+                <header>
+                    <button name="calculate_sheet_weight_basic" string="Calcular Peso"
+                            type="object" class="oe_highlight" icon="fa-calculator"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Calculador de Pesos - FASE 3 PASO 1</h1>
+                    </div>
+
+                    <group>
+                        <group name="input_data" string="Datos de Entrada">
+                            <field name="test_largo" placeholder="Ej: 1000"/>
+                            <field name="test_ancho" placeholder="Ej: 500"/>
+                            <field name="test_gramaje" placeholder="Ej: 200"/>
+                        </group>
+                        <group name="results" string="Resultados">
+                            <field name="resultado_peso" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <div class="alert alert-info" role="alert">
+                        <strong>Calculador de Pesos - Fase 3:</strong>
+                        <p>Puedes cambiar el gramaje para diferentes TESTs (150, 200, 275, etc.)</p>
+                        <p>Fórmula: Área (m²) = (Largo × Ancho) ÷ 1,000,000</p>
+                        <p>Peso (g) = Área × Gramaje</p>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción de ventana -->
+    <record id="action_weight_calculator_v2" model="ir.actions.act_window">
+        <field name="name">Calculador de Pesos v2</field>
+        <field name="res_model">megastock.weight.calculator</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_weight_calculator_form_v2"/>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡Prueba el calculador de pesos!
+            </p>
+            <p>
+                Este es el motor de cálculo de pesos para la Fase 3 del sistema de trimado.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú para testing -->
+    <menuitem id="menu_weight_calculator_test_v2"
+              name="🧮 Calculador Pesos v2"
+              parent="menu_megastock_orders_root"
+              action="action_weight_calculator_v2"
+              sequence="90"/>
+
+</odoo>

@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========== VISTA LISTA (TREE) ========== -->
+        <record id="view_paper_recipe_tree" model="ir.ui.view">
+            <field name="name">paper.recipe.tree</field>
+            <field name="model">megastock.paper.recipe</field>
+            <field name="arch" type="xml">
+                <tree string="Tests y Recetas de Papel">
+                    <field name="test_name"/>
+                    <field name="ect_value"/>
+                    <field name="liner_interno_gm"/>
+                    <field name="corrugado_medio_gm"/>
+                    <field name="liner_externo_gm"/>
+                    <field name="gramaje_combinado"/>
+                    <field name="gramaje_tolerancia_min"/>
+                    <field name="gramaje_tolerancia_max"/>
+                    <field name="active"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- ========== VISTA FORMULARIO (FORM) ========== -->
+        <record id="view_paper_recipe_form" model="ir.ui.view">
+            <field name="name">paper.recipe.form</field>
+            <field name="model">megastock.paper.recipe</field>
+            <field name="arch" type="xml">
+                <form string="Test y Receta de Papel">
+                    <header>
+                        <field name="active" widget="boolean_toggle"/>
+                    </header>
+                    <sheet>
+                        <div class="oe_title">
+                            <h1>
+                                <field name="test_name" placeholder="Ej: Test 200"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group name="basic_info" string="Información Básica">
+                                <field name="ect_value"/>
+                                <field name="factor_corrugador"/>
+                            </group>
+                            <group name="calculated_values" string="Valores Calculados">
+                                <field name="gramaje_combinado" readonly="1"/>
+                                <field name="gramaje_tolerancia_min" readonly="1"/>
+                                <field name="gramaje_tolerancia_max" readonly="1"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <page string="Gramajes por Capa" name="gramajes">
+                                <group>
+                                    <group name="paper_weights" string="Gramajes (g/m²)">
+                                        <field name="liner_interno_gm"/>
+                                        <field name="corrugado_medio_gm"/>
+                                        <field name="liner_externo_gm"/>
+                                    </group>
+                                </group>
+                            </page>
+                            <page string="Descripción" name="description">
+                                <group>
+                                    <field name="descripcion" nolabel="1" placeholder="Descripción adicional del test y sus características..."/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========== VISTA KANBAN ========== -->
+        <record id="view_paper_recipe_kanban" model="ir.ui.view">
+            <field name="name">paper.recipe.kanban</field>
+            <field name="model">megastock.paper.recipe</field>
+            <field name="arch" type="xml">
+                <kanban>
+                    <field name="test_name"/>
+                    <field name="ect_value"/>
+                    <field name="gramaje_combinado"/>
+                    <field name="active"/>
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div class="oe_kanban_card oe_kanban_global_click">
+                                <div class="oe_kanban_content">
+                                    <div class="o_kanban_record_title">
+                                        <strong><field name="test_name"/></strong>
+                                    </div>
+                                    <div class="o_kanban_record_body">
+                                        <div>ECT: <field name="ect_value"/></div>
+                                        <div>Gramaje: <field name="gramaje_combinado"/> g/m²</div>
+                                    </div>
+                                    <div class="o_kanban_record_bottom">
+                                        <div class="oe_kanban_bottom_left">
+                                            <t t-if="record.active.raw_value">
+                                                <span class="badge badge-success">Activo</span>
+                                            </t>
+                                            <t t-if="!record.active.raw_value">
+                                                <span class="badge badge-secondary">Inactivo</span>
+                                            </t>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+        <!-- ========== VISTA BÚSQUEDA (SEARCH) ========== -->
+        <record id="view_paper_recipe_search" model="ir.ui.view">
+            <field name="name">paper.recipe.search</field>
+            <field name="model">megastock.paper.recipe</field>
+            <field name="arch" type="xml">
+                <search string="Buscar Tests y Recetas">
+                    <field name="test_name" string="Nombre del Test"/>
+                    <field name="ect_value" string="ECT"/>
+                    <field name="gramaje_combinado" string="Gramaje"/>
+
+                    <filter string="Activos" name="active" domain="[('active','=',True)]"/>
+                    <filter string="Inactivos" name="inactive" domain="[('active','=',False)]"/>
+
+                    <separator/>
+                    <filter string="ECT Bajo (≤30)" name="ect_low" domain="[('ect_value','&lt;=',30)]"/>
+                    <filter string="ECT Alto (>30)" name="ect_high" domain="[('ect_value','>',30)]"/>
+
+                    <group expand="0" string="Agrupar Por">
+                        <filter string="ECT" name="group_ect" context="{'group_by':'ect_value'}"/>
+                        <filter string="Estado" name="group_active" context="{'group_by':'active'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- ========== ACCIÓN DE VENTANA ========== -->
+        <record id="action_paper_recipe" model="ir.actions.act_window">
+            <field name="name">Tests y Recetas de Papel</field>
+            <field name="res_model">megastock.paper.recipe</field>
+            <field name="view_mode">kanban,tree,form</field>
+            <field name="search_view_id" ref="view_paper_recipe_search"/>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    ¡Crea tu primer Test de Papel!
+                </p>
+                <p>
+                    Los tests de papel definen las recetas y gramajes para la producción de cartón corrugado.
+                    Cada test incluye los gramajes del liner interno, corrugado medio y liner externo,
+                    calculando automáticamente el gramaje combinado y las tolerancias.
+                </p>
+            </field>
+        </record>
+
+        <!-- ========== MENÚ ========== -->
+        <menuitem
+            id="menu_paper_recipe"
+            name="Tests y Recetas"
+            parent="menu_megastock_orders_root"
+            action="action_paper_recipe"
+            sequence="5"/>
+
+        <!-- ========== ACCIÓN SERVIDOR PARA CREAR TESTS ESTÁNDAR ========== -->
+        <record id="action_create_standard_tests" model="ir.actions.server">
+            <field name="name">Crear Tests Estándar</field>
+            <field name="model_id" ref="model_megastock_paper_recipe"/>
+            <field name="state">code</field>
+            <field name="code">
+action = model.create_standard_tests()
+            </field>
+        </record>
+
+        <!-- ========== DATOS INICIALES ========== -->
+        <function model="megastock.paper.recipe" name="create_standard_tests"/>
+
+    </data>
+</odoo>

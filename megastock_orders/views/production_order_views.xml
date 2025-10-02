@@ -10,6 +10,8 @@
                 <field name="pedido"/>
                 <field name="orden_produccion" optional="show"/>
                 <field name="cliente"/>
+                <field name="test_name" string="TEST" optional="show"/>
+                <field name="troquel" optional="show"/>
                 <field name="estado" widget="badge"/>
 
                 <!-- Campos opcionales - Fechas -->
@@ -25,6 +27,7 @@
 
                 <!-- Campos opcionales - Cantidades -->
                 <field name="cantidad" optional="show"/>
+                <field name="cantidad_ajustada" optional="show"/>
                 <field name="cantidad_entregada" optional="show"/>
                 <field name="porcentaje_cumplimiento" widget="percentage" optional="show"/>
                 <field name="cavidad" optional="hide"/>
@@ -32,6 +35,18 @@
                 <!-- Campos opcionales - Dimensiones -->
                 <field name="largo" optional="hide"/>
                 <field name="ancho" optional="hide"/>
+                <field name="alto" optional="hide"/>
+                <field name="largo_calculado" optional="show"/>
+                <field name="ancho_calculado" optional="show"/>
+                <field name="metros_lineales_calculados" optional="show"/>
+
+                <!-- Campos calculados - Dimensiones Rayado -->
+                <field name="largo_rayado" optional="show"/>
+                <field name="ancho_rayado" optional="show"/>
+                <field name="alto_rayado" optional="show"/>
+
+                <!-- Campos calculados - Pesos -->
+                <field name="peso_lamina_calculado" optional="show"/>
                 <field name="area_total" optional="hide"/>
 
                 <!-- Campos opcionales - Materiales -->
@@ -52,10 +67,17 @@
                 <field name="cantidad_medium" optional="hide"/>
                 <field name="cantidad_liner_externo" optional="hide"/>
 
+                <!-- Campos opcionales - Consumo de papel -->
+                <field name="peso_consumo_li" optional="hide"/>
+                <field name="peso_consumo_cm" optional="hide"/>
+                <field name="peso_consumo_le" optional="hide"/>
+
                 <!-- Campos opcionales - Planificación -->
                 <field name="grupo_planificacion" optional="show"/>
                 <field name="tipo_combinacion" optional="show"/>
                 <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="metros_lineales_calculados" optional="show"/>
+                <field name="peso_lamina_calculado" optional="show"/>
                 <field name="work_order_id" optional="show"/>
                 <field name="ancho_utilizado" optional="hide"/>
                 <field name="bobina_utilizada" optional="hide"/>
@@ -63,6 +85,7 @@
 
                 <!-- Campos opcionales - Otros -->
                 <field name="cumplimiento" optional="hide"/>
+                <field name="cumplimiento_calculado" optional="show"/>
             </tree>
         </field>
     </record>
@@ -110,10 +133,12 @@
                             <field name="descripcion"/>
                             <field name="largo"/>
                             <field name="ancho"/>
+                            <field name="alto"/>
                             <field name="cantidad"/>
                             <field name="cantidad_entregada"/>
                             <field name="cavidad"/>
-                            <field name="area_total"/>
+                            <field name="troquel"/>
+                            <field name="test_name" string="TEST"/>
                         </group>
                         <group name="technical_specs" string="Especificaciones Técnicas">
                             <field name="numero_troquel" readonly="1"/>
@@ -122,6 +147,27 @@
                             <field name="peso"/>
                             <field name="cortes" readonly="1"/>
                             <field name="metros_lineales" readonly="1"/>
+                            <field name="area_total"/>
+                        </group>
+                    </group>
+
+                    <group string="📊 Campos Calculados">
+                        <group name="calculated_dimensions" string="Dimensiones Calculadas">
+                            <field name="largo_calculado" readonly="1"/>
+                            <field name="ancho_calculado" readonly="1"/>
+                            <field name="cantidad_ajustada" readonly="1"/>
+                            <field name="metros_lineales_calculados" readonly="1"/>
+                        </group>
+                        <group name="calculated_rayado" string="Dimensiones Rayado">
+                            <field name="largo_rayado" readonly="1"/>
+                            <field name="ancho_rayado" readonly="1"/>
+                            <field name="alto_rayado" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="⚖️ Cálculos de Peso">
+                        <group name="weight_calculations" string="Peso y Consumos">
+                            <field name="peso_lamina_calculado" readonly="1"/>
                         </group>
                     </group>
 

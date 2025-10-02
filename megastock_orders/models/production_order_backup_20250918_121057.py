@@ -2,7 +2,6 @@
 
 from odoo import models, fields, api
 from datetime import datetime
-import math
 
 class ProductionOrder(models.Model):
     _name = 'megastock.production.order'
@@ -22,116 +21,9 @@ class ProductionOrder(models.Model):
     # Dimensiones y cantidades
     largo = fields.Float(string='Largo (mm)')
     ancho = fields.Float(string='Ancho (mm)')
-    alto = fields.Float(string='Alto (mm)')
     cantidad = fields.Integer(string='Cantidad')
     cavidad = fields.Integer(string='Cavidad')
-
-    # Información del producto (extraída del CSV)
-    tipo_producto = fields.Selection([
-        ('cajas', 'CAJAS'),
-        ('laminas', 'LAMINAS'),
-        ('planchas', 'PLANCHAS')
-    ], string='Tipo Producto', help='Tipo de producto extraído del CSV')
-
-    sustrato = fields.Selection([
-        ('kk', 'K/K'),
-        ('km', 'K/M'),
-        ('mk', 'M/K'),
-        ('mm', 'M/M')
-    ], string='Sustrato', help='Tipo de sustrato extraído del CSV')
-
-    troquel = fields.Selection([
-        ('si', 'SI'),
-        ('no', 'NO')
-    ], string='Troquel', help='Indica si el producto requiere troquel')
-
-    # Dimensiones rayado
-    largo_rayado = fields.Float(
-        string='Largo Rayado (mm)',
-        compute='_compute_largo_rayado',
-        store=True,
-        help='Dimensión largo rayado: alto + 2'
-    )
-    ancho_rayado = fields.Float(
-        string='Ancho Rayado (mm)',
-        compute='_compute_ancho_rayado',
-        store=True,
-        help='Dimensión ancho rayado: ancho_calculado - (alto_rayado * 2)'
-    )
-    alto_rayado = fields.Float(
-        string='Alto Rayado (mm)',
-        compute='_compute_alto_rayado',
-        store=True,
-        help='Dimensión alto rayado: alto + 2'
-    )
-
-    # Campos calculados para trimado
-    largo_calculado = fields.Float(
-        string='Largo Calculado (mm)',
-        compute='_compute_largo_calculado',
-        store=True,
-        help='Largo real: 2*alto + largo + 8'
-    )
-
-    ancho_calculado = fields.Float(
-        string='Ancho Calculado (mm)',
-        compute='_compute_ancho_calculado',
-        store=True,
-        help='Ancho real: 2*alto + ancho + 14'
-    )
-
-    cantidad_ajustada = fields.Float(
-        string='Cantidad Ajustada',
-        compute='_compute_cantidad_ajustada',
-        store=True,
-        help='Cantidad optimizada según cavidad: ceil(cantidad/cavidad) * cavidad'
-    )
-
-    metros_lineales_calculados = fields.Float(
-        string='Metros Lineales Calculados',
-        compute='_compute_metros_lineales_calculados',
-        store=True,
-        help='Metros lineales: ((cantidad_ajustada * largo_calculado) / cavidad) / 1000'
-    )
-
-    peso_lamina_calculado = fields.Float(
-        string='Peso Lámina Calculado (kg)',
-        compute='_compute_peso_lamina_calculado',
-        store=True,
-        help='Peso de la lámina: metros_lineales_calculados * ancho_calculado * gramaje_total / 1000000'
-    )
-
-    peso_consumo_li = fields.Float(
-        string='Peso Consumo LI (kg)',
-        compute='_compute_peso_consumo_li',
-        store=True,
-        help='Consumo Liner Interno: metros_lineales * ancho_calculado * gramaje_li / 1000000'
-    )
-
-    peso_consumo_cm = fields.Float(
-        string='Peso Consumo CM (kg)',
-        compute='_compute_peso_consumo_cm',
-        store=True,
-        help='Consumo Corrugado Medium: metros_lineales * ancho_calculado * gramaje_cm / 1000000'
-    )
-
-    peso_consumo_le = fields.Float(
-        string='Peso Consumo LE (kg)',
-        compute='_compute_peso_consumo_le',
-        store=True,
-        help='Consumo Liner Externo: metros_lineales * ancho_calculado * gramaje_le / 1000000'
-    )
-
-    cumplimiento_calculado = fields.Selection([
-        ('a_tiempo', 'A Tiempo'),
-        ('retrasado', 'Retrasado'),
-        ('adelantado', 'Adelantado'),
-        ('pendiente', 'Pendiente')
-    ], string='Cumplimiento Calculado',
-       compute='_compute_cumplimiento_calculado',
-       store=True,
-       help='Cumplimiento calculado basado en fechas de producción y entrega')
-
+    
     # Fechas y estado
     fecha_entrega_cliente = fields.Date(string='Fecha Entrega Cliente')
     fecha_produccion = fields.Date(string='Fecha Producción')
@@ -185,6 +77,7 @@ class ProductionOrder(models.Model):
     tipo_combinacion = fields.Selection([
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
+        ('tripla', 'Tripla'),
     ], string='Tipo de Combinación', default='individual')
     ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina')
     bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada')
@@ -193,22 +86,6 @@ class ProductionOrder(models.Model):
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
     
-    # Test calculado automáticamente desde descripción del producto
-    test_name = fields.Char(
-        string='TEST',
-        compute='_compute_test_from_description',
-        store=True,
-        help='Test extraído automáticamente de la descripción del producto'
-    )
-
-    test_id = fields.Many2one(
-        'megastock.paper.recipe',
-        string='Test/Receta',
-        compute='_compute_test_id_from_name',
-        store=True,
-        help='Relación con test de resistencia y receta de papel'
-    )
-
     # Relación con orden de trabajo
     work_order_id = fields.Many2one('megastock.work.order', string='Orden de Trabajo')
     
@@ -233,194 +110,7 @@ class ProductionOrder(models.Model):
                 record.porcentaje_cumplimiento = (record.cantidad_entregada / record.cantidad) * 100
             else:
                 record.porcentaje_cumplimiento = 0.0
-
-    @api.depends('descripcion')
-    def _compute_test_from_description(self):
-        """Extrae el número de test de la descripción del producto"""
-        import re
-        for record in self:
-            test_name = ''
-            if record.descripcion:
-                # Buscar patrones como "TEST 200", "Test 150", etc.
-                match = re.search(r'TEST\s+(\d+)', record.descripcion.upper())
-                if match:
-                    test_number = match.group(1)
-                    test_name = test_number  # Solo el número, sin "Test"
-            record.test_name = test_name
-
-    @api.depends('test_name')
-    def _compute_test_id_from_name(self):
-        """Busca la relación con el test basado en test_name"""
-        for record in self:
-            test_id = False
-            if record.test_name:
-                try:
-                    # Buscar el test en megastock.paper.recipe si existe
-                    if 'megastock.paper.recipe' in self.env:
-                        # Convertir número a formato "Test XXX" para búsqueda
-                        test_search_name = f"Test {record.test_name}"
-                        test = self.env['megastock.paper.recipe'].search([
-                            ('test_name', '=', test_search_name)
-                        ], limit=1)
-                        if test:
-                            test_id = test.id
-                except KeyError:
-                    # Modelo no existe aún, mantener test_id como False
-                    pass
-            record.test_id = test_id
-
-    def action_recalcular_test(self):
-        """Acción para recalcular test desde interfaz"""
-        for record in self:
-            record._compute_test_from_description()
-        return True
-
-    @api.depends('alto')
-    def _compute_largo_rayado(self):
-        """Calcula largo rayado según fórmula: alto + 2"""
-        for record in self:
-            if record.alto:
-                record.largo_rayado = record.alto + 2
-            else:
-                record.largo_rayado = 2.0  # Valor por defecto si alto es 0
-
-    @api.depends('alto')
-    def _compute_alto_rayado(self):
-        """Calcula alto rayado según fórmula: alto + 2"""
-        for record in self:
-            if record.alto:
-                record.alto_rayado = record.alto + 2
-            else:
-                record.alto_rayado = 2.0  # Valor por defecto si alto es 0
-
-    @api.depends('ancho_calculado', 'alto_rayado')
-    def _compute_ancho_rayado(self):
-        """Calcula ancho rayado según fórmula: ancho_calculado - (alto_rayado * 2)"""
-        for record in self:
-            if record.ancho_calculado and record.alto_rayado:
-                record.ancho_rayado = record.ancho_calculado - (record.alto_rayado * 2)
-            else:
-                record.ancho_rayado = 0.0
-
-    @api.depends('largo', 'alto')
-    def _compute_largo_calculado(self):
-        """Calcula largo real según fórmula: 2*alto + largo + 8"""
-        for record in self:
-            if record.largo and record.alto:
-                record.largo_calculado = (2 * record.alto) + record.largo + 8
-            else:
-                record.largo_calculado = record.largo or 0
-
-    @api.depends('ancho', 'alto', 'troquel')
-    def _compute_ancho_calculado(self):
-        """Calcula ancho real según fórmula: 2*alto + ancho + 14 + (2 si troquel=SI)"""
-        for record in self:
-            if record.ancho and record.alto:
-                base_ancho = (2 * record.alto) + record.ancho + 14
-                # Agregar 2mm si troquel = 'si'
-                troquel_extra = 2 if record.troquel == 'si' else 0
-                record.ancho_calculado = base_ancho + troquel_extra
-            else:
-                record.ancho_calculado = record.ancho or 0
-
-    @api.depends('cantidad', 'cavidad')
-    def _compute_cantidad_ajustada(self):
-        """Optimiza cantidad según cavidad: ceil(cantidad/cavidad) * cavidad"""
-        for record in self:
-            if record.cantidad and record.cavidad and record.cavidad > 0:
-                cortes_necesarios = math.ceil(record.cantidad / record.cavidad)
-                record.cantidad_ajustada = cortes_necesarios * record.cavidad
-            else:
-                record.cantidad_ajustada = record.cantidad or 0
-
-    @api.depends('cantidad_ajustada', 'largo_calculado', 'cavidad')
-    def _compute_metros_lineales_calculados(self):
-        """Calcula metros lineales: ((cantidad_ajustada * largo_calculado) / cavidad) / 1000"""
-        for record in self:
-            if record.cantidad_ajustada and record.largo_calculado and record.cavidad and record.cavidad > 0:
-                metros = ((record.cantidad_ajustada * record.largo_calculado) / record.cavidad) / 1000
-                record.metros_lineales_calculados = metros
-            else:
-                record.metros_lineales_calculados = 0
-
-    @api.depends('largo_calculado', 'ancho_calculado', 'test_name')
-    def _compute_peso_lamina_calculado(self):
-        """Calcula peso usando motor de cálculo"""
-        calculator = self.env['megastock.weight.calculator']
-        for record in self:
-            if record.largo_calculado and record.ancho_calculado and record.test_name:
-                try:
-                    # Convertir test_name a float (ej: "275" -> 275.0)
-                    test_value = float(record.test_name) if record.test_name else 200.0
-                    record.peso_lamina_calculado = calculator.calculate_sheet_weight(
-                        record.largo_calculado,
-                        record.ancho_calculado,
-                        test_value
-                    )
-                except (ValueError, TypeError):
-                    # Si no se puede convertir, usar valor por defecto
-                    record.peso_lamina_calculado = calculator.calculate_sheet_weight(
-                        record.largo_calculado,
-                        record.ancho_calculado,
-                        200.0
-                    )
-            else:
-                record.peso_lamina_calculado = 0
-
-    @api.depends('metros_lineales_calculados', 'ancho_calculado', 'liner_interno_gm')
-    def _compute_peso_consumo_li(self):
-        """Calcula consumo de Liner Interno: metros_lineales * ancho_calculado * gramaje_li / 1000000"""
-        for record in self:
-            if record.metros_lineales_calculados and record.ancho_calculado and record.liner_interno_gm:
-                peso = (record.metros_lineales_calculados * record.ancho_calculado * record.liner_interno_gm) / 1000000
-                record.peso_consumo_li = peso
-            else:
-                record.peso_consumo_li = 0
-
-    @api.depends('metros_lineales_calculados', 'ancho_calculado', 'medium_gm')
-    def _compute_peso_consumo_cm(self):
-        """Calcula consumo de Corrugado Medium: metros_lineales * ancho_calculado * gramaje_cm / 1000000"""
-        for record in self:
-            if record.metros_lineales_calculados and record.ancho_calculado and record.medium_gm:
-                peso = (record.metros_lineales_calculados * record.ancho_calculado * record.medium_gm) / 1000000
-                record.peso_consumo_cm = peso
-            else:
-                record.peso_consumo_cm = 0
-
-    @api.depends('metros_lineales_calculados', 'ancho_calculado', 'liner_externo_gm')
-    def _compute_peso_consumo_le(self):
-        """Calcula consumo de Liner Externo: metros_lineales * ancho_calculado * gramaje_le / 1000000"""
-        for record in self:
-            if record.metros_lineales_calculados and record.ancho_calculado and record.liner_externo_gm:
-                peso = (record.metros_lineales_calculados * record.ancho_calculado * record.liner_externo_gm) / 1000000
-                record.peso_consumo_le = peso
-            else:
-                record.peso_consumo_le = 0
-
-    @api.depends('fecha_produccion', 'fecha_entrega_cliente', 'estado')
-    def _compute_cumplimiento_calculado(self):
-        """Calcula cumplimiento basado en fechas de producción y entrega"""
-        from datetime import date
-        for record in self:
-            if not record.fecha_entrega_cliente:
-                record.cumplimiento_calculado = 'pendiente'
-            elif record.estado == 'entregado':
-                if record.fecha_produccion:
-                    if record.fecha_produccion <= record.fecha_entrega_cliente:
-                        record.cumplimiento_calculado = 'a_tiempo'
-                    else:
-                        record.cumplimiento_calculado = 'retrasado'
-                else:
-                    record.cumplimiento_calculado = 'a_tiempo'  # Entregado sin fecha de producción
-            elif record.estado in ['pendiente', 'ot', 'proceso', 'planchas']:
-                today = date.today()
-                if today <= record.fecha_entrega_cliente:
-                    record.cumplimiento_calculado = 'pendiente'
-                else:
-                    record.cumplimiento_calculado = 'retrasado'
-            else:
-                record.cumplimiento_calculado = 'pendiente'
-
+    
     @api.depends('cantidad', 'cavidad')
     def _compute_cortes(self):
         for record in self:
@@ -572,16 +262,8 @@ class ProductionOrder(models.Model):
 
     def _optimizar_ordenes(self, ordenes):
         """Algoritmo de optimización basado en el archivo Excel de trimado"""
-        # Obtener anchos de bobina disponibles desde la configuración
-        Bobina = self.env['megastock.bobina']
-        bobinas_disponibles = Bobina.get_bobinas_activas()
-
-        # Si no hay bobinas configuradas, mostrar error
-        if not bobinas_disponibles:
-            raise UserError(
-                "No hay bobinas activas configuradas. "
-                "Ve a Configuración > Bobinas y configura al menos una bobina activa."
-            )
+        # Anchos de bobina disponibles (basado en datos típicos de la industria)
+        BOBINAS_DISPONIBLES = [1600, 1400, 1200, 1000, 800]
         
         # Agrupar órdenes por características similares
         grupos_optimizados = []
@@ -593,7 +275,7 @@ class ProductionOrder(models.Model):
                 continue
                 
             # Buscar combinaciones óptimas
-            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, bobinas_disponibles)
+            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, BOBINAS_DISPONIBLES)
             
             if mejor_combinacion:
                 # Aplicar la combinación encontrada
@@ -622,7 +304,7 @@ class ProductionOrder(models.Model):
         
         # Probar combinación individual
         for bobina in bobinas:
-            if orden_principal.ancho <= (bobina - 30):
+            if orden_principal.ancho <= bobina:
                 resultado = self._calcular_eficiencia_real([orden_principal], bobina)
                 
                 if resultado['eficiencia'] > mejor_eficiencia:
@@ -663,8 +345,34 @@ class ProductionOrder(models.Model):
                             'cortes_totales': resultado['cortes_totales']
                         }
         
-        # Las triplas no son posibles debido a limitaciones de las máquinas corrugadoras
-        # que solo tienen máximo 2 cuchillas
+        # Probar triplas
+        for orden2 in todas_ordenes:
+            if orden2.id == orden_principal.id or orden2.id in procesadas:
+                continue
+                
+            for orden3 in todas_ordenes:
+                if orden3.id in [orden_principal.id, orden2.id] or orden3.id in procesadas:
+                    continue
+                    
+                ordenes_tripla = [orden_principal, orden2, orden3]
+                ancho_total = sum(orden.ancho for orden in ordenes_tripla)
+                
+                for bobina in bobinas:
+                    if ancho_total <= bobina:
+                        resultado = self._calcular_eficiencia_real(ordenes_tripla, bobina)
+                        
+                        if resultado['eficiencia'] > mejor_eficiencia:
+                            mejor_eficiencia = resultado['eficiencia']
+                            mejor_combinacion = {
+                                'ordenes': ordenes_tripla,
+                                'tipo': 'tripla',
+                                'bobina': bobina,
+                                'ancho_utilizado': ancho_total,
+                                'sobrante': resultado['sobrante'],
+                                'eficiencia': resultado['eficiencia'],
+                                'metros_lineales': resultado['metros_lineales'],
+                                'cortes_totales': resultado['cortes_totales']
+                            }
         
         return mejor_combinacion
 
@@ -702,8 +410,11 @@ class ProductionOrder(models.Model):
         # Aplicar ajustes aditivos (no multiplicativos)
         eficiencia_final = eficiencia_base
         
-        # Eficiencia base sin bonificaciones artificiales
-        # Fórmula correcta según especificaciones: (ANCHO_TOTAL_UTILIZADO / BOBINA_UTILIZADA) * 100
+        # Factor 1: Bonus por combinaciones (aditivo, no multiplicativo)
+        if len(ordenes) == 2:  # Dupla
+            eficiencia_final += 5  # +5% bonus
+        elif len(ordenes) == 3:  # Tripla
+            eficiencia_final += 8  # +8% bonus
         
         # Factor 2: Bonus por cavidades múltiples
         for orden in ordenes:

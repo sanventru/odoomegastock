@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import models, fields, api
-from odoo.exceptions import ValidationError
 from datetime import timedelta
-import json
 
 class MrpWorkcenter(models.Model):
     _inherit = 'mrp.workcenter'
@@ -212,121 +210,7 @@ class MrpWorkcenter(models.Model):
                 record.oee_performance * 
                 record.oee_quality
             ) / 10000.0  # Dividir por 10000 porque son porcentajes
-
-    @api.depends('ancho_util_mm', 'refilio_estandar_mm')
-    def _compute_ancho_disponible(self):
-        """Calcular ancho disponible descontando refilio"""
-        for record in self:
-            if record.ancho_util_mm and record.refilio_estandar_mm:
-                record.ancho_disponible_mm = record.ancho_util_mm - (2 * record.refilio_estandar_mm)
-            else:
-                record.ancho_disponible_mm = 0
-
-    # ========== VALIDACIONES TRIMADO ==========
-
-    @api.constrains('num_cuchillas')
-    def _check_num_cuchillas(self):
-        """Validar que el número de cuchillas sea 1 o 2"""
-        for record in self:
-            if record.num_cuchillas and record.num_cuchillas not in [1, 2]:
-                raise ValidationError("El número de cuchillas debe ser 1 o 2.")
-
-    @api.constrains('bobina_widths_available')
-    def _check_bobina_widths_json(self):
-        """Validar que el JSON de anchos de bobina sea válido"""
-        for record in self:
-            if record.bobina_widths_available:
-                try:
-                    widths = json.loads(record.bobina_widths_available)
-                    if not isinstance(widths, list):
-                        raise ValidationError("El formato de anchos de bobina debe ser una lista JSON.")
-                    for width in widths:
-                        if not isinstance(width, (int, float)) or width <= 0:
-                            raise ValidationError("Todos los anchos de bobina deben ser números positivos.")
-                except json.JSONDecodeError:
-                    raise ValidationError("Formato JSON inválido en anchos de bobina disponibles.")
-
-    @api.constrains('ancho_util_mm', 'refilio_estandar_mm')
-    def _check_ancho_util_refilio(self):
-        """Validar que el ancho útil sea mayor que el doble del refilio"""
-        for record in self:
-            if record.ancho_util_mm and record.refilio_estandar_mm:
-                if record.ancho_util_mm <= (2 * record.refilio_estandar_mm):
-                    raise ValidationError("El ancho útil debe ser mayor que el doble del refilio estándar.")
-
-    # ========== MÉTODOS TRIMADO ==========
-
-    def get_trimming_parameters(self):
-        """Obtener parámetros de trimado de la máquina"""
-        self.ensure_one()
-        try:
-            bobina_widths = json.loads(self.bobina_widths_available) if self.bobina_widths_available else []
-        except json.JSONDecodeError:
-            bobina_widths = []
-
-        return {
-            'workcenter_id': self.id,
-            'workcenter_name': self.name,
-            'bobina_widths_available': bobina_widths,
-            'num_cuchillas': self.num_cuchillas,
-            'ancho_util_mm': self.ancho_util_mm,
-            'ancho_disponible_mm': self.ancho_disponible_mm,
-            'refilio_estandar_mm': self.refilio_estandar_mm,
-            'velocidad_maxima_mmin': self.velocidad_maxima_mmin,
-            'tiempo_setup_cuchilla_min': self.tiempo_setup_cuchilla_min,
-            'eficiencia_trimado_pct': self.eficiencia_trimado_pct,
-            'machine_status': self.machine_status,
-        }
-
-    def can_process_order(self, ancho_requerido, largo_requerido=None):
-        """Verificar si la máquina puede procesar una orden con las dimensiones dadas"""
-        self.ensure_one()
-
-        # Verificar ancho disponible
-        if ancho_requerido > self.ancho_disponible_mm:
-            return False, f"Ancho requerido ({ancho_requerido}mm) excede ancho disponible ({self.ancho_disponible_mm}mm)"
-
-        # Verificar largo máximo si está definido
-        if largo_requerido and self.max_length_mm and largo_requerido > self.max_length_mm:
-            return False, f"Largo requerido ({largo_requerido}mm) excede capacidad máxima ({self.max_length_mm}mm)"
-
-        # Verificar estado de máquina
-        if self.machine_status not in ['operational', 'standby']:
-            return False, f"Máquina no disponible (Estado: {self.machine_status})"
-
-        return True, "OK"
-
-    def action_view_trimming_parameters(self):
-        """Mostrar parámetros de trimado en mensaje emergente"""
-        self.ensure_one()
-        params = self.get_trimming_parameters()
-
-        message = f"""
-        PARÁMETROS DE TRIMADO - {params['workcenter_name']}
-
-        • Número de Cuchillas: {params['num_cuchillas']}
-        • Ancho Útil: {params['ancho_util_mm']} mm
-        • Ancho Disponible: {params['ancho_disponible_mm']} mm
-        • Refilio Estándar: {params['refilio_estandar_mm']} mm
-        • Velocidad Máxima: {params['velocidad_maxima_mmin']} m/min
-        • Eficiencia Trimado: {params['eficiencia_trimado_pct']}%
-        • Estado Máquina: {params['machine_status']}
-
-        Anchos de Bobina Disponibles:
-        {', '.join(map(str, params['bobina_widths_available']))} mm
-        """
-
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Parámetros de Trimado',
-                'message': message,
-                'type': 'success',
-                'sticky': True,
-            }
-        }
-
+    
     # ========== MÉTODOS DE ACCIÓN ==========
     
     def action_start_maintenance(self):
@@ -374,55 +258,3 @@ class MrpWorkcenter(models.Model):
             'real_capacity': self.real_capacity,
             'capacity_unit': self.capacity_unit,
         }
-
-    # ========== CONFIGURACIÓN TRIMADO ==========
-
-    bobina_widths_available = fields.Text(
-        string='Anchos Bobina Disponibles (JSON)',
-        help='Lista JSON anchos disponibles: [1070,1100,1120,1150,1370,1400,1600,1700,1880]',
-        default='[1070,1100,1120,1150,1370,1400,1600,1700,1880]'
-    )
-
-    num_cuchillas = fields.Integer(
-        string='Número de Cuchillas',
-        help='Cantidad de cuchillas (1 o 2)',
-        default=2
-    )
-
-    ancho_util_mm = fields.Integer(
-        string='Ancho Útil (mm)',
-        help='Ancho útil máximo de procesamiento',
-        default=1880
-    )
-
-    refilio_estandar_mm = fields.Integer(
-        string='Refilio Estándar (mm)',
-        help='Margen de seguridad estándar',
-        default=30
-    )
-
-    velocidad_maxima_mmin = fields.Integer(
-        string='Velocidad Máxima (m/min)',
-        help='Velocidad máxima de procesamiento',
-        default=150
-    )
-
-    tiempo_setup_cuchilla_min = fields.Integer(
-        string='Tiempo Setup Cuchilla (min)',
-        help='Tiempo de configuración por cuchilla',
-        default=15
-    )
-
-    eficiencia_trimado_pct = fields.Float(
-        string='Eficiencia Trimado (%)',
-        help='Porcentaje de eficiencia en operaciones de trimado',
-        default=85.0
-    )
-
-    # Campo calculado para ancho disponible
-    ancho_disponible_mm = fields.Integer(
-        string='Ancho Disponible (mm)',
-        compute='_compute_ancho_disponible',
-        store=True,
-        help='Ancho disponible descontando refilio: ancho_util_mm - (2 * refilio_estandar_mm)'
-    )

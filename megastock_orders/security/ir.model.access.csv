@@ -7,3 +7,7 @@ access_bobina_user,megastock.bobina user,model_megastock_bobina,base.group_user,
 access_bobina_manager,megastock.bobina manager,model_megastock_bobina,base.group_system,1,1,1,1
 access_order_import_wizard_user,megastock.order.import.wizard user,model_megastock_order_import_wizard,base.group_user,1,1,1,1
 access_order_import_wizard_manager,megastock.order.import.wizard manager,model_megastock_order_import_wizard,base.group_system,1,1,1,1
+access_weight_calculator_user,megastock.weight.calculator user,model_megastock_weight_calculator,base.group_user,1,1,1,1
+access_weight_calculator_manager,megastock.weight.calculator manager,model_megastock_weight_calculator,base.group_system,1,1,1,1
+access_paper_recipe_user,megastock.paper.recipe user,model_megastock_paper_recipe,base.group_user,1,1,1,0
+access_paper_recipe_manager,megastock.paper.recipe manager,model_megastock_paper_recipe,base.group_system,1,1,1,1

@@ -54,7 +54,7 @@ class Bobina(models.Model):
         """Crear bobinas por defecto si no existen"""
         existing_bobinas = self.search([])
         if not existing_bobinas:
-            anchos_default = [1600, 1400, 1200, 1000, 800]
+            anchos_default = [1800, 1600, 1400, 1200, 1000, 800]
             for ancho in anchos_default:
                 self.create({
                     'ancho': ancho,

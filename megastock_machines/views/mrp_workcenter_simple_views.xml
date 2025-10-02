@@ -27,17 +27,50 @@
                         </group>
                         
                         <group string="Métricas OEE Hoy">
-                            <field name="downtime_count_today"/>
-                            <field name="downtime_duration_today"/>
+                            <!-- <field name="downtime_count_today"/> -->
+                            <!-- <field name="downtime_duration_today"/> -->
                             <field name="oee_availability" widget="percentage"/>
                         </group>
                     </group>
                     
                     <group string="Acciones">
-                        <button name="action_start_maintenance" 
+                        <button name="action_start_maintenance"
                                 string="Iniciar Mantenimiento"
                                 type="object"
                                 class="btn-warning"/>
+                    </group>
+                </page>
+
+                <page string="Configuración Trimado">
+                    <group>
+                        <group string="Parámetros de Cuchillas">
+                            <field name="num_cuchillas"/>
+                            <field name="tiempo_setup_cuchilla_min"/>
+                            <field name="eficiencia_trimado_pct"/>
+                        </group>
+
+                        <group string="Dimensiones de Procesamiento">
+                            <field name="ancho_util_mm"/>
+                            <field name="refilio_estandar_mm"/>
+                            <field name="ancho_disponible_mm" readonly="1"/>
+                            <field name="velocidad_maxima_mmin"/>
+                        </group>
+                    </group>
+
+                    <group string="Anchos de Bobina Disponibles">
+                        <field name="bobina_widths_available" widget="text"
+                               placeholder='[1070,1100,1120,1150,1370,1400,1600,1700,1880]'/>
+                        <div class="alert alert-info" role="alert">
+                            <strong>Formato:</strong> Lista JSON de anchos disponibles en mm.
+                            Ejemplo: [1070,1100,1120,1150,1370,1400,1600,1700,1880]
+                        </div>
+                    </group>
+
+                    <group string="Acciones de Trimado">
+                        <button name="action_view_trimming_parameters"
+                                string="Ver Parámetros de Trimado"
+                                type="object"
+                                class="btn-primary"/>
                     </group>
                 </page>
             </xpath>
