@@ -10,14 +10,14 @@ class PlanificacionWizard(models.TransientModel):
     test_principal = fields.Integer(
         string='Test Principal',
         required=True,
-        help='Número de test que define la resistencia principal del papel'
+        help='Test'
     )
 
     cavidad_limite = fields.Integer(
         string='Cavidad Límite',
         required=True,
         default=1,
-        help='Límite superior para multiplicar el ancho_calculado. El algoritmo probará desde 1 hasta este valor.'
+        help='Cavidad'
     )
 
     @api.constrains('cavidad_limite')
@@ -60,12 +60,19 @@ class PlanificacionWizard(models.TransientModel):
             cavidad_limite=self.cavidad_limite
         )
 
+        # Construir mensaje con información de la bobina óptima
+        mensaje = f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos.'
+        mensaje += f'\nBobina óptima: {resultado["bobina_optima"]:.0f}mm'
+        mensaje += f'\nEficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%'
+        mensaje += f'\nDesperdicio total: {resultado["desperdicio_total"]:.0f}mm'
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
                 'title': 'Planificación Masiva Completada',
-                'message': f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos. Eficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%',
+                'message': mensaje,
                 'type': 'success',
+                'sticky': True,
             }
         }

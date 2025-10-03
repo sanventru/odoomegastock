@@ -592,38 +592,62 @@ class ProductionOrder(models.Model):
                 "Ve a Configuración > Bobinas y configura al menos una bobina activa."
             )
 
-        # Agrupar órdenes por características similares
-        grupos_optimizados = []
-        ordenes_procesadas = set()
-        grupo_counter = 1
+        # NUEVA ESTRATEGIA: Probar cada bobina y elegir la que genere menor desperdicio total
+        mejor_bobina = None
+        menor_desperdicio_total = float('inf')
+        mejores_grupos = None
 
-        for orden in ordenes:
-            if orden.id in ordenes_procesadas:
-                continue
+        for bobina_candidata in bobinas_disponibles:
+            # Optimizar todas las órdenes usando solo esta bobina
+            grupos_con_esta_bobina = []
+            ordenes_procesadas = set()
+            grupo_counter = 1
+            desperdicio_total = 0
 
-            # Buscar combinaciones óptimas considerando cavidades múltiples
-            mejor_combinacion = self._encontrar_mejor_combinacion(
-                orden, ordenes, ordenes_procesadas, bobinas_disponibles, cavidad_limite
-            )
+            for orden in ordenes:
+                if orden.id in ordenes_procesadas:
+                    continue
 
-            if mejor_combinacion:
-                # Aplicar la combinación encontrada
-                self._aplicar_combinacion(mejor_combinacion, grupo_counter)
-                grupos_optimizados.append(mejor_combinacion)
+                # Buscar mejor combinación SOLO con esta bobina específica
+                mejor_combinacion = self._encontrar_mejor_combinacion(
+                    orden, ordenes, ordenes_procesadas, [bobina_candidata], cavidad_limite
+                )
 
-                # Marcar órdenes como procesadas
-                for orden_comb_data in mejor_combinacion['ordenes']:
-                    ordenes_procesadas.add(orden_comb_data['orden'].id)
+                if mejor_combinacion:
+                    grupos_con_esta_bobina.append(mejor_combinacion)
+                    desperdicio_total += mejor_combinacion['sobrante']
 
-                grupo_counter += 1
+                    # Marcar órdenes como procesadas
+                    for orden_comb_data in mejor_combinacion['ordenes']:
+                        ordenes_procesadas.add(orden_comb_data['orden'].id)
+
+                    grupo_counter += 1
+                else:
+                    # CRÍTICO: Si una orden no cabe en esta bobina, penalizar mucho
+                    # Esto asegura que bobinas pequeñas no sean elegidas si no procesan todas las órdenes
+                    desperdicio_total += 999999  # Penalización enorme
+
+            # Verificar si esta bobina es mejor que las anteriores
+            # Solo si procesa TODAS las órdenes (sin penalización)
+            if desperdicio_total < menor_desperdicio_total:
+                menor_desperdicio_total = desperdicio_total
+                mejor_bobina = bobina_candidata
+                mejores_grupos = grupos_con_esta_bobina
+
+        # Aplicar los mejores grupos encontrados
+        if mejores_grupos:
+            for idx, grupo in enumerate(mejores_grupos, start=1):
+                self._aplicar_combinacion(grupo, idx)
 
         # Calcular estadísticas
-        eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_optimizados)
-        eficiencia_promedio = eficiencia_total / len(grupos_optimizados) if grupos_optimizados else 0
+        eficiencia_total = sum(grupo['eficiencia'] for grupo in mejores_grupos) if mejores_grupos else 0
+        eficiencia_promedio = eficiencia_total / len(mejores_grupos) if mejores_grupos else 0
 
         return {
-            'grupos': len(grupos_optimizados),
-            'eficiencia_promedio': eficiencia_promedio
+            'grupos': len(mejores_grupos) if mejores_grupos else 0,
+            'eficiencia_promedio': eficiencia_promedio,
+            'bobina_optima': mejor_bobina,
+            'desperdicio_total': menor_desperdicio_total
         }
 
     def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
