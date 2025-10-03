@@ -11,3 +11,5 @@ access_weight_calculator_user,megastock.weight.calculator user,model_megastock_w
 access_weight_calculator_manager,megastock.weight.calculator manager,model_megastock_weight_calculator,base.group_system,1,1,1,1
 access_paper_recipe_user,megastock.paper.recipe user,model_megastock_paper_recipe,base.group_user,1,1,1,0
 access_paper_recipe_manager,megastock.paper.recipe manager,model_megastock_paper_recipe,base.group_system,1,1,1,1
+access_planificacion_wizard_user,megastock.planificacion.wizard user,model_megastock_planificacion_wizard,base.group_user,1,1,1,1
+access_planificacion_wizard_manager,megastock.planificacion.wizard manager,model_megastock_planificacion_wizard,base.group_system,1,1,1,1

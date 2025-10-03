@@ -75,6 +75,7 @@
                 <!-- Campos opcionales - Planificación -->
                 <field name="grupo_planificacion" optional="show"/>
                 <field name="tipo_combinacion" optional="show"/>
+                <field name="cavidad_optimizada" optional="show"/>
                 <field name="eficiencia" widget="percentage" optional="show"/>
                 <field name="metros_lineales_calculados" optional="show"/>
                 <field name="peso_lamina_calculado" optional="show"/>
@@ -204,6 +205,7 @@
                                 <group string="Optimización de Material">
                                     <field name="grupo_planificacion" readonly="1"/>
                                     <field name="tipo_combinacion" readonly="1"/>
+                                    <field name="cavidad_optimizada" readonly="1"/>
                                     <field name="eficiencia" widget="percentage" readonly="1"/>
                                 </group>
                                 <group string="Detalles de Bobina">
@@ -339,40 +341,6 @@
         </field>
     </record>
 
-    <!-- Acción de Planificación Masiva -->
-    <record id="action_planificar_ordenes_masivo" model="ir.actions.server">
-        <field name="name">Planificar Órdenes Seleccionadas</field>
-        <field name="model_id" ref="model_megastock_production_order"/>
-        <field name="binding_model_id" ref="model_megastock_production_order"/>
-        <field name="binding_view_types">list</field>
-        <field name="state">code</field>
-        <field name="code">
-if records:
-    # Filtrar solo órdenes pendientes
-    ordenes_pendientes = records.filtered(lambda r: r.estado == 'pendiente')
-    if ordenes_pendientes:
-        resultado = ordenes_pendientes[0]._optimizar_ordenes(ordenes_pendientes)
-        action = {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Planificación Masiva Completada',
-                'message': f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos. Eficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%',
-                'type': 'success',
-            }
-        }
-    else:
-        action = {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Sin órdenes válidas',
-                'message': 'Solo se pueden planificar órdenes en estado pendiente.',
-                'type': 'warning',
-            }
-        }
-        </field>
-    </record>
 
     <!-- Acción de Ventana -->
     <record id="action_production_order" model="ir.actions.act_window">

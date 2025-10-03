@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de formulario para el wizard de planificación -->
+    <record id="view_planificacion_wizard_form" model="ir.ui.view">
+        <field name="name">megastock.planificacion.wizard.form</field>
+        <field name="model">megastock.planificacion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Planificar Órdenes con Parámetros">
+                <group>
+                    <group>
+                        <field name="test_principal" placeholder="Ej: 200"/>
+                        <p class="text-muted">
+                            Número de test que define la resistencia principal del papel
+                        </p>
+                    </group>
+                    <group>
+                        <field name="cavidad_limite" placeholder="Ej: 4"/>
+                        <p class="text-muted">
+                            Límite superior para multiplicar el ancho_calculado.
+                            El algoritmo probará desde 1 hasta este valor para encontrar el menor desperdicio.
+                        </p>
+                    </group>
+                </group>
+                <div class="alert alert-info mt16" role="alert">
+                    <strong>¿Cómo funciona?</strong>
+                    <ul>
+                        <li><strong>Test Principal:</strong> Define la receta de papel que se utilizará para la producción.</li>
+                        <li><strong>Cavidad Límite:</strong> El algoritmo probará multiplicar el ancho_calculado de cada orden por 1, 2, 3... hasta este valor, calculando todas las combinaciones posibles y eligiendo la que minimice el desperdicio.</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Ejemplo:</strong> Si cavidad_limite = 4, para una orden con ancho_calculado = 500mm,
+                        el algoritmo probará 500mm, 1000mm, 1500mm y 2000mm, buscando la mejor combinación con las demás órdenes.
+                    </p>
+                </div>
+                <footer>
+                    <button string="Planificar" name="action_planificar" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para abrir el wizard -->
+    <record id="action_planificacion_wizard" model="ir.actions.act_window">
+        <field name="name">Planificar Órdenes</field>
+        <field name="res_model">megastock.planificacion.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_megastock_production_order"/>
+        <field name="binding_view_types">list</field>
+    </record>
+</odoo>

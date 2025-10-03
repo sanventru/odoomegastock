@@ -192,6 +192,7 @@ class ProductionOrder(models.Model):
     eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
+    cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización')
     
     # Test calculado automáticamente desde descripción del producto
     test_name = fields.Char(
@@ -570,8 +571,16 @@ class ProductionOrder(models.Model):
             }
         }
 
-    def _optimizar_ordenes(self, ordenes):
-        """Algoritmo de optimización basado en el archivo Excel de trimado"""
+    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1):
+        """Algoritmo de optimización basado en el archivo Excel de trimado
+
+        Args:
+            ordenes: Recordset de órdenes a optimizar
+            test_principal: Número de test principal para la producción
+            cavidad_limite: Límite superior para multiplicar ancho_calculado (default: 1)
+        """
+        from odoo.exceptions import UserError
+
         # Obtener anchos de bobina disponibles desde la configuración
         Bobina = self.env['megastock.bobina']
         bobinas_disponibles = Bobina.get_bobinas_activas()
@@ -582,102 +591,186 @@ class ProductionOrder(models.Model):
                 "No hay bobinas activas configuradas. "
                 "Ve a Configuración > Bobinas y configura al menos una bobina activa."
             )
-        
+
         # Agrupar órdenes por características similares
         grupos_optimizados = []
         ordenes_procesadas = set()
         grupo_counter = 1
-        
+
         for orden in ordenes:
             if orden.id in ordenes_procesadas:
                 continue
-                
-            # Buscar combinaciones óptimas
-            mejor_combinacion = self._encontrar_mejor_combinacion(orden, ordenes, ordenes_procesadas, bobinas_disponibles)
-            
+
+            # Buscar combinaciones óptimas considerando cavidades múltiples
+            mejor_combinacion = self._encontrar_mejor_combinacion(
+                orden, ordenes, ordenes_procesadas, bobinas_disponibles, cavidad_limite
+            )
+
             if mejor_combinacion:
                 # Aplicar la combinación encontrada
                 self._aplicar_combinacion(mejor_combinacion, grupo_counter)
                 grupos_optimizados.append(mejor_combinacion)
-                
+
                 # Marcar órdenes como procesadas
-                for orden_comb in mejor_combinacion['ordenes']:
-                    ordenes_procesadas.add(orden_comb.id)
-                
+                for orden_comb_data in mejor_combinacion['ordenes']:
+                    ordenes_procesadas.add(orden_comb_data['orden'].id)
+
                 grupo_counter += 1
-        
+
         # Calcular estadísticas
         eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_optimizados)
         eficiencia_promedio = eficiencia_total / len(grupos_optimizados) if grupos_optimizados else 0
-        
+
         return {
             'grupos': len(grupos_optimizados),
             'eficiencia_promedio': eficiencia_promedio
         }
 
-    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas):
-        """Encuentra la mejor combinación para una orden principal"""
+    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
+        """Encuentra la mejor combinación para una orden principal
+
+        Args:
+            orden_principal: Orden principal a optimizar
+            todas_ordenes: Todas las órdenes disponibles
+            procesadas: Set de IDs de órdenes ya procesadas
+            bobinas: Lista de anchos de bobinas disponibles
+            cavidad_limite: Límite superior para multiplicar ancho_calculado
+        """
         mejor_combinacion = None
-        mejor_eficiencia = 0
-        menor_sobrante = float('inf')
+        menor_sobrante = float('inf')  # Criterio único: minimizar sobrante
 
         # Margen de seguridad para cortes (30mm)
         MARGEN_SEGURIDAD = 30
 
-        # Probar combinación individual
-        for bobina in bobinas:
-            ancho_util = orden_principal.ancho_calculado
-            if ancho_util <= (bobina - MARGEN_SEGURIDAD):
-                resultado = self._calcular_eficiencia_real([orden_principal], bobina)
-
-                # Priorizar menor sobrante, luego mayor eficiencia
-                if (resultado['sobrante'] < menor_sobrante or
-                    (resultado['sobrante'] == menor_sobrante and resultado['eficiencia'] > mejor_eficiencia)):
-                    mejor_eficiencia = resultado['eficiencia']
-                    menor_sobrante = resultado['sobrante']
-                    mejor_combinacion = {
-                        'ordenes': [orden_principal],
-                        'tipo': 'individual',
-                        'bobina': bobina,
-                        'ancho_utilizado': ancho_util,
-                        'sobrante': resultado['sobrante'],
-                        'eficiencia': resultado['eficiencia'],
-                        'metros_lineales': resultado['metros_lineales'],
-                        'cortes_totales': resultado['cortes_totales']
-                    }
-
-        # Probar duplas - objetivo principal: minimizar sobrante
-        for orden2 in todas_ordenes:
-            if orden2.id == orden_principal.id or orden2.id in procesadas:
-                continue
-
-            ordenes_dupla = [orden_principal, orden2]
-            ancho_total = sum(orden.ancho_calculado for orden in ordenes_dupla)
+        # Probar combinaciones individuales con diferentes multiplicadores de cavidad
+        for multiplicador in range(1, cavidad_limite + 1):
+            ancho_util = orden_principal.ancho_calculado * multiplicador
 
             for bobina in bobinas:
-                if ancho_total <= (bobina - MARGEN_SEGURIDAD):
-                    resultado = self._calcular_eficiencia_real(ordenes_dupla, bobina)
+                if ancho_util <= (bobina - MARGEN_SEGURIDAD):
+                    # Crear datos de orden con multiplicador
+                    orden_data = [{
+                        'orden': orden_principal,
+                        'multiplicador': multiplicador,
+                        'ancho_efectivo': ancho_util
+                    }]
 
-                    # Priorizar duplas que reduzcan el sobrante
-                    if (resultado['sobrante'] < menor_sobrante or
-                        (resultado['sobrante'] == menor_sobrante and resultado['eficiencia'] > mejor_eficiencia)):
-                        mejor_eficiencia = resultado['eficiencia']
+                    resultado = self._calcular_eficiencia_real_con_cavidad(orden_data, bobina)
+
+                    # Criterio simple: menor sobrante gana
+                    if resultado['sobrante'] < menor_sobrante:
                         menor_sobrante = resultado['sobrante']
                         mejor_combinacion = {
-                            'ordenes': ordenes_dupla,
-                            'tipo': 'dupla',
+                            'ordenes': orden_data,
+                            'tipo': 'individual',
                             'bobina': bobina,
-                            'ancho_utilizado': ancho_total,
+                            'ancho_utilizado': ancho_util,
                             'sobrante': resultado['sobrante'],
                             'eficiencia': resultado['eficiencia'],
                             'metros_lineales': resultado['metros_lineales'],
                             'cortes_totales': resultado['cortes_totales']
                         }
 
+        # Probar duplas con diferentes multiplicadores de cavidad para cada orden
+        for orden2 in todas_ordenes:
+            if orden2.id == orden_principal.id or orden2.id in procesadas:
+                continue
+
+            # Probar todas las combinaciones de multiplicadores para ambas órdenes
+            for mult1 in range(1, cavidad_limite + 1):
+                for mult2 in range(1, cavidad_limite + 1):
+                    ancho1 = orden_principal.ancho_calculado * mult1
+                    ancho2 = orden2.ancho_calculado * mult2
+                    ancho_total = ancho1 + ancho2
+
+                    for bobina in bobinas:
+                        if ancho_total <= (bobina - MARGEN_SEGURIDAD):
+                            # Crear datos de órdenes con multiplicadores
+                            ordenes_data = [
+                                {
+                                    'orden': orden_principal,
+                                    'multiplicador': mult1,
+                                    'ancho_efectivo': ancho1
+                                },
+                                {
+                                    'orden': orden2,
+                                    'multiplicador': mult2,
+                                    'ancho_efectivo': ancho2
+                                }
+                            ]
+
+                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina)
+
+                            # Criterio simple: menor sobrante gana
+                            if resultado['sobrante'] < menor_sobrante:
+                                menor_sobrante = resultado['sobrante']
+                                mejor_combinacion = {
+                                    'ordenes': ordenes_data,
+                                    'tipo': 'dupla',
+                                    'bobina': bobina,
+                                    'ancho_utilizado': ancho_total,
+                                    'sobrante': resultado['sobrante'],
+                                    'eficiencia': resultado['eficiencia'],
+                                    'metros_lineales': resultado['metros_lineales'],
+                                    'cortes_totales': resultado['cortes_totales']
+                                }
+
         # Las triplas no son posibles debido a limitaciones de las máquinas corrugadoras
         # que solo tienen máximo 2 cuchillas
 
         return mejor_combinacion
+
+    def _calcular_eficiencia_real_con_cavidad(self, ordenes_data, bobina_ancho):
+        """Calcula la eficiencia y sobrante para una combinación de órdenes
+
+        Args:
+            ordenes_data: Lista de diccionarios con estructura:
+                         [{'orden': record, 'multiplicador': int, 'ancho_efectivo': float}, ...]
+            bobina_ancho: Ancho de la bobina en mm
+
+        Returns:
+            dict con eficiencia, sobrante, metros_lineales, cortes_totales
+        """
+        # Calcular totales usando anchos efectivos (ancho_calculado * multiplicador)
+        ancho_total_utilizado = sum(data['ancho_efectivo'] for data in ordenes_data)
+
+        # Verificar que las órdenes caben en la bobina
+        if ancho_total_utilizado > bobina_ancho:
+            return {
+                'eficiencia': 0,
+                'sobrante': bobina_ancho,
+                'metros_lineales': 0,
+                'cortes_totales': 0
+            }
+
+        # Calcular sobrante en ancho
+        sobrante_ancho = bobina_ancho - ancho_total_utilizado
+
+        # Calcular eficiencia: porcentaje de bobina utilizado
+        eficiencia = (ancho_total_utilizado / bobina_ancho) * 100
+
+        # Calcular metros lineales y cortes totales
+        metros_lineales = 0
+        cortes_totales = 0
+
+        for data in ordenes_data:
+            orden = data['orden']
+            multiplicador = data['multiplicador']
+
+            if orden.cavidad and orden.cavidad > 0:
+                # La cavidad efectiva se multiplica por el multiplicador
+                cavidad_efectiva = orden.cavidad * multiplicador
+                cortes_necesarios = orden.cantidad / cavidad_efectiva
+                metros_por_orden = (cortes_necesarios * orden.largo_calculado) / 1000  # mm a metros
+                metros_lineales += metros_por_orden
+                cortes_totales += cortes_necesarios
+
+        return {
+            'eficiencia': eficiencia,
+            'sobrante': sobrante_ancho,
+            'metros_lineales': metros_lineales,
+            'cortes_totales': cortes_totales
+        }
 
     def _calcular_eficiencia_real(self, ordenes, bobina_ancho):
         """Calcula la eficiencia real basada en el algoritmo del Excel de trimado"""
@@ -738,10 +831,19 @@ class ProductionOrder(models.Model):
         }
 
     def _aplicar_combinacion(self, combinacion, grupo_id):
-        """Aplica la combinación encontrada a las órdenes"""
+        """Aplica la combinación encontrada a las órdenes
+
+        Args:
+            combinacion: dict con la estructura de la combinación óptima
+            grupo_id: ID del grupo de planificación
+        """
         grupo_nombre = f"GRUPO-{grupo_id:03d}"
-        
-        for orden in combinacion['ordenes']:
+
+        for orden_data in combinacion['ordenes']:
+            orden = orden_data['orden']
+            multiplicador = orden_data.get('multiplicador', 1)
+            ancho_efectivo = orden_data.get('ancho_efectivo', orden.ancho_calculado)
+
             orden.write({
                 'grupo_planificacion': grupo_nombre,
                 'tipo_combinacion': combinacion['tipo'],
@@ -751,6 +853,8 @@ class ProductionOrder(models.Model):
                 'eficiencia': combinacion['eficiencia'],
                 'metros_lineales_planificados': combinacion.get('metros_lineales', 0),
                 'cortes_planificados': combinacion.get('cortes_totales', 0),
+                # Guardar el multiplicador de cavidad óptimo
+                'cavidad_optimizada': multiplicador,
             })
 
     def action_generar_ordenes_trabajo(self):
