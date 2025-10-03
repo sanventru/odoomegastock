@@ -186,13 +186,13 @@ class ProductionOrder(models.Model):
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
     ], string='Tipo de Combinación', default='individual')
-    ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina')
-    bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada')
+    ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina', group_operator=False)
+    bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada', group_operator=False)
     sobrante = fields.Float(string='Sobrante (mm)', help='Material sobrante después del corte')
-    eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado')
+    eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado', group_operator='avg')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
-    cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización')
+    cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator=False)
     
     # Test calculado automáticamente desde descripción del producto
     test_name = fields.Char(
@@ -767,8 +767,20 @@ class ProductionOrder(models.Model):
                 'cortes_totales': 0
             }
 
-        # Calcular sobrante en ancho
-        sobrante_ancho = bobina_ancho - ancho_total_utilizado
+        # NUEVA FÓRMULA DE SOBRANTE:
+        # Distribuir equitativamente la bobina entre las órdenes del grupo
+        # sobrante_individual = ((bobina - 30) / num_ordenes) - ancho_calculado
+        # sobrante_grupo = suma de todos los sobrantes individuales
+
+        MARGEN_SEGURIDAD = 30
+        num_ordenes = len(ordenes_data)
+        espacio_por_orden = (bobina_ancho - MARGEN_SEGURIDAD) / num_ordenes
+
+        sobrante_ancho = 0
+        for data in ordenes_data:
+            # ancho_efectivo ya incluye el multiplicador
+            sobrante_individual = espacio_por_orden - data['ancho_efectivo']
+            sobrante_ancho += sobrante_individual
 
         # Calcular eficiencia: porcentaje de bobina utilizado
         eficiencia = (ancho_total_utilizado / bobina_ancho) * 100
@@ -863,17 +875,25 @@ class ProductionOrder(models.Model):
         """
         grupo_nombre = f"GRUPO-{grupo_id:03d}"
 
+        # Calcular sobrante individual para cada orden
+        MARGEN_SEGURIDAD = 30
+        num_ordenes = len(combinacion['ordenes'])
+        espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
+
         for orden_data in combinacion['ordenes']:
             orden = orden_data['orden']
             multiplicador = orden_data.get('multiplicador', 1)
             ancho_efectivo = orden_data.get('ancho_efectivo', orden.ancho_calculado)
+
+            # Calcular sobrante individual de esta orden
+            sobrante_individual = espacio_por_orden - ancho_efectivo
 
             orden.write({
                 'grupo_planificacion': grupo_nombre,
                 'tipo_combinacion': combinacion['tipo'],
                 'ancho_utilizado': combinacion['ancho_utilizado'],
                 'bobina_utilizada': combinacion['bobina'],
-                'sobrante': combinacion['sobrante'],
+                'sobrante': sobrante_individual,  # Sobrante individual, no del grupo
                 'eficiencia': combinacion['eficiencia'],
                 'metros_lineales_planificados': combinacion.get('metros_lineales', 0),
                 'cortes_planificados': combinacion.get('cortes_totales', 0),
