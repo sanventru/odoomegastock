@@ -186,13 +186,13 @@ class ProductionOrder(models.Model):
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
     ], string='Tipo de Combinación', default='individual')
-    ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina', group_operator=False)
-    bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada', group_operator=False)
+    ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina', group_operator='max')
+    bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada', group_operator='max')
     sobrante = fields.Float(string='Sobrante (mm)', help='Material sobrante después del corte')
     eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado', group_operator='avg')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
-    cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator=False)
+    cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator='max')
     
     # Test calculado automáticamente desde descripción del producto
     test_name = fields.Char(
