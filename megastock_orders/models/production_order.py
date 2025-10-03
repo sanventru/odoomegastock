@@ -935,21 +935,31 @@ class ProductionOrder(models.Model):
         for grupo_nombre, ordenes_grupo in grupos.items():
             # Calcular datos del grupo
             primer_orden = ordenes_grupo[0]
+
+            # SUMAR valores que deben agregarse
             metros_lineales_totales = sum(orden.metros_lineales_planificados for orden in ordenes_grupo)
             cortes_totales = sum(orden.cortes_planificados for orden in ordenes_grupo)
-            
+            sobrante_total = sum(orden.sobrante for orden in ordenes_grupo)  # SUMA de sobrantes individuales
+
+            # PROMEDIAR la eficiencia
+            eficiencia_promedio = sum(orden.eficiencia for orden in ordenes_grupo) / len(ordenes_grupo)
+
+            # Tomar valores únicos del grupo (todas las órdenes tienen el mismo valor)
+            bobina = primer_orden.bobina_utilizada  # Misma para todas
+            ancho_util = primer_orden.ancho_utilizado  # Mismo para todas
+
             # Crear la orden de trabajo
             work_order = WorkOrder.create({
                 'grupo_planificacion': grupo_nombre,
                 'tipo_combinacion': primer_orden.tipo_combinacion,
-                'bobina_utilizada': primer_orden.bobina_utilizada,
-                'ancho_utilizado': primer_orden.ancho_utilizado,
-                'sobrante': primer_orden.sobrante,
-                'eficiencia': primer_orden.eficiencia,
+                'bobina_utilizada': bobina,
+                'ancho_utilizado': ancho_util,
+                'sobrante': sobrante_total,  # SUMA de sobrantes del grupo
+                'eficiencia': eficiencia_promedio,  # PROMEDIO de eficiencias
                 'metros_lineales_totales': metros_lineales_totales,
                 'cortes_totales': cortes_totales,
                 'fecha_programada': primer_orden.fecha_produccion,
-                'observaciones': f'Generada automáticamente desde {len(ordenes_grupo)} órdenes de producción del grupo {grupo_nombre}',
+                'observaciones': f'Generada automáticamente desde {len(ordenes_grupo)} órdenes de producción del grupo {grupo_nombre}. Bobina: {bobina}mm, Sobrante total: {sobrante_total:.2f}mm',
             })
             
             # Asignar la orden de trabajo a todas las órdenes del grupo y cambiar estado
@@ -970,6 +980,58 @@ class ProductionOrder(models.Model):
             'params': {
                 'title': 'Órdenes de trabajo generadas',
                 'message': mensaje,
+                'type': 'success',
+            }
+        }
+
+    def action_resetear_agrupaciones(self):
+        """Resetea las agrupaciones de las órdenes seleccionadas para poder replanificar"""
+        # Verificar que haya órdenes seleccionadas
+        if not self:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin órdenes seleccionadas',
+                    'message': 'Selecciona las órdenes que deseas resetear.',
+                    'type': 'warning',
+                }
+            }
+
+        # Filtrar órdenes que están planificadas pero NO tienen orden de trabajo
+        ordenes_reseteable = self.filtered(lambda r: r.grupo_planificacion and not r.work_order_id)
+
+        if not ordenes_reseteable:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin órdenes válidas',
+                    'message': 'Solo se pueden resetear órdenes planificadas que NO tengan orden de trabajo asignada.',
+                    'type': 'warning',
+                }
+            }
+
+        # Resetear campos de planificación y estado
+        ordenes_reseteable.write({
+            'grupo_planificacion': False,
+            'tipo_combinacion': 'individual',
+            'ancho_utilizado': 0,
+            'bobina_utilizada': 0,
+            'sobrante': 0,
+            'eficiencia': 0,
+            'metros_lineales_planificados': 0,
+            'cortes_planificados': 0,
+            'cavidad_optimizada': 0,
+            'estado': 'pendiente',  # Volver a estado pendiente
+        })
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Agrupaciones reseteadas',
+                'message': f'Se han reseteado {len(ordenes_reseteable)} órdenes. Ahora están listas para planificar nuevamente.',
                 'type': 'success',
             }
         }

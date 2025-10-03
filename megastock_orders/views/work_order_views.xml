@@ -12,14 +12,16 @@
                 <field name="cantidad_ordenes"/>
                 <field name="fecha_programada"/>
                 <field name="estado" widget="badge"/>
-                <field name="eficiencia" widget="percentage"/>
-                <field name="progreso" widget="progressbar"/>
-                <field name="operador" optional="show"/>
-                <field name="maquina" optional="show"/>
+                <field name="bobina_utilizada" optional="show"/>
+                <field name="ancho_utilizado" optional="show"/>
+                <field name="sobrante" optional="show"/>
+                <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="metros_lineales_totales" optional="show"/>
+                <field name="cortes_totales" optional="show"/>
+                <field name="progreso" widget="progressbar" optional="show"/>
+                <field name="operador" optional="hide"/>
+                <field name="maquina" optional="hide"/>
                 <field name="turno" optional="hide"/>
-                <field name="bobina_utilizada" optional="hide"/>
-                <field name="ancho_utilizado" optional="hide"/>
-                <field name="metros_lineales_totales" optional="hide"/>
                 <field name="duracion_estimada" optional="hide"/>
                 <field name="duracion_real" optional="hide"/>
                 <field name="fecha_creacion" optional="hide"/>

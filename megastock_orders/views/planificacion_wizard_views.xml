@@ -10,22 +10,23 @@
                     <group>
                         <field name="test_principal" placeholder="Ej: 200"/>
                         <p class="text-muted">
-                            Número de test que define la resistencia principal del papel
+                            Test resistencia papel
                         </p>
                     </group>
                     <group>
                         <field name="cavidad_limite" placeholder="Ej: 4"/>
                         <p class="text-muted">
-                            Límite superior para multiplicar el ancho_calculado.
-                            El algoritmo probará desde 1 hasta este valor para encontrar el menor desperdicio.
+                            Cavidad límite
                         </p>
                     </group>
                 </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>
                     <ul>
-                        <li><strong>Test Principal:</strong> Define la receta de papel que se utilizará para la producción.</li>
-                        <li><strong>Cavidad Límite:</strong> El algoritmo probará multiplicar el ancho_calculado de cada orden por 1, 2, 3... hasta este valor, calculando todas las combinaciones posibles y eligiendo la que minimice el desperdicio.</li>
+                        <li>
+                            <strong>Test Principal:</strong> Define la receta de papel que se utilizará para la producción.</li>
+                        <li>
+                            <strong>Cavidad Límite:</strong> El algoritmo probará multiplicar el ancho_calculado de cada orden por 1, 2, 3... hasta este valor, calculando todas las combinaciones posibles y eligiendo la que minimice el desperdicio.</li>
                     </ul>
                     <p class="mb-0">
                         <strong>Ejemplo:</strong> Si cavidad_limite = 4, para una orden con ancho_calculado = 500mm,
