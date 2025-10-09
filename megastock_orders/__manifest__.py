@@ -31,6 +31,8 @@ Funcionalidades:
         'views/work_order_views.xml',
         'views/bobina_views.xml',
         'views/paper_recipe_views.xml',
+        'views/proceso_preprinter_views.xml',
+        'views/proceso_microcorrugado_views.xml',
         'views/order_import_wizard_views.xml',
         'views/planificacion_wizard_views.xml',
         'views/weight_calculator_views.xml',

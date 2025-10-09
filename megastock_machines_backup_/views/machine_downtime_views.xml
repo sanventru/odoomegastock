@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Vista de lista para paradas -->
+        <record id="machine_downtime_tree_view" model="ir.ui.view">
+            <field name="name">megastock.machine.downtime.tree</field>
+            <field name="model">megastock.machine.downtime</field>
+            <field name="arch" type="xml">
+                <tree string="Paradas de Máquinas">
+                    <field name="name"/>
+                    <field name="workcenter_id"/>
+                    <field name="category"/>
+                    <field name="cause"/>
+                    <field name="start_time"/>
+                    <field name="duration_minutes" widget="float_time"/>
+                    <field name="operator_name"/>
+                    <field name="state"/>
+                </tree>
+            </field>
+        </record>
+
+        <!-- Vista de formulario para paradas -->
+        <record id="machine_downtime_form_view" model="ir.ui.view">
+            <field name="name">megastock.machine.downtime.form</field>
+            <field name="model">megastock.machine.downtime</field>
+            <field name="arch" type="xml">
+                <form string="Parada de Máquina">
+                    <header>
+                        <button name="action_resolve" string="Resolver Parada" 
+                                type="object" class="oe_highlight"
+                                attrs="{'invisible': [('state', '!=', 'in_progress')]}"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                        <group>
+                            <group string="Información Básica">
+                                <field name="name" readonly="1"/>
+                                <field name="workcenter_id"/>
+                                <field name="category"/>
+                                <field name="cause"/>
+                                <field name="operator_name"/>
+                            </group>
+                            <group string="Tiempos">
+                                <field name="start_time"/>
+                                <field name="end_time" attrs="{'readonly': [('state', '=', 'in_progress')]}"/>
+                                <field name="duration_minutes" widget="float_time"/>
+                            </group>
+                        </group>
+                        <group string="Descripción del Problema">
+                            <field name="description" nolabel="1"/>
+                        </group>
+                        <group string="Acción Correctiva" 
+                               attrs="{'invisible': [('state', '=', 'in_progress')]}">
+                            <field name="corrective_action" nolabel="1"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Acción para abrir paradas -->
+        <record id="action_machine_downtime" model="ir.actions.act_window">
+            <field name="name">Paradas de Máquinas</field>
+            <field name="res_model">megastock.machine.downtime</field>
+            <field name="view_mode">tree,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Registra una nueva parada de máquina
+                </p>
+                <p>
+                    Utiliza esta vista para registrar y hacer seguimiento de las paradas
+                    de máquinas en el proceso productivo.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menú básico -->
+        <menuitem id="menu_megastock_machines_root" 
+                  name="MEGASTOCK Máquinas" 
+                  parent="mrp.menu_mrp_root" 
+                  sequence="50"/>
+        
+        <menuitem id="menu_machine_downtime" 
+                  name="Paradas" 
+                  parent="menu_megastock_machines_root" 
+                  action="action_machine_downtime" 
+                  sequence="10"/>
+
+    </data>
+</odoo>

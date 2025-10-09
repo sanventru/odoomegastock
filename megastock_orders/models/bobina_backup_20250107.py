@@ -9,9 +9,7 @@ class Bobina(models.Model):
     _order = 'ancho desc'
     _rec_name = 'display_name'
 
-    codigo = fields.Char(string='Código', help='Código único de identificación de la bobina')
     ancho = fields.Float(string='Ancho (mm)', required=True, help='Ancho de la bobina en milímetros')
-    descripcion = fields.Text(string='Descripción', help='Descripción detallada de la bobina')
     activa = fields.Boolean(string='Activa', default=True, help='Si está marcada, la bobina estará disponible para planificación')
     notas = fields.Text(string='Notas', help='Observaciones adicionales sobre esta bobina')
     display_name = fields.Char(string='Nombre', compute='_compute_display_name', store=True)
@@ -22,12 +20,10 @@ class Bobina(models.Model):
     stock_actual = fields.Float(string='Stock Actual', help='Stock actual disponible')
     costo = fields.Float(string='Costo por Unidad', help='Costo por unidad de la bobina')
 
-    @api.depends('codigo', 'ancho')
+    @api.depends('ancho')
     def _compute_display_name(self):
         for record in self:
-            if record.codigo and record.codigo.strip():
-                record.display_name = record.codigo.strip()
-            elif record.ancho:
+            if record.ancho:
                 record.display_name = f"Bobina {record.ancho:.0f}mm"
             else:
                 record.display_name = "Bobina sin ancho"
@@ -47,11 +43,7 @@ class Bobina(models.Model):
     def name_get(self):
         result = []
         for record in self:
-            # Usar codigo si existe y no está vacío (sin espacios)
-            if record.codigo and record.codigo.strip():
-                name = record.codigo.strip()
-            else:
-                name = f"Bobina {record.ancho:.0f}mm"
+            name = f"Bobina {record.ancho:.0f}mm"
             if not record.activa:
                 name += " (Inactiva)"
             result.append((record.id, name))

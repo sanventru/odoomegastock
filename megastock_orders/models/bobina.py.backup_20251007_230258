@@ -22,12 +22,10 @@ class Bobina(models.Model):
     stock_actual = fields.Float(string='Stock Actual', help='Stock actual disponible')
     costo = fields.Float(string='Costo por Unidad', help='Costo por unidad de la bobina')
 
-    @api.depends('codigo', 'ancho')
+    @api.depends('ancho')
     def _compute_display_name(self):
         for record in self:
-            if record.codigo and record.codigo.strip():
-                record.display_name = record.codigo.strip()
-            elif record.ancho:
+            if record.ancho:
                 record.display_name = f"Bobina {record.ancho:.0f}mm"
             else:
                 record.display_name = "Bobina sin ancho"
@@ -47,11 +45,7 @@ class Bobina(models.Model):
     def name_get(self):
         result = []
         for record in self:
-            # Usar codigo si existe y no está vacío (sin espacios)
-            if record.codigo and record.codigo.strip():
-                name = record.codigo.strip()
-            else:
-                name = f"Bobina {record.ancho:.0f}mm"
+            name = f"Bobina {record.ancho:.0f}mm"
             if not record.activa:
                 name += " (Inactiva)"
             result.append((record.id, name))

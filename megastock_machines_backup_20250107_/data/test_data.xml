@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Datos de prueba para MEGASTOCK Machines -->
+        
+        <!-- Centros de Trabajo de Prueba (FASE 1) -->
+        <record id="workcenter_corrugadora_test" model="mrp.workcenter">
+            <field name="name">Corrugadora Principal TEST</field>
+            <field name="code">CORR-01</field>
+            <field name="capacity">100</field>
+            <field name="time_efficiency">85.0</field>
+            
+            <!-- Campos MEGASTOCK FASE 1 -->
+            <field name="power_consumption_kw">75.0</field>
+            <field name="compressed_air_consumption">25.0</field>
+            <field name="hydraulic_oil_consumption">15.0</field>
+            <field name="lubricant_consumption">5.0</field>
+            
+            <field name="max_width_mm">2000</field>
+            <field name="max_length_mm">3000</field>
+            <field name="max_thickness_mm">8.0</field>
+            
+            <field name="theoretical_capacity">1200.0</field>
+            <field name="capacity_unit">meters</field>
+            
+            <field name="maintenance_hours_interval">200</field>
+            <field name="total_operation_hours">1850.0</field>
+            <field name="machine_status">operational</field>
+        </record>
+        
+        <record id="workcenter_troqueladora_test" model="mrp.workcenter">
+            <field name="name">Troqueladora Industrial TEST</field>
+            <field name="code">TROQ-02</field>
+            <field name="capacity">80</field>
+            <field name="time_efficiency">90.0</field>
+            
+            <!-- Campos MEGASTOCK FASE 1 -->
+            <field name="power_consumption_kw">45.0</field>
+            <field name="compressed_air_consumption">30.0</field>
+            <field name="hydraulic_oil_consumption">20.0</field>
+            <field name="lubricant_consumption">8.0</field>
+            
+            <field name="max_width_mm">1800</field>
+            <field name="max_length_mm">2500</field>
+            <field name="max_thickness_mm">12.0</field>
+            
+            <field name="theoretical_capacity">800.0</field>
+            <field name="capacity_unit">pieces</field>
+            
+            <field name="maintenance_hours_interval">150</field>
+            <field name="total_operation_hours">980.0</field>
+            <field name="machine_status">setup</field>
+        </record>
+        
+        <record id="workcenter_impresora_test" model="mrp.workcenter">
+            <field name="name">Impresora Flexográfica TEST</field>
+            <field name="code">IMP-03</field>
+            <field name="capacity">120</field>
+            <field name="time_efficiency">75.0</field>
+            
+            <!-- Campos MEGASTOCK FASE 1 -->
+            <field name="power_consumption_kw">35.0</field>
+            <field name="compressed_air_consumption">15.0</field>
+            <field name="hydraulic_oil_consumption">10.0</field>
+            <field name="lubricant_consumption">3.0</field>
+            
+            <field name="max_width_mm">1500</field>
+            <field name="max_length_mm">2000</field>
+            <field name="max_thickness_mm">5.0</field>
+            
+            <field name="theoretical_capacity">2000.0</field>
+            <field name="capacity_unit">reams</field>
+            
+            <field name="maintenance_hours_interval">120</field>
+            <field name="total_operation_hours">2100.0</field>
+            <field name="machine_status">maintenance</field>
+        </record>
+        
+        <!-- Operadores de Prueba (FASE 2) -->
+        <record id="operator_juan_perez" model="megastock.machine.operator">
+            <field name="name">Juan Pérez Rodríguez</field>
+            <field name="operator_code">OP001</field>
+            <field name="certification_level">senior</field>
+            <field name="years_experience">8</field>
+            <field name="experience_current_machine">5</field>
+            
+            <field name="preferred_shift">morning</field>
+            <field name="current_shift">morning</field>
+            <field name="current_status">available</field>
+            
+            <field name="efficiency_rating">92.0</field>
+            <field name="quality_rating">96.0</field>
+            <field name="safety_rating">100.0</field>
+            
+            <field name="can_perform_basic_maintenance">1</field>
+            <field name="primary_workcenter_id" ref="workcenter_corrugadora_test"/>
+        </record>
+        
+        <record id="operator_maria_gonzalez" model="megastock.machine.operator">
+            <field name="name">María González Torres</field>
+            <field name="operator_code">OP002</field>
+            <field name="certification_level">expert</field>
+            <field name="years_experience">12</field>
+            <field name="experience_current_machine">7</field>
+            
+            <field name="preferred_shift">afternoon</field>
+            <field name="current_shift">afternoon</field>
+            <field name="current_status">assigned</field>
+            
+            <field name="efficiency_rating">95.0</field>
+            <field name="quality_rating">98.0</field>
+            <field name="safety_rating">100.0</field>
+            
+            <field name="can_perform_basic_maintenance">1</field>
+            <field name="primary_workcenter_id" ref="workcenter_troqueladora_test"/>
+        </record>
+        
+        <record id="operator_carlos_mendez" model="megastock.machine.operator">
+            <field name="name">Carlos Méndez Silva</field>
+            <field name="operator_code">OP003</field>
+            <field name="certification_level">junior</field>
+            <field name="years_experience">3</field>
+            <field name="experience_current_machine">2</field>
+            
+            <field name="preferred_shift">night</field>
+            <field name="current_shift">night</field>
+            <field name="current_status">on_break</field>
+            
+            <field name="efficiency_rating">80.0</field>
+            <field name="quality_rating">88.0</field>
+            <field name="safety_rating">95.0</field>
+            
+            <field name="can_perform_basic_maintenance">0</field>
+            <field name="primary_workcenter_id" ref="workcenter_impresora_test"/>
+        </record>
+        
+        <record id="operator_ana_ramirez" model="megastock.machine.operator">
+            <field name="name">Ana Ramírez Castro</field>
+            <field name="operator_code">OP004</field>
+            <field name="certification_level">instructor</field>
+            <field name="years_experience">15</field>
+            <field name="experience_current_machine">10</field>
+            
+            <field name="preferred_shift">flexible</field>
+            <field name="current_shift">morning</field>
+            <field name="current_status">training</field>
+            
+            <field name="efficiency_rating">97.0</field>
+            <field name="quality_rating">99.0</field>
+            <field name="safety_rating">100.0</field>
+            
+            <field name="can_perform_basic_maintenance">1</field>
+            <field name="primary_workcenter_id" ref="workcenter_corrugadora_test"/>
+        </record>
+        
+        <!-- Nota: Certificaciones y turnos se crearán manualmente en las pruebas 
+             para evitar problemas de evaluación de expresiones en datos de prueba -->
+        
+    </data>
+</odoo>

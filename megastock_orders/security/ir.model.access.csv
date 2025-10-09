@@ -13,3 +13,11 @@ access_paper_recipe_user,megastock.paper.recipe user,model_megastock_paper_recip
 access_paper_recipe_manager,megastock.paper.recipe manager,model_megastock_paper_recipe,base.group_system,1,1,1,1
 access_planificacion_wizard_user,megastock.planificacion.wizard user,model_megastock_planificacion_wizard,base.group_user,1,1,1,1
 access_planificacion_wizard_manager,megastock.planificacion.wizard manager,model_megastock_planificacion_wizard,base.group_system,1,1,1,1
+access_proceso_preprinter_user,megastock.proceso.preprinter user,model_megastock_proceso_preprinter,base.group_user,1,1,1,0
+access_proceso_preprinter_manager,megastock.proceso.preprinter manager,model_megastock_proceso_preprinter,base.group_system,1,1,1,1
+access_proceso_preprinter_line_user,megastock.proceso.preprinter.line user,model_megastock_proceso_preprinter_line,base.group_user,1,1,1,1
+access_proceso_preprinter_line_manager,megastock.proceso.preprinter.line manager,model_megastock_proceso_preprinter_line,base.group_system,1,1,1,1
+access_proceso_microcorrugado_user,megastock.proceso.microcorrugado user,model_megastock_proceso_microcorrugado,base.group_user,1,1,1,0
+access_proceso_microcorrugado_manager,megastock.proceso.microcorrugado manager,model_megastock_proceso_microcorrugado,base.group_system,1,1,1,1
+access_proceso_microcorrugado_line_user,megastock.proceso.microcorrugado.line user,model_megastock_proceso_microcorrugado_line,base.group_user,1,1,1,1
+access_proceso_microcorrugado_line_manager,megastock.proceso.microcorrugado.line manager,model_megastock_proceso_microcorrugado_line,base.group_system,1,1,1,1

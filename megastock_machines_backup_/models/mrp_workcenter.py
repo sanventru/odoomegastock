@@ -222,29 +222,6 @@ class MrpWorkcenter(models.Model):
             else:
                 record.ancho_disponible_mm = 0
 
-    @api.depends('name')
-    def _compute_es_maquina_corrugado(self):
-        """Determinar si es máquina de corrugado basándose en el nombre"""
-        for record in self:
-            if record.name:
-                nombre_lower = record.name.lower()
-                record.es_maquina_corrugado = (
-                    'corrugadora' in nombre_lower or
-                    'microcorrugadora' in nombre_lower
-                )
-            else:
-                record.es_maquina_corrugado = False
-
-    @api.onchange('name')
-    def _onchange_name_set_factor(self):
-        """Establecer factor de corrugado automáticamente según nombre de máquina"""
-        if self.name:
-            nombre_lower = self.name.lower()
-            if 'corrugadora' in nombre_lower and 'micro' not in nombre_lower:
-                self.factor_corrugado = 1.45
-            elif 'microcorrugadora' in nombre_lower or 'micro' in nombre_lower:
-                self.factor_corrugado = 1.20
-
     # ========== VALIDACIONES TRIMADO ==========
 
     @api.constrains('num_cuchillas')
@@ -298,7 +275,6 @@ class MrpWorkcenter(models.Model):
             'velocidad_maxima_mmin': self.velocidad_maxima_mmin,
             'tiempo_setup_cuchilla_min': self.tiempo_setup_cuchilla_min,
             'eficiencia_trimado_pct': self.eficiencia_trimado_pct,
-            'factor_corrugado': self.factor_corrugado,
             'machine_status': self.machine_status,
         }
 
@@ -449,19 +425,4 @@ class MrpWorkcenter(models.Model):
         compute='_compute_ancho_disponible',
         store=True,
         help='Ancho disponible descontando refilio: ancho_util_mm - (2 * refilio_estandar_mm)'
-    )
-
-    # Campo auxiliar para visibilidad
-    es_maquina_corrugado = fields.Boolean(
-        string='Es Máquina de Corrugado',
-        compute='_compute_es_maquina_corrugado',
-        store=False,
-        help='Determina si el centro de trabajo es Corrugadora o Microcorrugadora'
-    )
-
-    # Factor de corrugado (visible solo para Corrugadora y Microcorrugadora)
-    factor_corrugado = fields.Float(
-        string='Factor de Corrugado',
-        help='Factor técnico para cálculo de gramajes (1.45 para Corrugadora, 1.20 para Microcorrugadora)',
-        default=1.45
     )

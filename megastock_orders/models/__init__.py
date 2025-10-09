@@ -5,3 +5,5 @@ from . import work_order
 from . import bobina
 from . import paper_recipe
 from . import weight_calculator
+from . import proceso_preprinter
+from . import proceso_microcorrugado

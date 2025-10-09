@@ -5,7 +5,7 @@
         <field name="name">megastock.work.order.tree</field>
         <field name="model">megastock.work.order</field>
         <field name="arch" type="xml">
-            <tree string="Órdenes de Trabajo" decoration-success="estado=='completada'" decoration-warning="estado=='en_proceso'" decoration-info="estado=='programada'" decoration-muted="estado=='cancelada' or not bobina_asignada_id" limit="80">
+            <tree string="Órdenes de Trabajo" decoration-success="estado=='completada'" decoration-warning="estado=='en_proceso'" decoration-info="estado=='programada'" decoration-muted="estado=='cancelada'">
                 <field name="numero_orden"/>
                 <field name="grupo_planificacion"/>
                 <field name="tipo_combinacion" widget="badge"/>
@@ -37,25 +37,22 @@
         <field name="arch" type="xml">
             <form string="Orden de Trabajo">
                 <header>
-                    <button name="action_programar" string="Programar" type="object"
+                    <button name="action_programar" string="Programar" type="object" 
                             class="oe_highlight" icon="fa-calendar"
                             attrs="{'invisible': [('estado', '!=', 'borrador')]}"/>
-                    <button name="action_iniciar_preprinter" string="Iniciar Preprinter" type="object"
-                            class="oe_highlight" icon="fa-cogs"
-                            attrs="{'invisible': [('estado', '!=', 'programada')]}"/>
-                    <button name="action_iniciar" string="Iniciar Producción" type="object"
+                    <button name="action_iniciar" string="Iniciar" type="object" 
                             class="oe_highlight" icon="fa-play"
-                            attrs="{'invisible': [('estado', 'not in', ['microcorrugado'])]}"/>
-                    <button name="action_pausar" string="Pausar" type="object"
+                            attrs="{'invisible': [('estado', '!=', 'programada')]}"/>
+                    <button name="action_pausar" string="Pausar" type="object" 
                             icon="fa-pause"
                             attrs="{'invisible': [('estado', '!=', 'en_proceso')]}"/>
-                    <button name="action_completar" string="Completar" type="object"
+                    <button name="action_completar" string="Completar" type="object" 
                             class="oe_highlight" icon="fa-check"
                             attrs="{'invisible': [('estado', 'not in', ['en_proceso', 'pausada'])]}"/>
-                    <button name="action_cancelar" string="Cancelar" type="object"
+                    <button name="action_cancelar" string="Cancelar" type="object" 
                             icon="fa-times"
                             attrs="{'invisible': [('estado', 'in', ['completada', 'cancelada'])]}"/>
-                    <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,preprinter,microcorrugado,en_proceso,completada"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,en_proceso,completada"/>
                 </header>
                 <sheet>
                     <div class="oe_title">

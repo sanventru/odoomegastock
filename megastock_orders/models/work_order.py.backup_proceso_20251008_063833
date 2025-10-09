@@ -21,8 +21,6 @@ class WorkOrder(models.Model):
     estado = fields.Selection([
         ('borrador', 'Borrador'),
         ('programada', 'Programada'),
-        ('preprinter', 'Preprinter'),
-        ('microcorrugado', 'Microcorrugado'),
         ('en_proceso', 'En Proceso'),
         ('pausada', 'Pausada'),
         ('completada', 'Completada'),
@@ -53,10 +51,6 @@ class WorkOrder(models.Model):
     # Relación con órdenes de producción
     production_order_ids = fields.One2many('megastock.production.order', 'work_order_id', string='Órdenes de Producción')
     cantidad_ordenes = fields.Integer(string='Cantidad de Órdenes', compute='_compute_cantidad_ordenes', store=True)
-
-    # Relación con procesos de producción
-    preprinter_id = fields.Many2one('megastock.proceso.preprinter', string='Proceso Preprinter', readonly=True)
-    microcorrugado_id = fields.Many2one('megastock.proceso.microcorrugado', string='Proceso Microcorrugado', readonly=True)
     
     # Campos de seguimiento
     operador = fields.Many2one('res.users', string='Operador Asignado')
@@ -194,38 +188,3 @@ class WorkOrder(models.Model):
         """Acción para cancelar la orden de trabajo"""
         self.write({'estado': 'cancelada'})
         return True
-
-    def action_iniciar_preprinter(self):
-        """Acción para iniciar el proceso Preprinter"""
-        from odoo.exceptions import UserError
-
-        # Validar que tenga bobina asignada
-        if not self.bobina_asignada_id:
-            raise UserError('No se puede iniciar Preprinter: La orden de trabajo no tiene bobina asignada.')
-
-        # Validar que no exista ya un proceso preprinter
-        if self.preprinter_id:
-            raise UserError('Ya existe un proceso Preprinter para esta orden de trabajo.')
-
-        # Crear el registro de preprinter
-        preprinter = self.env['megastock.proceso.preprinter'].create({
-            'work_order_id': self.id,
-            'fecha_inicio': fields.Datetime.now(),
-            'estado': 'iniciado',
-        })
-
-        # Actualizar la orden de trabajo
-        self.write({
-            'estado': 'preprinter',
-            'preprinter_id': preprinter.id
-        })
-
-        # Abrir el formulario de preprinter para que el usuario agregue materiales
-        return {
-            'type': 'ir.actions.act_window',
-            'name': 'Proceso Preprinter',
-            'res_model': 'megastock.proceso.preprinter',
-            'res_id': preprinter.id,
-            'view_mode': 'form',
-            'target': 'current',
-        }

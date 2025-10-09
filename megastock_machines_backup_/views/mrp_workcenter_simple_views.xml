@@ -54,9 +54,6 @@
                             <field name="refilio_estandar_mm"/>
                             <field name="ancho_disponible_mm" readonly="1"/>
                             <field name="velocidad_maxima_mmin"/>
-                            <field name="es_maquina_corrugado" invisible="1"/>
-                            <field name="factor_corrugado"
-                                   attrs="{'invisible': [('es_maquina_corrugado', '=', False)]}"/>
                         </group>
                     </group>
 
