@@ -884,86 +884,14 @@ class ProductionOrder(models.Model):
             })
 
     def action_generar_ordenes_trabajo(self):
-        """Acción para generar órdenes de trabajo desde grupos planificados"""
-        # Buscar todas las órdenes que tienen grupo de planificación pero no tienen orden de trabajo
-        ordenes_planificadas = self.search([
-            ('grupo_planificacion', '!=', False),
-            ('work_order_id', '=', False)
-        ])
-        
-        if not ordenes_planificadas:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': 'Sin órdenes planificadas',
-                    'message': 'No hay órdenes planificadas sin orden de trabajo para procesar.',
-                    'type': 'warning',
-                }
-            }
-        
-        # Agrupar por grupo_planificacion
-        grupos = {}
-        for orden in ordenes_planificadas:
-            grupo = orden.grupo_planificacion
-            if grupo not in grupos:
-                grupos[grupo] = []
-            grupos[grupo].append(orden)
-        
-        # Crear órdenes de trabajo para cada grupo
-        ordenes_trabajo_creadas = []
-        WorkOrder = self.env['megastock.work.order']
-        
-        for grupo_nombre, ordenes_grupo in grupos.items():
-            # Calcular datos del grupo
-            primer_orden = ordenes_grupo[0]
-
-            # SUMAR valores que deben agregarse
-            metros_lineales_totales = sum(orden.metros_lineales_planificados for orden in ordenes_grupo)
-            cortes_totales = sum(orden.cortes_planificados for orden in ordenes_grupo)
-            sobrante_total = sum(orden.sobrante for orden in ordenes_grupo)  # SUMA de sobrantes individuales
-
-            # PROMEDIAR la eficiencia
-            eficiencia_promedio = sum(orden.eficiencia for orden in ordenes_grupo) / len(ordenes_grupo)
-
-            # Tomar valores únicos del grupo (todas las órdenes tienen el mismo valor)
-            bobina = primer_orden.bobina_utilizada  # Misma para todas
-            ancho_util = primer_orden.ancho_utilizado  # Mismo para todas
-
-            # Crear la orden de trabajo
-            work_order = WorkOrder.create({
-                'grupo_planificacion': grupo_nombre,
-                'tipo_combinacion': primer_orden.tipo_combinacion,
-                'bobina_utilizada': bobina,
-                'ancho_utilizado': ancho_util,
-                'sobrante': sobrante_total,  # SUMA de sobrantes del grupo
-                'eficiencia': eficiencia_promedio,  # PROMEDIO de eficiencias
-                'metros_lineales_totales': metros_lineales_totales,
-                'cortes_totales': cortes_totales,
-                'fecha_programada': primer_orden.fecha_produccion,
-                'observaciones': f'Generada automáticamente desde {len(ordenes_grupo)} órdenes de producción del grupo {grupo_nombre}. Bobina: {bobina}mm, Sobrante total: {sobrante_total:.2f}mm',
-            })
-            
-            # Asignar la orden de trabajo a todas las órdenes del grupo y cambiar estado
-            for orden in ordenes_grupo:
-                orden.write({
-                    'work_order_id': work_order.id,
-                    'estado': 'ot'
-                })
-            
-            ordenes_trabajo_creadas.append(work_order)
-        
-        # Mostrar resultado
-        mensaje = f'Se han creado {len(ordenes_trabajo_creadas)} órdenes de trabajo desde {len(grupos)} grupos planificados.'
-        
+        """Acción para abrir wizard de generación de órdenes de trabajo"""
+        # Abrir el wizard para que el usuario especifique si requiere doblez
         return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Órdenes de trabajo generadas',
-                'message': mensaje,
-                'type': 'success',
-            }
+            'type': 'ir.actions.act_window',
+            'name': 'Generar Órdenes de Trabajo',
+            'res_model': 'megastock.generar.ordenes.wizard',
+            'view_mode': 'form',
+            'target': 'new',
         }
 
     def action_resetear_agrupaciones(self):

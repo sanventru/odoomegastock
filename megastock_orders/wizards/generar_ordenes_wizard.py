@@ -1,0 +1,81 @@
+# -*- coding: utf-8 -*-
+
+from odoo import models, fields, api
+from odoo.exceptions import UserError
+
+class GenerarOrdenesWizard(models.TransientModel):
+    _name = 'megastock.generar.ordenes.wizard'
+    _description = 'Wizard para Generar Órdenes de Trabajo'
+
+    requiere_doblez = fields.Boolean(
+        string='Requiere Doblez',
+        default=False,
+        help='Indica si las órdenes de trabajo requieren proceso de doblado'
+    )
+
+    def action_registrar(self):
+        """Registra el valor de requiere_doblez y genera las órdenes de trabajo"""
+        self.ensure_one()
+
+        # Buscar todas las órdenes que tienen grupo de planificación pero no tienen orden de trabajo
+        ordenes_planificadas = self.env['megastock.production.order'].search([
+            ('grupo_planificacion', '!=', False),
+            ('work_order_id', '=', False)
+        ])
+
+        if not ordenes_planificadas:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': 'Sin órdenes planificadas',
+                    'message': 'No hay órdenes planificadas sin orden de trabajo para procesar.',
+                    'type': 'warning',
+                }
+            }
+
+        # Agrupar por grupo_planificacion
+        grupos = {}
+        for orden in ordenes_planificadas:
+            grupo = orden.grupo_planificacion
+            if grupo not in grupos:
+                grupos[grupo] = []
+            grupos[grupo].append(orden)
+
+        # Crear una orden de trabajo por cada grupo
+        work_orders_created = []
+        for grupo, ordenes in grupos.items():
+            # Tomar valores del primer elemento (todas las órdenes del grupo comparten estos valores)
+            primera_orden = ordenes[0]
+
+            # Calcular totales del grupo
+            metros_totales = sum(orden.metros_lineales for orden in ordenes)
+            cortes_totales = sum(orden.cortes_planificados for orden in ordenes)
+
+            # Crear la orden de trabajo
+            work_order = self.env['megastock.work.order'].create({
+                'grupo_planificacion': grupo,
+                'tipo_combinacion': primera_orden.tipo_combinacion,
+                'bobina_utilizada': primera_orden.bobina_utilizada,
+                'ancho_utilizado': primera_orden.ancho_utilizado,
+                'sobrante': primera_orden.sobrante,
+                'eficiencia': primera_orden.eficiencia,
+                'metros_lineales_totales': metros_totales,
+                'cortes_totales': cortes_totales,
+                'estado': 'programada',
+                'requiere_doblez': self.requiere_doblez,  # Asignar el valor del wizard
+            })
+
+            # Asociar las órdenes de producción a esta orden de trabajo
+            ordenes.write({'work_order_id': work_order.id})
+            work_orders_created.append(work_order.id)
+
+        # Retornar a la vista de órdenes de trabajo creadas
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Órdenes de Trabajo Generadas',
+            'res_model': 'megastock.work.order',
+            'view_mode': 'tree,form',
+            'domain': [('id', 'in', work_orders_created)],
+            'target': 'current',
+        }

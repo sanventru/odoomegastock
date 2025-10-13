@@ -23,6 +23,11 @@ class WorkOrder(models.Model):
         ('programada', 'Programada'),
         ('preprinter', 'Preprinter'),
         ('microcorrugado', 'Microcorrugado'),
+        ('dobladora', 'Dobladora'),
+        ('corte_ceja', 'Corte de Ceja'),
+        ('guillotina', 'Corte Guillotina'),
+        ('empaque', 'Empaque'),
+        ('almacenamiento', 'Almacenamiento'),
         ('en_proceso', 'En Proceso'),
         ('pausada', 'Pausada'),
         ('completada', 'Completada'),
@@ -57,6 +62,14 @@ class WorkOrder(models.Model):
     # Relación con procesos de producción
     preprinter_id = fields.Many2one('megastock.proceso.preprinter', string='Proceso Preprinter', readonly=True)
     microcorrugado_id = fields.Many2one('megastock.proceso.microcorrugado', string='Proceso Microcorrugado', readonly=True)
+    dobladora_id = fields.Many2one('megastock.proceso.dobladora', string='Proceso Dobladora', readonly=True)
+    corte_ceja_id = fields.Many2one('megastock.proceso.corte.ceja', string='Proceso Corte de Ceja', readonly=True)
+    corte_guillotina_id = fields.Many2one('megastock.proceso.corte.guillotina', string='Proceso Corte de Guillotina', readonly=True)
+    empaque_id = fields.Many2one('megastock.proceso.empaque', string='Proceso Empaque', readonly=True)
+    almacenamiento_id = fields.Many2one('megastock.proceso.almacenamiento', string='Proceso Almacenamiento', readonly=True)
+
+    # Configuración de procesos
+    requiere_doblez = fields.Boolean(string='Requiere Doblez', default=False, help='Indica si la orden requiere proceso de doblado')
     
     # Campos de seguimiento
     operador = fields.Many2one('res.users', string='Operador Asignado')
@@ -226,6 +239,104 @@ class WorkOrder(models.Model):
             'name': 'Proceso Preprinter',
             'res_model': 'megastock.proceso.preprinter',
             'res_id': preprinter.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_preprinter(self):
+        """Abrir el proceso Preprinter existente"""
+        self.ensure_one()
+        if not self.preprinter_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Preprinter',
+            'res_model': 'megastock.proceso.preprinter',
+            'res_id': self.preprinter_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_microcorrugado(self):
+        """Abrir el proceso Microcorrugado existente"""
+        self.ensure_one()
+        if not self.microcorrugado_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Microcorrugado',
+            'res_model': 'megastock.proceso.microcorrugado',
+            'res_id': self.microcorrugado_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_dobladora(self):
+        """Abrir el proceso Dobladora existente"""
+        self.ensure_one()
+        if not self.dobladora_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Dobladora',
+            'res_model': 'megastock.proceso.dobladora',
+            'res_id': self.dobladora_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_corte_ceja(self):
+        """Abrir el proceso Corte de Ceja existente"""
+        self.ensure_one()
+        if not self.corte_ceja_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Corte de Ceja',
+            'res_model': 'megastock.proceso.corte.ceja',
+            'res_id': self.corte_ceja_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_corte_guillotina(self):
+        """Abrir el proceso Corte de Guillotina existente"""
+        self.ensure_one()
+        if not self.corte_guillotina_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Corte de Guillotina',
+            'res_model': 'megastock.proceso.corte.guillotina',
+            'res_id': self.corte_guillotina_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_empaque(self):
+        """Abrir el proceso Empaque existente"""
+        self.ensure_one()
+        if not self.empaque_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Empaque',
+            'res_model': 'megastock.proceso.empaque',
+            'res_id': self.empaque_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
+
+    def action_ver_almacenamiento(self):
+        """Abrir el proceso Almacenamiento existente"""
+        self.ensure_one()
+        if not self.almacenamiento_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'name': 'Proceso Almacenamiento',
+            'res_model': 'megastock.proceso.almacenamiento',
+            'res_id': self.almacenamiento_id.id,
             'view_mode': 'form',
             'target': 'current',
         }

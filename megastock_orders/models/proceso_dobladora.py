@@ -3,9 +3,9 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError
 
-class ProcesoMicrocorrugado(models.Model):
-    _name = 'megastock.proceso.microcorrugado'
-    _description = 'Proceso Microcorrugado MEGASTOCK'
+class ProcesoDobladora(models.Model):
+    _name = 'megastock.proceso.dobladora'
+    _description = 'Proceso Dobladora MEGASTOCK'
     _order = 'fecha_inicio desc'
     _rec_name = 'work_order_id'
 
@@ -32,8 +32,8 @@ class ProcesoMicrocorrugado(models.Model):
     ], string='Estado', default='iniciado', required=True, tracking=True)
 
     material_ids = fields.One2many(
-        'megastock.proceso.microcorrugado.line',
-        'microcorrugado_id',
+        'megastock.proceso.dobladora.line',
+        'dobladora_id',
         string='Materiales'
     )
     observaciones = fields.Text(string='Observaciones')
@@ -41,45 +41,22 @@ class ProcesoMicrocorrugado(models.Model):
     def name_get(self):
         result = []
         for record in self:
-            name = f"Microcorrugado - {record.work_order_id.numero_orden}"
+            name = f"Dobladora - {record.work_order_id.numero_orden}"
             result.append((record.id, name))
         return result
 
     def action_finalizar(self):
-        """Finalizar el proceso Microcorrugado e iniciar el siguiente proceso según configuración"""
+        """Finalizar el proceso Dobladora y verificar si requiere corte de ceja"""
         if self.estado == 'finalizado':
             raise UserError('Este proceso ya ha sido finalizado.')
 
-        # Finalizar microcorrugado
+        # Finalizar dobladora
         self.write({
             'estado': 'finalizado',
             'fecha_fin': fields.Datetime.now()
         })
 
-        # Verificar si requiere doblez
-        if self.work_order_id.requiere_doblez:
-            # Iniciar proceso Dobladora
-            dobladora = self.env['megastock.proceso.dobladora'].create({
-                'work_order_id': self.work_order_id.id,
-                'fecha_inicio': fields.Datetime.now(),
-                'estado': 'iniciado',
-            })
-
-            self.work_order_id.write({
-                'estado': 'dobladora',
-                'dobladora_id': dobladora.id
-            })
-
-            return {
-                'type': 'ir.actions.act_window',
-                'name': 'Proceso Dobladora',
-                'res_model': 'megastock.proceso.dobladora',
-                'res_id': dobladora.id,
-                'view_mode': 'form',
-                'target': 'current',
-            }
-
-        # No requiere doblez, verificar si algún producto tiene ceja > 0
+        # Verificar si algún producto tiene ceja > 0
         requiere_corte_ceja = False
         for orden in self.work_order_id.production_order_ids:
             # Acceder al product.template a través de product.product
@@ -111,7 +88,7 @@ class ProcesoMicrocorrugado(models.Model):
                 'target': 'current',
             }
         else:
-            # No requiere doblez ni ceja, ir directo a Empaque
+            # No requiere ceja, ir directo a Empaque
             empaque = self.env['megastock.proceso.empaque'].create({
                 'work_order_id': self.work_order_id.id,
                 'fecha_inicio': fields.Datetime.now(),
@@ -133,13 +110,13 @@ class ProcesoMicrocorrugado(models.Model):
             }
 
 
-class ProcesoMicrocorrugadoLine(models.Model):
-    _name = 'megastock.proceso.microcorrugado.line'
-    _description = 'Línea de Material Microcorrugado'
+class ProcesoDobleadoraLine(models.Model):
+    _name = 'megastock.proceso.dobladora.line'
+    _description = 'Línea de Material Dobladora'
 
-    microcorrugado_id = fields.Many2one(
-        'megastock.proceso.microcorrugado',
-        string='Microcorrugado',
+    dobladora_id = fields.Many2one(
+        'megastock.proceso.dobladora',
+        string='Dobladora',
         required=True,
         ondelete='cascade'
     )

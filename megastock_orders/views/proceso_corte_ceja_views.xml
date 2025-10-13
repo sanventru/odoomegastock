@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Formulario Proceso Corte de Ceja -->
+    <record id="view_proceso_corte_ceja_form" model="ir.ui.view">
+        <field name="name">megastock.proceso.corte.ceja.form</field>
+        <field name="model">megastock.proceso.corte.ceja</field>
+        <field name="arch" type="xml">
+            <form string="Proceso Corte de Ceja">
+                <header>
+                    <button name="action_finalizar" string="Finalizar Corte de Ceja" type="object"
+                            class="oe_highlight" icon="fa-check"
+                            attrs="{'invisible': [('estado', '=', 'finalizado')]}"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="iniciado,finalizado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="work_order_id" readonly="1"/>
+                        </h1>
+                        <h3>
+                            Proceso Corte de Ceja
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group name="info_fechas" string="Información de Fechas">
+                            <field name="fecha_inicio" readonly="1"/>
+                            <field name="fecha_fin" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Materiales" name="materiales">
+                            <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Materiales" editable="bottom">
+                                    <field name="producto_id"/>
+                                    <field name="cantidad"/>
+                                    <field name="uom_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Observaciones" name="observaciones">
+                            <group>
+                                <field name="observaciones" nolabel="1" placeholder="Observaciones del proceso..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista Proceso Corte de Ceja -->
+    <record id="view_proceso_corte_ceja_tree" model="ir.ui.view">
+        <field name="name">megastock.proceso.corte.ceja.tree</field>
+        <field name="model">megastock.proceso.corte.ceja</field>
+        <field name="arch" type="xml">
+            <tree string="Procesos Corte de Ceja" decoration-success="estado=='finalizado'" decoration-info="estado=='iniciado'">
+                <field name="work_order_id"/>
+                <field name="fecha_inicio"/>
+                <field name="fecha_fin"/>
+                <field name="estado"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Acción para el proceso -->
+    <record id="action_proceso_corte_ceja" model="ir.actions.act_window">
+        <field name="name">Procesos Corte de Ceja</field>
+        <field name="res_model">megastock.proceso.corte.ceja</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay procesos de Corte de Ceja creados
+            </p>
+        </field>
+    </record>
+</odoo>

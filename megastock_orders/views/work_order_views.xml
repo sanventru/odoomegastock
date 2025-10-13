@@ -55,9 +55,71 @@
                     <button name="action_cancelar" string="Cancelar" type="object"
                             icon="fa-times"
                             attrs="{'invisible': [('estado', 'in', ['completada', 'cancelada'])]}"/>
-                    <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,preprinter,microcorrugado,en_proceso,completada"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,preprinter,microcorrugado,dobladora,corte_ceja,guillotina,empaque,almacenamiento,completada"/>
                 </header>
                 <sheet>
+                    <!-- Campos invisibles necesarios para attrs -->
+                    <field name="preprinter_id" invisible="1"/>
+                    <field name="microcorrugado_id" invisible="1"/>
+                    <field name="dobladora_id" invisible="1"/>
+                    <field name="corte_ceja_id" invisible="1"/>
+                    <field name="corte_guillotina_id" invisible="1"/>
+                    <field name="empaque_id" invisible="1"/>
+                    <field name="almacenamiento_id" invisible="1"/>
+
+                    <!-- Smart Buttons para acceder a procesos -->
+                    <div class="oe_button_box" name="button_box">
+                        <button type="object" name="action_ver_preprinter"
+                                class="oe_stat_button" icon="fa-cogs"
+                                attrs="{'invisible': [('preprinter_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Preprinter</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_microcorrugado"
+                                class="oe_stat_button" icon="fa-cogs"
+                                attrs="{'invisible': [('microcorrugado_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Microcorrugado</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_dobladora"
+                                class="oe_stat_button" icon="fa-cogs"
+                                attrs="{'invisible': [('dobladora_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Dobladora</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_corte_ceja"
+                                class="oe_stat_button" icon="fa-cut"
+                                attrs="{'invisible': [('corte_ceja_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Corte Ceja</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_corte_guillotina"
+                                class="oe_stat_button" icon="fa-scissors"
+                                attrs="{'invisible': [('corte_guillotina_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Guillotina</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_empaque"
+                                class="oe_stat_button" icon="fa-box"
+                                attrs="{'invisible': [('empaque_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Empaque</span>
+                            </div>
+                        </button>
+                        <button type="object" name="action_ver_almacenamiento"
+                                class="oe_stat_button" icon="fa-warehouse"
+                                attrs="{'invisible': [('almacenamiento_id', '=', False)]}">
+                            <div class="o_field_widget o_stat_info">
+                                <span class="o_stat_text">Almacenamiento</span>
+                            </div>
+                        </button>
+                    </div>
+
                     <div class="oe_title">
                         <h1>
                             <field name="numero_orden" readonly="1"/>

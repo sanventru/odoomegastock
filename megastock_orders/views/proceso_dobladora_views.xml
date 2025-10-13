@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Formulario Proceso Dobladora -->
+    <record id="view_proceso_dobladora_form" model="ir.ui.view">
+        <field name="name">megastock.proceso.dobladora.form</field>
+        <field name="model">megastock.proceso.dobladora</field>
+        <field name="arch" type="xml">
+            <form string="Proceso Dobladora">
+                <header>
+                    <button name="action_finalizar" string="Finalizar Dobladora" type="object"
+                            class="oe_highlight" icon="fa-check"
+                            attrs="{'invisible': [('estado', '=', 'finalizado')]}"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="iniciado,finalizado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="work_order_id" readonly="1"/>
+                        </h1>
+                        <h3>
+                            Proceso Dobladora
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group name="info_fechas" string="Información de Fechas">
+                            <field name="fecha_inicio" readonly="1"/>
+                            <field name="fecha_fin" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Materiales" name="materiales">
+                            <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Materiales" editable="bottom">
+                                    <field name="producto_id"/>
+                                    <field name="cantidad"/>
+                                    <field name="uom_id"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Observaciones" name="observaciones">
+                            <group>
+                                <field name="observaciones" nolabel="1" placeholder="Observaciones del proceso..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista Proceso Dobladora -->
+    <record id="view_proceso_dobladora_tree" model="ir.ui.view">
+        <field name="name">megastock.proceso.dobladora.tree</field>
+        <field name="model">megastock.proceso.dobladora</field>
+        <field name="arch" type="xml">
+            <tree string="Procesos Dobladora" decoration-success="estado=='finalizado'" decoration-info="estado=='iniciado'">
+                <field name="work_order_id"/>
+                <field name="fecha_inicio"/>
+                <field name="fecha_fin"/>
+                <field name="estado" widget="badge"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_proceso_dobladora_search" model="ir.ui.view">
+        <field name="name">megastock.proceso.dobladora.search</field>
+        <field name="model">megastock.proceso.dobladora</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Procesos Dobladora">
+                <field name="work_order_id"/>
+                <filter string="Iniciados" name="iniciados" domain="[('estado', '=', 'iniciado')]"/>
+                <filter string="Finalizados" name="finalizados" domain="[('estado', '=', 'finalizado')]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                    <filter string="Fecha Inicio" name="group_fecha_inicio" context="{'group_by': 'fecha_inicio'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_proceso_dobladora" model="ir.actions.act_window">
+        <field name="name">Procesos Dobladora</field>
+        <field name="res_model">megastock.proceso.dobladora</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_proceso_dobladora_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay procesos Dobladora registrados!
+            </p>
+            <p>
+                Los procesos Dobladora se crean cuando una orden requiere doblez después de Microcorrugado.
+            </p>
+        </field>
+    </record>
+
+    <!-- No crear menú - se accede desde órdenes de trabajo -->
+</odoo>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Formulario del Wizard Requiere Doblez -->
+    <record id="view_requiere_doblez_wizard_form" model="ir.ui.view">
+        <field name="name">megastock.requiere.doblez.wizard.form</field>
+        <field name="model">megastock.requiere.doblez.wizard</field>
+        <field name="arch" type="xml">
+            <form string="¿Requiere Doblez?">
+                <group>
+                    <field name="microcorrugado_id" invisible="1"/>
+                    <div class="alert alert-info" role="alert" style="margin-bottom:0px;">
+                        <h3>¿Esta orden requiere proceso de Dobladora?</h3>
+                        <p>Seleccione la opción correspondiente:</p>
+                    </div>
+                </group>
+                <footer>
+                    <button name="action_si_requiere_doblez" string="Sí, Requiere Doblez" type="object" class="btn-primary"/>
+                    <button name="action_no_requiere_doblez" string="No Requiere Doblez" type="object" class="btn-secondary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

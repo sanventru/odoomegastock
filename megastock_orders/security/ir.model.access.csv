@@ -21,3 +21,24 @@ access_proceso_microcorrugado_user,megastock.proceso.microcorrugado user,model_m
 access_proceso_microcorrugado_manager,megastock.proceso.microcorrugado manager,model_megastock_proceso_microcorrugado,base.group_system,1,1,1,1
 access_proceso_microcorrugado_line_user,megastock.proceso.microcorrugado.line user,model_megastock_proceso_microcorrugado_line,base.group_user,1,1,1,1
 access_proceso_microcorrugado_line_manager,megastock.proceso.microcorrugado.line manager,model_megastock_proceso_microcorrugado_line,base.group_system,1,1,1,1
+access_proceso_dobladora_user,megastock.proceso.dobladora user,model_megastock_proceso_dobladora,base.group_user,1,1,1,0
+access_proceso_dobladora_manager,megastock.proceso.dobladora manager,model_megastock_proceso_dobladora,base.group_system,1,1,1,1
+access_proceso_dobladora_line_user,megastock.proceso.dobladora.line user,model_megastock_proceso_dobladora_line,base.group_user,1,1,1,1
+access_proceso_dobladora_line_manager,megastock.proceso.dobladora.line manager,model_megastock_proceso_dobladora_line,base.group_system,1,1,1,1
+access_requiere_doblez_wizard,megastock.requiere.doblez.wizard,model_megastock_requiere_doblez_wizard,base.group_user,1,1,1,1
+access_generar_ordenes_wizard_user,megastock.generar.ordenes.wizard user,model_megastock_generar_ordenes_wizard,base.group_user,1,1,1,1
+access_generar_ordenes_wizard_manager,megastock.generar.ordenes.wizard manager,model_megastock_generar_ordenes_wizard,base.group_system,1,1,1,1
+access_proceso_corte_ceja_user,megastock.proceso.corte.ceja user,model_megastock_proceso_corte_ceja,base.group_user,1,1,1,0
+access_proceso_corte_ceja_manager,megastock.proceso.corte.ceja manager,model_megastock_proceso_corte_ceja,base.group_system,1,1,1,1
+access_proceso_corte_ceja_line_user,megastock.proceso.corte.ceja.line user,model_megastock_proceso_corte_ceja_line,base.group_user,1,1,1,1
+access_proceso_corte_ceja_line_manager,megastock.proceso.corte.ceja.line manager,model_megastock_proceso_corte_ceja_line,base.group_system,1,1,1,1
+access_proceso_corte_guillotina_user,megastock.proceso.corte.guillotina user,model_megastock_proceso_corte_guillotina,base.group_user,1,1,1,0
+access_proceso_corte_guillotina_manager,megastock.proceso.corte.guillotina manager,model_megastock_proceso_corte_guillotina,base.group_system,1,1,1,1
+access_proceso_corte_guillotina_line_user,megastock.proceso.corte.guillotina.line user,model_megastock_proceso_corte_guillotina_line,base.group_user,1,1,1,1
+access_proceso_corte_guillotina_line_manager,megastock.proceso.corte.guillotina.line manager,model_megastock_proceso_corte_guillotina_line,base.group_system,1,1,1,1
+access_proceso_empaque_user,megastock.proceso.empaque user,model_megastock_proceso_empaque,base.group_user,1,1,1,0
+access_proceso_empaque_manager,megastock.proceso.empaque manager,model_megastock_proceso_empaque,base.group_system,1,1,1,1
+access_proceso_empaque_line_user,megastock.proceso.empaque.line user,model_megastock_proceso_empaque_line,base.group_user,1,1,1,1
+access_proceso_empaque_line_manager,megastock.proceso.empaque.line manager,model_megastock_proceso_empaque_line,base.group_system,1,1,1,1
+access_proceso_almacenamiento_user,megastock.proceso.almacenamiento user,model_megastock_proceso_almacenamiento,base.group_user,1,1,1,0
+access_proceso_almacenamiento_manager,megastock.proceso.almacenamiento manager,model_megastock_proceso_almacenamiento,base.group_system,1,1,1,1

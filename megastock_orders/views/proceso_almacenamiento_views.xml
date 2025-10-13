@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Formulario Proceso Almacenamiento -->
+    <record id="view_proceso_almacenamiento_form" model="ir.ui.view">
+        <field name="name">megastock.proceso.almacenamiento.form</field>
+        <field name="model">megastock.proceso.almacenamiento</field>
+        <field name="arch" type="xml">
+            <form string="Proceso Almacenamiento">
+                <header>
+                    <button name="action_finalizar" string="Finalizar Almacenamiento" type="object"
+                            class="oe_highlight" icon="fa-check"
+                            attrs="{'invisible': [('estado', '=', 'finalizado')]}"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="iniciado,finalizado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="work_order_id" readonly="1"/>
+                        </h1>
+                        <h3>
+                            Proceso Almacenamiento
+                        </h3>
+                    </div>
+
+                    <group>
+                        <group name="info_fechas" string="Información de Fechas">
+                            <field name="fecha_inicio" readonly="1"/>
+                            <field name="fecha_fin" readonly="1"/>
+                        </group>
+                        <group name="info_almacen" string="Información de Almacén">
+                            <field name="ubicacion_almacen" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                            <field name="lote" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                        </group>
+                    </group>
+
+                    <group>
+                        <group name="observaciones" string="Observaciones">
+                            <field name="observaciones" nolabel="1" placeholder="Observaciones del proceso..." attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista Proceso Almacenamiento -->
+    <record id="view_proceso_almacenamiento_tree" model="ir.ui.view">
+        <field name="name">megastock.proceso.almacenamiento.tree</field>
+        <field name="model">megastock.proceso.almacenamiento</field>
+        <field name="arch" type="xml">
+            <tree string="Procesos Almacenamiento" decoration-success="estado=='finalizado'" decoration-info="estado=='iniciado'">
+                <field name="work_order_id"/>
+                <field name="ubicacion_almacen"/>
+                <field name="lote"/>
+                <field name="fecha_inicio"/>
+                <field name="fecha_fin"/>
+                <field name="estado"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Acción para el proceso -->
+    <record id="action_proceso_almacenamiento" model="ir.actions.act_window">
+        <field name="name">Procesos Almacenamiento</field>
+        <field name="res_model">megastock.proceso.almacenamiento</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay procesos de Almacenamiento creados
+            </p>
+        </field>
+    </record>
+</odoo>
