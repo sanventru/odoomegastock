@@ -67,7 +67,12 @@ class GenerarOrdenesWizard(models.TransientModel):
             })
 
             # Asociar las órdenes de producción a esta orden de trabajo
-            ordenes.write({'work_order_id': work_order.id})
+            # Convertir lista de Python a recordset de Odoo
+            ordenes_recordset = self.env['megastock.production.order'].browse([o.id for o in ordenes])
+            ordenes_recordset.write({
+                'work_order_id': work_order.id,
+                'estado': 'ot'
+            })
             work_orders_created.append(work_order.id)
 
         # Retornar a la vista de órdenes de trabajo creadas

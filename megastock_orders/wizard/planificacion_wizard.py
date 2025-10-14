@@ -60,11 +60,11 @@ class PlanificacionWizard(models.TransientModel):
             cavidad_limite=self.cavidad_limite
         )
 
-        # Construir mensaje con información de la bobina óptima
+        # Construir mensaje con información del resultado
         mensaje = f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos.'
-        mensaje += f'\nBobina óptima: {resultado["bobina_optima"]:.0f}mm'
         mensaje += f'\nEficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%'
         mensaje += f'\nDesperdicio total: {resultado["desperdicio_total"]:.0f}mm'
+        mensaje += f'\n\nCada grupo ha sido optimizado con la bobina que minimiza su propio desperdicio.'
 
         return {
             'type': 'ir.actions.client',
