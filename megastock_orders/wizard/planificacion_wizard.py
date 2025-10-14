@@ -20,6 +20,13 @@ class PlanificacionWizard(models.TransientModel):
         help='Cavidad'
     )
 
+    bobina_unica = fields.Boolean(
+        string='Bobina Única',
+        default=False,
+        help='Si está marcado, todos los grupos usarán una sola bobina (la que minimice el desperdicio total). '
+             'Si no está marcado, cada grupo elegirá la bobina que minimice su propio desperdicio.'
+    )
+
     @api.constrains('cavidad_limite')
     def _check_cavidad_limite(self):
         """Validar que la cavidad límite sea mayor a 0"""
@@ -57,14 +64,20 @@ class PlanificacionWizard(models.TransientModel):
         resultado = ordenes_pendientes[0]._optimizar_ordenes(
             ordenes_pendientes,
             test_principal=self.test_principal,
-            cavidad_limite=self.cavidad_limite
+            cavidad_limite=self.cavidad_limite,
+            bobina_unica=self.bobina_unica
         )
 
         # Construir mensaje con información del resultado
         mensaje = f'Se han planificado {len(ordenes_pendientes)} órdenes en {resultado["grupos"]} grupos.'
         mensaje += f'\nEficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%'
         mensaje += f'\nDesperdicio total: {resultado["desperdicio_total"]:.0f}mm'
-        mensaje += f'\n\nCada grupo ha sido optimizado con la bobina que minimiza su propio desperdicio.'
+
+        if self.bobina_unica and 'bobina_optima' in resultado:
+            mensaje += f'\n\nBobina única utilizada: {resultado["bobina_optima"]:.0f}mm'
+            mensaje += f'\nTodos los grupos usan la misma bobina que minimiza el desperdicio total.'
+        else:
+            mensaje += f'\n\nCada grupo ha sido optimizado con la bobina que minimiza su propio desperdicio.'
 
         return {
             'type': 'ir.actions.client',

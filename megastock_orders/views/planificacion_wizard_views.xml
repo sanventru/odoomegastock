@@ -20,6 +20,9 @@
                         </p>
                     </group>
                 </group>
+                <group>
+                    <field name="bobina_unica"/>
+                </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>
                     <ul>
@@ -27,6 +30,8 @@
                             <strong>Test Principal:</strong> Define la receta de papel que se utilizará para la producción.</li>
                         <li>
                             <strong>Cavidad Límite:</strong> El algoritmo probará multiplicar el ancho_calculado de cada orden por 1, 2, 3... hasta este valor, calculando todas las combinaciones posibles y eligiendo la que minimice el desperdicio.</li>
+                        <li>
+                            <strong>Bobina Única:</strong> Si está marcado, todos los grupos usarán una sola bobina (la que minimice el desperdicio total). Si no está marcado, cada grupo elegirá independientemente la bobina que minimice su propio desperdicio.</li>
                     </ul>
                     <p class="mb-0">
                         <strong>Ejemplo:</strong> Si cavidad_limite = 4, para una orden con ancho_calculado = 500mm,
