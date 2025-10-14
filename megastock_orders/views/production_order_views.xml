@@ -89,7 +89,10 @@ if records:
                 <field name="grupo_planificacion" optional="show"/>
                 <field name="tipo_combinacion" optional="show"/>
                 <field name="cavidad_optimizada" optional="show"/>
-                <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="eficiencia" widget="percentage" optional="hide"/>
+                <field name="cortes_planificados" optional="hide"/>
+                <field name="cantidad_planificada" optional="hide"/>
+                <field name="metros_lineales_planificados" optional="hide"/>
                 <field name="metros_lineales_calculados" optional="show"/>
                 <field name="peso_lamina_calculado" optional="show"/>
                 <field name="work_order_id" optional="show"/>
@@ -111,12 +114,8 @@ if records:
         <field name="arch" type="xml">
             <form string="Pedido de Producción">
                 <header>
-                    <button name="action_planificar_ordenes" string="Planificar Órdenes" type="object" 
-                            class="oe_highlight" icon="fa-cogs" 
-                            attrs="{'invisible': [('estado', '!=', 'pendiente')]}"/>
-                    <button name="action_generar_ordenes_trabajo" string="Generar Órdenes de Trabajo" type="object" 
-                            class="oe_highlight" icon="fa-industry" 
-                            attrs="{'invisible': ['|', ('grupo_planificacion', '=', False), ('work_order_id', '!=', False)]}"/>
+                    <button name="action_planificar_ordenes" string="Planificar Órdenes" type="object" class="oe_highlight" icon="fa-cogs" attrs="{'invisible': [('estado', '!=', 'pendiente')]}"/>
+                    <button name="action_generar_ordenes_trabajo" string="Generar Órdenes de Trabajo" type="object" class="oe_highlight" icon="fa-industry" attrs="{'invisible': ['|', ('grupo_planificacion', '=', False), ('work_order_id', '!=', False)]}"/>
                     <field name="estado" widget="statusbar" statusbar_visible="pendiente,ot,proceso,planchas,entregado"/>
                 </header>
                 <sheet>
@@ -219,23 +218,27 @@ if records:
                                     <field name="grupo_planificacion" readonly="1"/>
                                     <field name="tipo_combinacion" readonly="1"/>
                                     <field name="cavidad_optimizada" readonly="1"/>
-                                    <field name="eficiencia" widget="percentage" readonly="1"/>
+                                    <field name="eficiencia" widget="percentage" readonly="1" invisible="1"/>
                                 </group>
                                 <group string="Detalles de Bobina">
                                     <field name="ancho_utilizado" readonly="1"/>
                                     <field name="bobina_utilizada" readonly="1"/>
                                     <field name="sobrante" readonly="1"/>
-                                    <field name="metros_lineales_planificados" readonly="1"/>
                                     <field name="cortes_planificados" readonly="1"/>
+                                    <field name="cantidad_planificada" readonly="1"/>
+                                    <field name="metros_lineales_planificados" readonly="1"/>
                                 </group>
                             </group>
                             <div class="alert alert-info" role="alert">
                                 <strong>Información de Planificación:</strong>
                                 <p>Esta orden ha sido optimizada mediante el algoritmo de trimado para minimizar el desperdicio de material.</p>
                                 <ul>
-                                    <li><strong>Grupo:</strong> Identifica qué órdenes se procesan juntas</li>
-                                    <li><strong>Tipo:</strong> Individual o Dupla según la combinación (máximo 2 cuchillas)</li>
-                                    <li><strong>Eficiencia:</strong> Porcentaje de aprovechamiento del material</li>
+                                    <li>
+                                        <strong>Grupo:</strong> Identifica qué órdenes se procesan juntas</li>
+                                    <li>
+                                        <strong>Tipo:</strong> Individual o Dupla según la combinación (máximo 2 cuchillas)</li>
+                                    <li>
+                                        <strong>Eficiencia:</strong> Porcentaje de aprovechamiento del material</li>
                                 </ul>
                             </div>
                         </page>

@@ -192,6 +192,7 @@ class ProductionOrder(models.Model):
     eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado', group_operator='avg')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
+    cantidad_planificada = fields.Integer(string='Cantidad Planificada', help='Cantidad que se producirá según la planificación: cortes_planificados * cavidad_efectiva')
     cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator='max')
     
     # Test calculado automáticamente desde descripción del producto
@@ -931,6 +932,21 @@ class ProductionOrder(models.Model):
             # Calcular sobrante individual de esta orden
             sobrante_individual = espacio_por_orden - ancho_efectivo
 
+            # Calcular valores de planificación según especificaciones:
+            # cavidad_efectiva = cavidad * multiplicador
+            cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
+
+            # 1. cortes_planificados = cantidad / cavidad_efectiva
+            cortes_planificados = int(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+
+            # 2. cantidad_planificada = cortes_planificados * cavidad_efectiva
+            cantidad_planificada = cortes_planificados * cavidad_efectiva
+
+            # 3. metros_lineales_planificados = ((cantidad_planificada * largo_calculado) / cavidad_efectiva) / 1000
+            metros_lineales_planificados = 0
+            if cavidad_efectiva > 0 and orden.largo_calculado:
+                metros_lineales_planificados = ((cantidad_planificada * orden.largo_calculado) / cavidad_efectiva) / 1000
+
             orden.write({
                 'grupo_planificacion': grupo_nombre,
                 'tipo_combinacion': combinacion['tipo'],
@@ -938,8 +954,9 @@ class ProductionOrder(models.Model):
                 'bobina_utilizada': combinacion['bobina'],
                 'sobrante': sobrante_individual,  # Sobrante individual, no del grupo
                 'eficiencia': combinacion['eficiencia'],
-                'metros_lineales_planificados': combinacion.get('metros_lineales', 0),
-                'cortes_planificados': combinacion.get('cortes_totales', 0),
+                'metros_lineales_planificados': metros_lineales_planificados,
+                'cortes_planificados': cortes_planificados,
+                'cantidad_planificada': cantidad_planificada,
                 # Guardar el multiplicador de cavidad óptimo
                 'cavidad_optimizada': multiplicador,
             })
@@ -993,6 +1010,7 @@ class ProductionOrder(models.Model):
             'eficiencia': 0,
             'metros_lineales_planificados': 0,
             'cortes_planificados': 0,
+            'cantidad_planificada': 0,
             'cavidad_optimizada': 0,
             'estado': 'pendiente',  # Volver a estado pendiente
         })

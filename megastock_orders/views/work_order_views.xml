@@ -16,7 +16,7 @@
                 <field name="bobina_asignada_id"/>
                 <field name="ancho_utilizado" optional="show"/>
                 <field name="sobrante" optional="show"/>
-                <field name="eficiencia" widget="percentage" optional="show"/>
+                <field name="eficiencia" widget="percentage" optional="hide"/>
                 <field name="metros_lineales_totales" optional="show"/>
                 <field name="cortes_totales" optional="show"/>
                 <field name="progreso" widget="progressbar" optional="show"/>
@@ -37,24 +37,12 @@
         <field name="arch" type="xml">
             <form string="Orden de Trabajo">
                 <header>
-                    <button name="action_programar" string="Programar" type="object"
-                            class="oe_highlight" icon="fa-calendar"
-                            attrs="{'invisible': [('estado', '!=', 'borrador')]}"/>
-                    <button name="action_iniciar_preprinter" string="Iniciar Preprinter" type="object"
-                            class="oe_highlight" icon="fa-cogs"
-                            attrs="{'invisible': [('estado', '!=', 'programada')]}"/>
-                    <button name="action_iniciar" string="Iniciar Producción" type="object"
-                            class="oe_highlight" icon="fa-play"
-                            attrs="{'invisible': [('estado', 'not in', ['microcorrugado'])]}"/>
-                    <button name="action_pausar" string="Pausar" type="object"
-                            icon="fa-pause"
-                            attrs="{'invisible': [('estado', '!=', 'en_proceso')]}"/>
-                    <button name="action_completar" string="Completar" type="object"
-                            class="oe_highlight" icon="fa-check"
-                            attrs="{'invisible': [('estado', 'not in', ['en_proceso', 'pausada'])]}"/>
-                    <button name="action_cancelar" string="Cancelar" type="object"
-                            icon="fa-times"
-                            attrs="{'invisible': [('estado', 'in', ['completada', 'cancelada'])]}"/>
+                    <button name="action_programar" string="Programar" type="object" class="oe_highlight" icon="fa-calendar" attrs="{'invisible': [('estado', '!=', 'borrador')]}"/>
+                    <button name="action_iniciar_preprinter" string="Iniciar Preprinter" type="object" class="oe_highlight" icon="fa-cogs" attrs="{'invisible': [('estado', '!=', 'programada')]}"/>
+                    <button name="action_iniciar" string="Iniciar Producción" type="object" class="oe_highlight" icon="fa-play" attrs="{'invisible': [('estado', 'not in', ['microcorrugado'])]}"/>
+                    <button name="action_pausar" string="Pausar" type="object" icon="fa-pause" attrs="{'invisible': [('estado', '!=', 'en_proceso')]}"/>
+                    <button name="action_completar" string="Completar" type="object" class="oe_highlight" icon="fa-check" attrs="{'invisible': [('estado', 'not in', ['en_proceso', 'pausada'])]}"/>
+                    <button name="action_cancelar" string="Cancelar" type="object" icon="fa-times" attrs="{'invisible': [('estado', 'in', ['completada', 'cancelada'])]}"/>
                     <field name="estado" widget="statusbar" statusbar_visible="borrador,programada,preprinter,microcorrugado,dobladora,corte_ceja,guillotina,empaque,almacenamiento,completada"/>
                 </header>
                 <sheet>
@@ -69,51 +57,37 @@
 
                     <!-- Smart Buttons para acceder a procesos -->
                     <div class="oe_button_box" name="button_box">
-                        <button type="object" name="action_ver_preprinter"
-                                class="oe_stat_button" icon="fa-cogs"
-                                attrs="{'invisible': [('preprinter_id', '=', False)]}">
+                        <button type="object" name="action_ver_preprinter" class="oe_stat_button" icon="fa-cogs" attrs="{'invisible': [('preprinter_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Preprinter</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_microcorrugado"
-                                class="oe_stat_button" icon="fa-cogs"
-                                attrs="{'invisible': [('microcorrugado_id', '=', False)]}">
+                        <button type="object" name="action_ver_microcorrugado" class="oe_stat_button" icon="fa-cogs" attrs="{'invisible': [('microcorrugado_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Microcorrugado</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_dobladora"
-                                class="oe_stat_button" icon="fa-cogs"
-                                attrs="{'invisible': [('dobladora_id', '=', False)]}">
+                        <button type="object" name="action_ver_dobladora" class="oe_stat_button" icon="fa-cogs" attrs="{'invisible': [('dobladora_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Dobladora</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_corte_ceja"
-                                class="oe_stat_button" icon="fa-cut"
-                                attrs="{'invisible': [('corte_ceja_id', '=', False)]}">
+                        <button type="object" name="action_ver_corte_ceja" class="oe_stat_button" icon="fa-cut" attrs="{'invisible': [('corte_ceja_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Corte Ceja</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_corte_guillotina"
-                                class="oe_stat_button" icon="fa-scissors"
-                                attrs="{'invisible': [('corte_guillotina_id', '=', False)]}">
+                        <button type="object" name="action_ver_corte_guillotina" class="oe_stat_button" icon="fa-scissors" attrs="{'invisible': [('corte_guillotina_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Guillotina</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_empaque"
-                                class="oe_stat_button" icon="fa-box"
-                                attrs="{'invisible': [('empaque_id', '=', False)]}">
+                        <button type="object" name="action_ver_empaque" class="oe_stat_button" icon="fa-box" attrs="{'invisible': [('empaque_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Empaque</span>
                             </div>
                         </button>
-                        <button type="object" name="action_ver_almacenamiento"
-                                class="oe_stat_button" icon="fa-warehouse"
-                                attrs="{'invisible': [('almacenamiento_id', '=', False)]}">
+                        <button type="object" name="action_ver_almacenamiento" class="oe_stat_button" icon="fa-warehouse" attrs="{'invisible': [('almacenamiento_id', '=', False)]}">
                             <div class="o_field_widget o_stat_info">
                                 <span class="o_stat_text">Almacenamiento</span>
                             </div>
@@ -139,7 +113,7 @@
                         </group>
                         <group name="assignment_info" string="Asignación">
                             <field name="operador"/>
-                            <field name="maquina"/>
+                            <field name="maquina" invisible="1"/>
                             <field name="turno"/>
                             <field name="fecha_inicio" readonly="1"/>
                             <field name="fecha_fin" readonly="1"/>
@@ -152,7 +126,7 @@
                             <field name="bobina_asignada_id"/>
                             <field name="ancho_utilizado" readonly="1"/>
                             <field name="sobrante" readonly="1"/>
-                            <field name="eficiencia" widget="percentage" readonly="1"/>
+                            <field name="eficiencia" widget="percentage" readonly="1" invisible="1"/>
                         </group>
                         <group name="production_data" string="Datos de Producción">
                             <field name="metros_lineales_totales" readonly="1"/>
@@ -173,6 +147,9 @@
                                     <field name="cantidad"/>
                                     <field name="largo"/>
                                     <field name="ancho"/>
+                                    <field name="cortes_planificados" string="Cortes"/>
+                                    <field name="cantidad_planificada" string="Cant. Planif."/>
+                                    <field name="metros_lineales_planificados" string="Metros Lin."/>
                                     <field name="estado" widget="badge"/>
                                     <field name="fecha_produccion"/>
                                 </tree>
@@ -207,7 +184,7 @@
                 <field name="numero_orden"/>
                 <field name="grupo_planificacion"/>
                 <field name="operador"/>
-                <field name="maquina"/>
+                <field name="maquina" invisible="1"/>
 
                 <filter string="Borrador" name="borrador" domain="[('estado', '=', 'borrador')]"/>
                 <filter string="Programadas" name="programadas" domain="[('estado', '=', 'programada')]"/>
@@ -271,14 +248,21 @@
                                     </span>
                                 </div>
                                 <div class="o_kanban_record_body">
-                                    <strong>Órdenes: </strong><field name="cantidad_ordenes"/><br/>
-                                    <strong>Eficiencia: </strong><field name="eficiencia" widget="percentage"/><br/>
+                                    <strong>Órdenes: </strong>
+                                    <field name="cantidad_ordenes"/>
+                                    <br/>
+                                    <strong>Eficiencia: </strong>
+                                    <field name="eficiencia" widget="percentage" invisible="1"/>
+                                    <br/>
                                     <t t-if="record.operador.raw_value">
-                                        <strong>Operador: </strong><field name="operador"/><br/>
+                                        <strong>Operador: </strong>
+                                        <field name="operador"/>
+                                        <br/>
                                     </t>
                                     <div class="progress mb-2">
                                         <div class="progress-bar" role="progressbar" t-att-style="'width: ' + record.progreso.raw_value + '%'">
-                                            <field name="progreso"/>%
+                                            <field name="progreso"/>
+%
                                         </div>
                                     </div>
                                 </div>

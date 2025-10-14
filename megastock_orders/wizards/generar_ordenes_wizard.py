@@ -49,8 +49,16 @@ class GenerarOrdenesWizard(models.TransientModel):
             primera_orden = ordenes[0]
 
             # Calcular totales del grupo
-            metros_totales = sum(orden.metros_lineales for orden in ordenes)
+            # SUMAR metros_lineales_planificados de todas las órdenes del grupo
+            metros_totales = sum(orden.metros_lineales_planificados for orden in ordenes)
+            # SUMAR cortes_planificados de todas las órdenes del grupo
             cortes_totales = sum(orden.cortes_planificados for orden in ordenes)
+
+            # SUMAR sobrantes individuales de todas las órdenes del grupo
+            sobrante_total = sum(orden.sobrante for orden in ordenes)
+
+            # PROMEDIAR la eficiencia del grupo
+            eficiencia_promedio = sum(orden.eficiencia for orden in ordenes) / len(ordenes) if ordenes else 0
 
             # Crear la orden de trabajo
             work_order = self.env['megastock.work.order'].create({
@@ -58,8 +66,8 @@ class GenerarOrdenesWizard(models.TransientModel):
                 'tipo_combinacion': primera_orden.tipo_combinacion,
                 'bobina_utilizada': primera_orden.bobina_utilizada,
                 'ancho_utilizado': primera_orden.ancho_utilizado,
-                'sobrante': primera_orden.sobrante,
-                'eficiencia': primera_orden.eficiencia,
+                'sobrante': sobrante_total,  # SUMA de sobrantes del grupo
+                'eficiencia': eficiencia_promedio,  # PROMEDIO de eficiencias
                 'metros_lineales_totales': metros_totales,
                 'cortes_totales': cortes_totales,
                 'estado': 'programada',
