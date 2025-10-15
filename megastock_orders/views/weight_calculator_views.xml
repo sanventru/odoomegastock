@@ -8,8 +8,7 @@
         <field name="arch" type="xml">
             <form string="MEGASTOCK - Calculador de Pesos">
                 <header>
-                    <button name="calculate_sheet_weight_basic" string="Calcular Peso"
-                            type="object" class="oe_highlight" icon="fa-calculator"/>
+                    <button name="calculate_sheet_weight_basic" string="Calcular Peso" type="object" class="oe_highlight" icon="fa-calculator"/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -56,10 +55,6 @@
     </record>
 
     <!-- Menú para testing -->
-    <menuitem id="menu_weight_calculator_test_v2"
-              name="🧮 Calculador Pesos v2"
-              parent="menu_megastock_orders_root"
-              action="action_weight_calculator_v2"
-              sequence="90"/>
+    <menuitem id="menu_weight_calculator_test_v2" name="🧮 Calculador Pesos v2" parent="menu_megastock_orders_root" action="action_weight_calculator_v2" sequence="90"/>
 
 </odoo>

@@ -321,7 +321,8 @@ class ProductionOrder(models.Model):
                 base_ancho = (2 * record.alto) + record.ancho + 14
                 # Agregar 2mm si troquel = 'si'
                 troquel_extra = 2 if record.troquel == 'si' else 0
-                record.ancho_calculado = base_ancho + troquel_extra
+                #record.ancho_calculado = base_ancho + troquel_extra
+                record.ancho_calculado = base_ancho
             else:
                 record.ancho_calculado = record.ancho or 0
 
