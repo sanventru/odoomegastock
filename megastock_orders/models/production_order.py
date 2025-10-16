@@ -194,7 +194,8 @@ class ProductionOrder(models.Model):
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
     cantidad_planificada = fields.Integer(string='Cantidad Planificada', help='Cantidad que se producirá según la planificación: cortes_planificados * cavidad_efectiva')
     cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator='max')
-    
+    faltante = fields.Integer(string='Faltante', compute='_compute_faltante', store=True, help='Cantidad faltante: cantidad solicitada - cantidad planificada')
+
     # Test calculado automáticamente desde descripción del producto
     test_name = fields.Char(
         string='TEST',
@@ -224,7 +225,10 @@ class ProductionOrder(models.Model):
             if record.largo and record.ancho and record.cantidad:
                 # Convertir de mm² a m²
                 area_unitaria = (record.largo * record.ancho) / 1000000
-                record.area_total = area_unitaria * record.cantidad
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.area_total = area_unitaria * record.cantidad
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.area_total = round(area_unitaria * record.cantidad)
             else:
                 record.area_total = 0.0
     
@@ -232,7 +236,10 @@ class ProductionOrder(models.Model):
     def _compute_porcentaje_cumplimiento(self):
         for record in self:
             if record.cantidad and record.cantidad > 0:
-                record.porcentaje_cumplimiento = (record.cantidad_entregada / record.cantidad) * 100
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.porcentaje_cumplimiento = (record.cantidad_entregada / record.cantidad) * 100
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.porcentaje_cumplimiento = round((record.cantidad_entregada / record.cantidad) * 100)
             else:
                 record.porcentaje_cumplimiento = 0.0
 
@@ -325,6 +332,12 @@ class ProductionOrder(models.Model):
                 record.ancho_calculado = base_ancho
             else:
                 record.ancho_calculado = record.ancho or 0
+
+    @api.depends('cantidad', 'cantidad_planificada')
+    def _compute_faltante(self):
+        """Calcula el faltante: cantidad solicitada - cantidad planificada"""
+        for record in self:
+            record.faltante = (record.cantidad or 0) - (record.cantidad_planificada or 0)
 
     @api.depends('cantidad', 'cavidad')
     def _compute_cantidad_ajustada(self):
@@ -436,7 +449,10 @@ class ProductionOrder(models.Model):
     def _compute_metros_lineales(self):
         for record in self:
             if record.cortes and record.largo:
-                record.metros_lineales = (record.cortes * record.largo) / 1000
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.metros_lineales = (record.cortes * record.largo) / 1000
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.metros_lineales = round((record.cortes * record.largo) / 1000)
             else:
                 record.metros_lineales = 0.0
     
@@ -452,7 +468,10 @@ class ProductionOrder(models.Model):
     def _compute_cantidad_liner_interno(self):
         for record in self:
             if record.liner_interno_ancho and record.liner_interno_gm and record.metros_lineales:
-                record.cantidad_liner_interno = (record.liner_interno_ancho * record.liner_interno_gm) * (record.metros_lineales / 1000000)
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.cantidad_liner_interno = (record.liner_interno_ancho * record.liner_interno_gm) * (record.metros_lineales / 1000000)
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.cantidad_liner_interno = round((record.liner_interno_ancho * record.liner_interno_gm) * (record.metros_lineales / 1000000))
             else:
                 record.cantidad_liner_interno = 0.0
     
@@ -460,7 +479,10 @@ class ProductionOrder(models.Model):
     def _compute_cantidad_medium(self):
         for record in self:
             if record.medium_ancho and record.medium_gm and record.metros_lineales:
-                record.cantidad_medium = (record.medium_ancho * record.medium_gm) * (record.metros_lineales / 1000000) * 1.45
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.cantidad_medium = (record.medium_ancho * record.medium_gm) * (record.metros_lineales / 1000000) * 1.45
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.cantidad_medium = round((record.medium_ancho * record.medium_gm) * (record.metros_lineales / 1000000) * 1.45)
             else:
                 record.cantidad_medium = 0.0
     
@@ -468,7 +490,10 @@ class ProductionOrder(models.Model):
     def _compute_cantidad_liner_externo(self):
         for record in self:
             if record.liner_externo_ancho and record.liner_externo_gm and record.metros_lineales:
-                record.cantidad_liner_externo = (record.liner_externo_ancho * record.liner_externo_gm) * (record.metros_lineales / 1000000)
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # record.cantidad_liner_externo = (record.liner_externo_ancho * record.liner_externo_gm) * (record.metros_lineales / 1000000)
+                # CON redondeo (comentar si NO se requiere redondeo):
+                record.cantidad_liner_externo = round((record.liner_externo_ancho * record.liner_externo_gm) * (record.metros_lineales / 1000000))
             else:
                 record.cantidad_liner_externo = 0.0
     
@@ -828,7 +853,10 @@ class ProductionOrder(models.Model):
             sobrante_ancho += sobrante_individual
 
         # Calcular eficiencia: porcentaje de bobina utilizado
-        eficiencia = (ancho_total_utilizado / bobina_ancho) * 100
+        # SIN redondeo (descomentar si NO se requiere redondeo):
+        # eficiencia = (ancho_total_utilizado / bobina_ancho) * 100
+        # CON redondeo (comentar si NO se requiere redondeo):
+        eficiencia = round((ancho_total_utilizado / bobina_ancho) * 100)
 
         # Calcular metros lineales y cortes totales
         metros_lineales = 0
@@ -904,8 +932,13 @@ class ProductionOrder(models.Model):
         # Limitar entre 0 y 100
         eficiencia_final = max(0, min(100, eficiencia_final))
 
+        # SIN redondeo (descomentar si NO se requiere redondeo):
+        # eficiencia_redondeada = eficiencia_final
+        # CON redondeo (comentar si NO se requiere redondeo):
+        eficiencia_redondeada = round(eficiencia_final)
+
         return {
-            'eficiencia': eficiencia_final,
+            'eficiencia': eficiencia_redondeada,
             'sobrante': sobrante_ancho,
             'metros_lineales': metros_lineales,
             'cortes_totales': cortes_totales
@@ -925,13 +958,38 @@ class ProductionOrder(models.Model):
         num_ordenes = len(combinacion['ordenes'])
         espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
 
+        # Para DUPLAS: Identificar el pedido con menor cantidad
+        orden_menor = None
+        orden_mayor = None
+        metros_lineales_menor = 0
+
+        if combinacion['tipo'] == 'dupla' and num_ordenes == 2:
+            # Identificar cuál orden tiene menor cantidad
+            orden1 = combinacion['ordenes'][0]['orden']
+            orden2 = combinacion['ordenes'][1]['orden']
+
+            if orden1.cantidad <= orden2.cantidad:
+                orden_menor = orden1
+                orden_mayor = orden2
+            else:
+                orden_menor = orden2
+                orden_mayor = orden1
+
+        # Primera pasada: Calcular orden con cantidad menor (o todas si es individual)
         for orden_data in combinacion['ordenes']:
             orden = orden_data['orden']
             multiplicador = orden_data.get('multiplicador', 1)
             ancho_efectivo = orden_data.get('ancho_efectivo', orden.ancho_calculado)
 
             # Calcular sobrante individual de esta orden
-            sobrante_individual = espacio_por_orden - ancho_efectivo
+            # SIN redondeo (descomentar si NO se requiere redondeo):
+            # sobrante_individual = espacio_por_orden - ancho_efectivo
+            # CON redondeo (comentar si NO se requiere redondeo):
+            sobrante_individual = round(espacio_por_orden - ancho_efectivo)
+
+            # Si es DUPLA y esta es la orden MAYOR, saltarla por ahora
+            if combinacion['tipo'] == 'dupla' and orden.id == orden_mayor.id:
+                continue
 
             # Calcular valores de planificación según especificaciones:
             # cavidad_efectiva = cavidad * multiplicador
@@ -946,21 +1004,75 @@ class ProductionOrder(models.Model):
             # 3. metros_lineales_planificados = ((cantidad_planificada * largo_calculado) / cavidad_efectiva) / 1000
             metros_lineales_planificados = 0
             if cavidad_efectiva > 0 and orden.largo_calculado:
-                metros_lineales_planificados = ((cantidad_planificada * orden.largo_calculado) / cavidad_efectiva) / 1000
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # metros_lineales_planificados = ((cantidad_planificada * orden.largo_calculado) / cavidad_efectiva) / 1000
+                # CON redondeo (comentar si NO se requiere redondeo):
+                metros_lineales_planificados = round(((cantidad_planificada * orden.largo_calculado) / cavidad_efectiva) / 1000)
+
+            # Guardar metros_lineales de la orden menor para usar en el cálculo de la orden mayor
+            if combinacion['tipo'] == 'dupla' and orden.id == orden_menor.id:
+                metros_lineales_menor = metros_lineales_planificados
 
             orden.write({
                 'grupo_planificacion': grupo_nombre,
                 'tipo_combinacion': combinacion['tipo'],
                 'ancho_utilizado': combinacion['ancho_utilizado'],
                 'bobina_utilizada': combinacion['bobina'],
-                'sobrante': sobrante_individual,  # Sobrante individual, no del grupo
+                'sobrante': sobrante_individual,
                 'eficiencia': combinacion['eficiencia'],
                 'metros_lineales_planificados': metros_lineales_planificados,
                 'cortes_planificados': cortes_planificados,
                 'cantidad_planificada': cantidad_planificada,
-                # Guardar el multiplicador de cavidad óptimo
                 'cavidad_optimizada': multiplicador,
             })
+
+        # Segunda pasada: Calcular orden MAYOR en duplas con fórmula especial
+        if combinacion['tipo'] == 'dupla' and orden_mayor:
+            # Encontrar orden_data del pedido mayor
+            orden_mayor_data = None
+            for od in combinacion['ordenes']:
+                if od['orden'].id == orden_mayor.id:
+                    orden_mayor_data = od
+                    break
+
+            if orden_mayor_data:
+                multiplicador = orden_mayor_data.get('multiplicador', 1)
+                ancho_efectivo = orden_mayor_data.get('ancho_efectivo', orden_mayor.ancho_calculado)
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # sobrante_individual = espacio_por_orden - ancho_efectivo
+                # CON redondeo (comentar si NO se requiere redondeo):
+                sobrante_individual = round(espacio_por_orden - ancho_efectivo)
+
+                # Fórmula especial para el pedido de cantidad mayor:
+                # cantidad_planificada = ((metros_lineales_menor / largo_calculado_mayor) * 1000)
+                cantidad_planificada = 0
+                if orden_mayor.largo_calculado and orden_mayor.largo_calculado > 0:
+                    cantidad_planificada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+
+                # Para este pedido, cortes_planificados se calcula al revés desde cantidad_planificada
+                cavidad_efectiva = orden_mayor.cavidad * multiplicador if orden_mayor.cavidad else multiplicador
+                cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+
+                # metros_lineales_planificados usa la fórmula estándar
+                metros_lineales_planificados = 0
+                if cavidad_efectiva > 0 and orden_mayor.largo_calculado:
+                    # SIN redondeo (descomentar si NO se requiere redondeo):
+                    # metros_lineales_planificados = ((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000
+                    # CON redondeo (comentar si NO se requiere redondeo):
+                    metros_lineales_planificados = round(((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000)
+
+                orden_mayor.write({
+                    'grupo_planificacion': grupo_nombre,
+                    'tipo_combinacion': combinacion['tipo'],
+                    'ancho_utilizado': combinacion['ancho_utilizado'],
+                    'bobina_utilizada': combinacion['bobina'],
+                    'sobrante': sobrante_individual,
+                    'eficiencia': combinacion['eficiencia'],
+                    'metros_lineales_planificados': metros_lineales_planificados,
+                    'cortes_planificados': cortes_planificados,
+                    'cantidad_planificada': cantidad_planificada,
+                    'cavidad_optimizada': multiplicador,
+                })
 
     def action_generar_ordenes_trabajo(self):
         """Acción para abrir wizard de generación de órdenes de trabajo"""
