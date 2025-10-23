@@ -996,7 +996,10 @@ class ProductionOrder(models.Model):
             cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
 
             # 1. cortes_planificados = cantidad / cavidad_efectiva
-            cortes_planificados = int(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+            # SIN redondeo (descomentar si NO se requiere redondeo):
+            # cortes_planificados = int(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+            # CON redondeo (comentar si NO se requiere redondeo):
+            cortes_planificados = round(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
 
             # 2. cantidad_planificada = cortes_planificados * cavidad_efectiva
             cantidad_planificada = cortes_planificados * cavidad_efectiva
@@ -1047,11 +1050,17 @@ class ProductionOrder(models.Model):
                 # cantidad_planificada = ((metros_lineales_menor / largo_calculado_mayor) * 1000)
                 cantidad_planificada = 0
                 if orden_mayor.largo_calculado and orden_mayor.largo_calculado > 0:
-                    cantidad_planificada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+                    # SIN redondeo (descomentar si NO se requiere redondeo):
+                    # cantidad_planificada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+                    # CON redondeo (comentar si NO se requiere redondeo):
+                    cantidad_planificada = round((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
 
                 # Para este pedido, cortes_planificados se calcula al revés desde cantidad_planificada
                 cavidad_efectiva = orden_mayor.cavidad * multiplicador if orden_mayor.cavidad else multiplicador
-                cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+                # SIN redondeo (descomentar si NO se requiere redondeo):
+                # cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+                # CON redondeo (comentar si NO se requiere redondeo):
+                cortes_planificados = round(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
 
                 # metros_lineales_planificados usa la fórmula estándar
                 metros_lineales_planificados = 0
