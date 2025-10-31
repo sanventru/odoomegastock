@@ -40,6 +40,59 @@ class ProductionOrder(models.Model):
         ('mm', 'M/M')
     ], string='Sustrato', help='Tipo de sustrato extraído del CSV')
 
+    over_superior = fields.Float(string='Over Superior', help='Valor de over superior')
+    over_inferior = fields.Float(string='Over Inferior', help='Valor de over inferior')
+
+    solapa = fields.Float(
+        string='Solapa (mm)',
+        compute='_compute_solapa',
+        store=True,
+        help='Solapa calculada: (ancho / 2) + compensación de ancho de la flauta'
+    )
+
+    a1 = fields.Float(
+        string='A1 (mm)',
+        compute='_compute_a1',
+        store=True,
+        help='A1 calculado: (ancho / 2) + (over_superior / 2) + compensación de ancho de la flauta'
+    )
+
+    a2 = fields.Float(
+        string='A2 (mm)',
+        compute='_compute_a2',
+        store=True,
+        help='A2 calculado: alto + compensación de alto de la flauta'
+    )
+
+    a3 = fields.Float(
+        string='A3 (mm)',
+        compute='_compute_a3',
+        store=True,
+        help='A3 calculado: (ancho / 2) + (over_superior / 2) + compensación de ancho de la flauta'
+    )
+
+    # Índices de flauta
+    alto_indice_flauta = fields.Float(
+        string='Alto (Índice Flauta) (mm)',
+        compute='_compute_alto_indice_flauta',
+        store=True,
+        help='Alto del pedido + compensación de alto de la flauta'
+    )
+
+    ancho_indice_flauta = fields.Float(
+        string='Ancho (Índice Flauta) (mm)',
+        compute='_compute_ancho_indice_flauta',
+        store=True,
+        help='Ancho del pedido + compensación de ancho de la flauta'
+    )
+
+    largo_indice_flauta = fields.Float(
+        string='Largo (Índice Flauta) (mm)',
+        compute='_compute_largo_indice_flauta',
+        store=True,
+        help='Largo del pedido + compensación de largo de la flauta'
+    )
+
     troquel = fields.Selection([
         ('si', 'SI'),
         ('no', 'NO')
@@ -219,12 +272,12 @@ class ProductionOrder(models.Model):
     area_total = fields.Float(string='Área Total (m²)', compute='_compute_area_total', store=True)
     porcentaje_cumplimiento = fields.Float(string='% Cumplimiento', compute='_compute_porcentaje_cumplimiento', store=True)
     
-    @api.depends('largo', 'ancho', 'cantidad')
+    @api.depends('largo_indice_flauta', 'ancho_indice_flauta', 'cantidad')
     def _compute_area_total(self):
         for record in self:
-            if record.largo and record.ancho and record.cantidad:
+            if record.largo_indice_flauta and record.ancho_indice_flauta and record.cantidad:
                 # Convertir de mm² a m²
-                area_unitaria = (record.largo * record.ancho) / 1000000
+                area_unitaria = (record.largo_indice_flauta * record.ancho_indice_flauta) / 1000000
                 # SIN redondeo (descomentar si NO se requiere redondeo):
                 # record.area_total = area_unitaria * record.cantidad
                 # CON redondeo (comentar si NO se requiere redondeo):
@@ -284,23 +337,23 @@ class ProductionOrder(models.Model):
             record._compute_test_from_description()
         return True
 
-    @api.depends('alto')
+    @api.depends('alto_indice_flauta')
     def _compute_largo_rayado(self):
-        """Calcula largo rayado según fórmula: alto + 2"""
+        """Calcula largo rayado según fórmula: alto_indice_flauta + 2"""
         for record in self:
-            if record.alto:
-                record.largo_rayado = record.alto + 2
+            if record.alto_indice_flauta:
+                record.largo_rayado = record.alto_indice_flauta + 2
             else:
-                record.largo_rayado = 2.0  # Valor por defecto si alto es 0
+                record.largo_rayado = 2.0  # Valor por defecto si alto_indice_flauta es 0
 
-    @api.depends('alto')
+    @api.depends('alto_indice_flauta')
     def _compute_alto_rayado(self):
-        """Calcula alto rayado según fórmula: alto + 2"""
+        """Calcula alto rayado según fórmula: alto_indice_flauta + 2"""
         for record in self:
-            if record.alto:
-                record.alto_rayado = record.alto + 2
+            if record.alto_indice_flauta:
+                record.alto_rayado = record.alto_indice_flauta + 2
             else:
-                record.alto_rayado = 2.0  # Valor por defecto si alto es 0
+                record.alto_rayado = 2.0  # Valor por defecto si alto_indice_flauta es 0
 
     @api.depends('ancho_calculado', 'alto_rayado')
     def _compute_ancho_rayado(self):
@@ -311,27 +364,179 @@ class ProductionOrder(models.Model):
             else:
                 record.ancho_rayado = 0.0
 
-    @api.depends('largo', 'alto')
+    @api.depends('largo_indice_flauta', 'alto_indice_flauta')
     def _compute_largo_calculado(self):
-        """Calcula largo real según fórmula: 2*alto + largo + 8"""
+        """Calcula largo real según fórmula: 2*alto_indice_flauta + largo_indice_flauta + 8"""
         for record in self:
-            if record.largo and record.alto:
-                record.largo_calculado = (2 * record.alto) + record.largo + 8
+            if record.largo_indice_flauta and record.alto_indice_flauta:
+                record.largo_calculado = (2 * record.alto_indice_flauta) + record.largo_indice_flauta + 8
             else:
-                record.largo_calculado = record.largo or 0
+                record.largo_calculado = record.largo_indice_flauta or 0
 
-    @api.depends('ancho', 'alto', 'troquel')
+    @api.depends('ancho_indice_flauta', 'alto_indice_flauta', 'troquel')
     def _compute_ancho_calculado(self):
-        """Calcula ancho real según fórmula: 2*alto + ancho + 14 + (2 si troquel=SI)"""
+        """Calcula ancho real según fórmula: 2*alto_indice_flauta + ancho_indice_flauta + 14 + (2 si troquel=SI)"""
         for record in self:
-            if record.ancho and record.alto:
-                base_ancho = (2 * record.alto) + record.ancho + 14
+            if record.ancho_indice_flauta and record.alto_indice_flauta:
+                base_ancho = (2 * record.alto_indice_flauta) + record.ancho_indice_flauta + 14
                 # Agregar 2mm si troquel = 'si'
                 troquel_extra = 2 if record.troquel == 'si' else 0
                 #record.ancho_calculado = base_ancho + troquel_extra
                 record.ancho_calculado = base_ancho
             else:
-                record.ancho_calculado = record.ancho or 0
+                record.ancho_calculado = record.ancho_indice_flauta or 0
+
+    @api.depends('ancho', 'flauta')
+    def _compute_solapa(self):
+        """Calcula solapa: (ancho / 2) + compensación de ancho de la flauta"""
+        for record in self:
+            solapa = 0.0
+            if record.ancho:
+                # Calcular base: ancho / 2
+                solapa = record.ancho / 2
+
+                # Buscar compensación de la flauta
+                if record.flauta:
+                    flauta_obj = self.env['megastock.flauta'].search([
+                        ('codigo', '=', record.flauta.upper().strip())
+                    ], limit=1)
+
+                    if flauta_obj:
+                        solapa += flauta_obj.compensacion_ancho
+
+            record.solapa = solapa
+
+    @api.depends('ancho', 'over_superior', 'flauta')
+    def _compute_a1(self):
+        """Calcula A1: (ancho / 2) + (over_superior / 2) + compensación de ancho de la flauta"""
+        for record in self:
+            a1 = 0.0
+
+            # Calcular: (ancho / 2) + (over_superior / 2)
+            if record.ancho:
+                a1 += record.ancho / 2
+
+            if record.over_superior:
+                a1 += record.over_superior / 2
+
+            # Buscar y sumar compensación de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    a1 += flauta_obj.compensacion_ancho
+
+            record.a1 = a1
+
+    @api.depends('alto', 'flauta')
+    def _compute_a2(self):
+        """Calcula A2: alto + compensación de alto de la flauta"""
+        for record in self:
+            a2 = 0.0
+
+            # Calcular base: alto
+            if record.alto:
+                a2 = record.alto
+
+            # Buscar y sumar compensación de alto de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    a2 += flauta_obj.compensacion_alto
+
+            record.a2 = a2
+
+    @api.depends('ancho', 'over_superior', 'flauta')
+    def _compute_a3(self):
+        """Calcula A3: (ancho / 2) + (over_superior / 2) + compensación de ancho de la flauta (igual que A1)"""
+        for record in self:
+            a3 = 0.0
+
+            # Calcular: (ancho / 2) + (over_superior / 2)
+            if record.ancho:
+                a3 += record.ancho / 2
+
+            if record.over_superior:
+                a3 += record.over_superior / 2
+
+            # Buscar y sumar compensación de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    a3 += flauta_obj.compensacion_ancho
+
+            record.a3 = a3
+
+    @api.depends('alto', 'flauta')
+    def _compute_alto_indice_flauta(self):
+        """Calcula Alto (Índice Flauta): alto + compensación de alto de la flauta"""
+        for record in self:
+            alto_indice = 0.0
+
+            # Calcular base: alto
+            if record.alto:
+                alto_indice = record.alto
+
+            # Buscar y sumar compensación de alto de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    alto_indice += flauta_obj.compensacion_alto
+
+            record.alto_indice_flauta = alto_indice
+
+    @api.depends('ancho', 'flauta')
+    def _compute_ancho_indice_flauta(self):
+        """Calcula Ancho (Índice Flauta): ancho + compensación de ancho de la flauta"""
+        for record in self:
+            ancho_indice = 0.0
+
+            # Calcular base: ancho
+            if record.ancho:
+                ancho_indice = record.ancho
+
+            # Buscar y sumar compensación de ancho de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    ancho_indice += flauta_obj.compensacion_ancho
+
+            record.ancho_indice_flauta = ancho_indice
+
+    @api.depends('largo', 'flauta')
+    def _compute_largo_indice_flauta(self):
+        """Calcula Largo (Índice Flauta): largo + compensación de largo de la flauta"""
+        for record in self:
+            largo_indice = 0.0
+
+            # Calcular base: largo
+            if record.largo:
+                largo_indice = record.largo
+
+            # Buscar y sumar compensación de largo de la flauta
+            if record.flauta:
+                flauta_obj = self.env['megastock.flauta'].search([
+                    ('codigo', '=', record.flauta.upper().strip())
+                ], limit=1)
+
+                if flauta_obj:
+                    largo_indice += flauta_obj.compensacion_largo
+
+            record.largo_indice_flauta = largo_indice
 
     @api.depends('cantidad', 'cantidad_planificada')
     def _compute_faltante(self):
@@ -445,14 +650,14 @@ class ProductionOrder(models.Model):
             else:
                 record.cortes = 0
     
-    @api.depends('cortes', 'largo')
+    @api.depends('cortes', 'largo_indice_flauta')
     def _compute_metros_lineales(self):
         for record in self:
-            if record.cortes and record.largo:
+            if record.cortes and record.largo_indice_flauta:
                 # SIN redondeo (descomentar si NO se requiere redondeo):
-                # record.metros_lineales = (record.cortes * record.largo) / 1000
+                # record.metros_lineales = (record.cortes * record.largo_indice_flauta) / 1000
                 # CON redondeo (comentar si NO se requiere redondeo):
-                record.metros_lineales = round((record.cortes * record.largo) / 1000)
+                record.metros_lineales = round((record.cortes * record.largo_indice_flauta) / 1000)
             else:
                 record.metros_lineales = 0.0
     
@@ -497,11 +702,11 @@ class ProductionOrder(models.Model):
             else:
                 record.cantidad_liner_externo = 0.0
     
-    @api.onchange('cortes', 'largo')
+    @api.onchange('cortes', 'largo_indice_flauta')
     def _onchange_cortes_largo(self):
-        """Actualizar metros lineales cuando cambie cortes o largo"""
-        if self.cortes and self.largo:
-            self.metros_lineales = (self.cortes * self.largo) / 1000
+        """Actualizar metros lineales cuando cambie cortes o largo_indice_flauta"""
+        if self.cortes and self.largo_indice_flauta:
+            self.metros_lineales = (self.cortes * self.largo_indice_flauta) / 1000
         else:
             self.metros_lineales = 0.0
     
@@ -598,7 +803,7 @@ class ProductionOrder(models.Model):
             }
         }
 
-    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False):
+    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None):
         """Algoritmo de optimización basado en el archivo Excel de trimado
 
         Args:
@@ -606,18 +811,21 @@ class ProductionOrder(models.Model):
             test_principal: Número de test principal para la producción
             cavidad_limite: Límite superior para multiplicar ancho_calculado (default: 1)
             bobina_unica: Si True, todos los grupos usan una sola bobina (default: False)
+            bobinas_disponibles: Lista de anchos de bobinas a considerar (default: None, usa todas las activas)
         """
         from odoo.exceptions import UserError
 
-        # Obtener anchos de bobina disponibles desde la configuración
-        Bobina = self.env['megastock.bobina']
-        bobinas_disponibles = Bobina.get_bobinas_activas()
+        # Si no se proporcionan bobinas específicas, obtener todas las activas
+        if bobinas_disponibles is None:
+            Bobina = self.env['megastock.bobina']
+            bobinas_disponibles = Bobina.get_bobinas_activas()
 
-        # Si no hay bobinas configuradas, mostrar error
+        # Si no hay bobinas configuradas o seleccionadas, mostrar error
         if not bobinas_disponibles:
             raise UserError(
-                "No hay bobinas activas configuradas. "
-                "Ve a Configuración > Bobinas y configura al menos una bobina activa."
+                "No hay bobinas disponibles para planificar. "
+                "Ve a Configuración > Bobinas y configura al menos una bobina activa, "
+                "o selecciona bobinas en el wizard de planificación."
             )
 
         # ESTRATEGIA 1: BOBINA ÚNICA - Todos los grupos usan la misma bobina

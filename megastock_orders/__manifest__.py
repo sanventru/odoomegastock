@@ -30,6 +30,7 @@ Funcionalidades:
         'views/production_order_views.xml',
         'views/bobina_views.xml',
         'views/paper_recipe_views.xml',
+        'views/flauta_views.xml',
         'views/proceso_preprinter_views.xml',
         'views/proceso_microcorrugado_views.xml',
         'views/proceso_dobladora_views.xml',
@@ -50,4 +51,5 @@ Funcionalidades:
     'application': True,
     'auto_install': False,
     'sequence': 110,
+    'post_init_hook': 'post_init_hook',
 }

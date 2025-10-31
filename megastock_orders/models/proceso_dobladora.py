@@ -36,6 +36,22 @@ class ProcesoDobladora(models.Model):
         'dobladora_id',
         string='Materiales'
     )
+    personal_ids = fields.One2many(
+        'megastock.proceso.dobladora.personal',
+        'dobladora_id',
+        string='Personal de Doblado'
+    )
+
+    # Desperdicios
+    cuadre_inicio_final = fields.Float(string='Cuadre Inicio Final de Corrido', digits=(16, 2))
+    desperdicio_operativo = fields.Float(string='Operativo', digits=(16, 2))
+    desperdicio_otros = fields.Text(string='Otros (Especifique)')
+
+    # Tipo de Goma
+    goma_dl2 = fields.Float(string='GOMA ADHESIVO DL-2', digits=(16, 2))
+    goma_dv6 = fields.Float(string='GOMA ADHESIVO DV-6', digits=(16, 2))
+    goma_ca50 = fields.Float(string='GOMA ADHESIVO CA-50', digits=(16, 2))
+
     observaciones = fields.Text(string='Observaciones')
 
     def name_get(self):
@@ -142,3 +158,39 @@ class ProcesoDobleadoraLine(models.Model):
     def _onchange_producto_id(self):
         if self.producto_id:
             self.uom_id = self.producto_id.uom_id
+
+
+class ProcesoDobleadoraPersonal(models.Model):
+    _name = 'megastock.proceso.dobladora.personal'
+    _description = 'Personal de Doblado'
+
+    dobladora_id = fields.Many2one(
+        'megastock.proceso.dobladora',
+        string='Dobladora',
+        required=True,
+        ondelete='cascade'
+    )
+    cantidad_doblada = fields.Float(string='Cantidad Doblada', digits=(16, 2))
+    fecha_doblado = fields.Date(string='Fecha Doblado')
+    empleado_id = fields.Many2one(
+        'hr.employee',
+        string='Nombre Empleado',
+        required=True
+    )
+    hora_inicial = fields.Datetime(string='Hora Inicial')
+    hora_final = fields.Datetime(string='Hora Final')
+    total_horas = fields.Float(
+        string='Total Horas',
+        compute='_compute_total_horas',
+        store=True,
+        digits=(16, 2)
+    )
+
+    @api.depends('hora_inicial', 'hora_final')
+    def _compute_total_horas(self):
+        for record in self:
+            if record.hora_inicial and record.hora_final:
+                delta = record.hora_final - record.hora_inicial
+                record.total_horas = delta.total_seconds() / 3600.0
+            else:
+                record.total_horas = 0.0

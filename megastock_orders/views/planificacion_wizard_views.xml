@@ -14,14 +14,11 @@
                         </p>
                     </group>
                     <group>
-                        <field name="cavidad_limite" placeholder="Ej: 4"/>
+                        <field name="bobinas_seleccionadas" widget="many2many_tags"/>
                         <p class="text-muted">
-                            Cavidad límite
+                            Seleccione las bobinas (anchos) a utilizar en la planificación
                         </p>
                     </group>
-                </group>
-                <group>
-                    <field name="bobina_unica"/>
                 </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>
@@ -29,13 +26,15 @@
                         <li>
                             <strong>Test Principal:</strong> Define la receta de papel que se utilizará para la producción.</li>
                         <li>
-                            <strong>Cavidad Límite:</strong> El algoritmo probará multiplicar el ancho_calculado de cada orden por 1, 2, 3... hasta este valor, calculando todas las combinaciones posibles y eligiendo la que minimice el desperdicio.</li>
-                        <li>
-                            <strong>Bobina Única:</strong> Si está marcado, todos los grupos usarán una sola bobina (la que minimice el desperdicio total). Si no está marcado, cada grupo elegirá independientemente la bobina que minimice su propio desperdicio.</li>
+                            <strong>Bobinas a Utilizar:</strong> Seleccione las bobinas (anchos) que desea considerar.
+                            <ul>
+                                <li>Si selecciona <strong>1 bobina</strong>: Todos los grupos usarán esa bobina.</li>
+                                <li>Si selecciona <strong>2 o más bobinas</strong>: Cada grupo elegirá la mejor de las seleccionadas para minimizar su desperdicio.</li>
+                            </ul>
+                        </li>
                     </ul>
                     <p class="mb-0">
-                        <strong>Ejemplo:</strong> Si cavidad_limite = 4, para una orden con ancho_calculado = 500mm,
-                        el algoritmo probará 500mm, 1000mm, 1500mm y 2000mm, buscando la mejor combinación con las demás órdenes.
+                        <em>Nota: El algoritmo utiliza automáticamente cavidad límite = 4 para optimizar las combinaciones.</em>
                     </p>
                 </div>
                 <footer>

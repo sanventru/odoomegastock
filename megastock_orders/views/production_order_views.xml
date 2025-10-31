@@ -37,6 +37,9 @@ if records:
                 <field name="descripcion" optional="hide"/>
 
                 <field name="flauta" optional="hide"/>
+                <field name="sustrato" optional="hide"/>
+                <field name="over_superior" optional="hide"/>
+                <field name="over_inferior" optional="hide"/>
 
                 <!-- Campos opcionales - Cantidades -->
                 <field name="cantidad" optional="show"/>
@@ -49,6 +52,10 @@ if records:
                 <field name="largo" optional="hide"/>
                 <field name="ancho" optional="hide"/>
                 <field name="alto" optional="hide"/>
+                <field name="solapa" optional="show"/>
+                <field name="a1" optional="show"/>
+                <field name="a2" optional="show"/>
+                <field name="a3" optional="show"/>
                 <field name="largo_calculado" optional="show"/>
                 <field name="ancho_calculado" optional="show"/>
                 <field name="metros_lineales_calculados" optional="show"/>
@@ -57,6 +64,11 @@ if records:
                 <field name="largo_rayado" optional="show"/>
                 <field name="ancho_rayado" optional="show"/>
                 <field name="alto_rayado" optional="show"/>
+
+                <!-- Campos calculados - Índice Flauta -->
+                <field name="alto_indice_flauta" optional="show"/>
+                <field name="ancho_indice_flauta" optional="show"/>
+                <field name="largo_indice_flauta" optional="show"/>
 
                 <!-- Campos calculados - Pesos -->
                 <field name="peso_lamina_calculado" optional="show"/>
@@ -151,6 +163,9 @@ if records:
                             <field name="cantidad"/>
                             <field name="cantidad_entregada"/>
                             <field name="cavidad"/>
+                            <field name="sustrato"/>
+                            <field name="over_superior"/>
+                            <field name="over_inferior"/>
                             <field name="troquel"/>
                             <field name="test_name" string="TEST"/>
                         </group>
@@ -167,6 +182,10 @@ if records:
 
                     <group string="📊 Campos Calculados">
                         <group name="calculated_dimensions" string="Dimensiones Calculadas">
+                            <field name="solapa" readonly="1"/>
+                            <field name="a1" readonly="1"/>
+                            <field name="a2" readonly="1"/>
+                            <field name="a3" readonly="1"/>
                             <field name="largo_calculado" readonly="1"/>
                             <field name="ancho_calculado" readonly="1"/>
                             <field name="cantidad_ajustada" readonly="1"/>
@@ -176,6 +195,14 @@ if records:
                             <field name="largo_rayado" readonly="1"/>
                             <field name="ancho_rayado" readonly="1"/>
                             <field name="alto_rayado" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="📏 Índices de Flauta">
+                        <group name="indice_flauta_dimensions" string="Dimensiones con Índice de Flauta">
+                            <field name="alto_indice_flauta" readonly="1"/>
+                            <field name="ancho_indice_flauta" readonly="1"/>
+                            <field name="largo_indice_flauta" readonly="1"/>
                         </group>
                     </group>
 
@@ -269,6 +296,17 @@ if records:
                 <field name="cliente"/>
                 <field name="codigo"/>
                 <field name="descripcion"/>
+                <field name="flauta"/>
+                <field name="sustrato"/>
+                <field name="solapa"/>
+                <field name="a1"/>
+                <field name="a2"/>
+                <field name="a3"/>
+                <field name="alto_indice_flauta"/>
+                <field name="ancho_indice_flauta"/>
+                <field name="largo_indice_flauta"/>
+                <field name="over_superior"/>
+                <field name="over_inferior"/>
                 <field name="numero_troquel"/>
 
                 <filter string="Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>

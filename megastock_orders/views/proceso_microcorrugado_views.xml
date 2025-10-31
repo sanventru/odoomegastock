@@ -30,6 +30,74 @@
                     </group>
 
                     <notebook>
+                        <page string="Materia Prima" name="materia_prima">
+                            <field name="materia_prima_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Materia Prima" editable="bottom">
+                                    <field name="codigo_imp"/>
+                                    <field name="ancho"/>
+                                    <field name="gramaje"/>
+                                    <field name="peso_inicial"/>
+                                    <field name="peso_final"/>
+                                    <field name="consumo_kg" readonly="1"/>
+                                    <field name="metros_producidos"/>
+                                    <field name="medium_tiro_corru_1"/>
+                                    <field name="medium_tiro_corru_2"/>
+                                    <field name="medium_tiro_corru_3"/>
+                                    <field name="medium_tiro_corru_4"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="TIRO" name="tiro">
+                            <field name="tiro_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="TIRO" editable="bottom">
+                                    <field name="medium_tiro_corru_1"/>
+                                    <field name="medium_tiro_corru_2"/>
+                                    <field name="medium_tiro_corru_3"/>
+                                    <field name="medium_tiro_corru_4"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="RETIRO" name="retiro">
+                            <field name="retiro_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="RETIRO" editable="bottom">
+                                    <field name="medium_retiro_corru_1"/>
+                                    <field name="medium_retiro_corru_2"/>
+                                    <field name="medium_retiro_corru_3"/>
+                                    <field name="medium_retiro_corru_4"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Personal de Corrugación" name="personal">
+                            <field name="personal_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Personal de Corrugación" editable="bottom">
+                                    <field name="empleado_id"/>
+                                    <field name="turno"/>
+                                    <field name="hora_ingreso"/>
+                                    <field name="hora_final"/>
+                                    <field name="horas_total" readonly="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Cuadre Inicio de Corrida" name="cuadre_corrida">
+                            <group>
+                                <group string="Cuadre Inicio de Corrida">
+                                    <field name="cuadre_empalme" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="cuadre_operativo" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="cuadre_causa_operativo" nolabel="1" placeholder="Causa Operativo..." attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                <field name="cuadre_otros_especifique" nolabel="1" placeholder="Otros Especifique..." attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                            </group>
+                        </page>
+                        <page string="Desperdicios y Cantidad" name="desperdicios">
+                            <group>
+                                <group string="Resultados Finales">
+                                    <field name="sumatoria_total_desperdicios" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="cantidad_entregada" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                </group>
+                            </group>
+                        </page>
                         <page string="Materiales" name="materiales">
                             <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
                                 <tree string="Materiales" editable="bottom">

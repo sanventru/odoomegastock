@@ -210,10 +210,10 @@ class OrderImportWizard(models.TransientModel):
             }
             return troquel_map.get(troquel_csv.upper(), 'no') if troquel_csv else 'no'
 
-        # Campos según estructura CSV actualizada (18 columnas)
+        # Campos según estructura CSV actualizada (20 columnas)
         # 0=ORDEN, 1=PEDIDO, 2=CODIGO, 3=CLIENTE, 4=DESCRIPCIÓN, 5=FECHA_PEDIDO_CLIENTE,
         # 6=LARGO, 7=ANCHO, 8=ALTO, 9=CANTIDAD, 10=FECHA_ENTREGA_CLIENTE, 11=FECHA_PRODUCCION,
-        # 12=CUMPLIMIENTO, 13=TIPO, 14=FLAUTA, 15=TEST, 16=SUSTRATO, 17=TROQUEL
+        # 12=CUMPLIMIENTO, 13=TIPO, 14=FLAUTA, 15=TEST, 16=SUSTRATO, 17=OVER SUPERIOR, 18=OVER INFERIOR, 19=TROQUEL
         # LARGO_RAYADO = alto + 2, ALTO_RAYADO = alto + 2, ANCHO_RAYADO = ancho_calculado - (alto_rayado * 2)
         order_data = {
             'orden_produccion': safe_get(0),                 # ORDEN DE PRODUCCION
@@ -232,7 +232,9 @@ class OrderImportWizard(models.TransientModel):
             'tipo_producto': map_tipo_producto(safe_get(13)), # TIPO
             'flauta': safe_get(14),                          # FLAUTA
             'sustrato': map_sustrato(safe_get(16)),          # SUSTRATO
-            'troquel': map_troquel(safe_get(17)),            # TROQUEL
+            'over_superior': safe_float(safe_get(17)),       # OVER SUPERIOR
+            'over_inferior': safe_float(safe_get(18)),       # OVER INFERIOR
+            'troquel': map_troquel(safe_get(19)),            # TROQUEL
             # largo_rayado es calculado: alto + 2
             # alto_rayado es calculado: alto + 2
             # ancho_rayado es calculado: ancho_calculado - (alto_rayado * 2)

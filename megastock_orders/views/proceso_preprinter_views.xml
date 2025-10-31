@@ -30,6 +30,52 @@
                     </group>
 
                     <notebook>
+                        <page string="Color" name="color">
+                            <field name="tinta_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Tintas" editable="bottom">
+                                    <field name="tinta_id"/>
+                                    <field name="porcentaje"/>
+                                    <field name="peso_inicial"/>
+                                    <field name="peso_final"/>
+                                    <field name="consumo_real" readonly="1"/>
+                                    <field name="viscosidad"/>
+                                    <field name="ph"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Desperdicios" name="desperdicios">
+                            <group>
+                                <group string="Tipos de Desperdicio">
+                                    <field name="cantidad_corrugada" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="cuadre" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="operativo_tinta_mala" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="caida_maltrato_transportacion" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                </group>
+                                <group string="">
+                                    <field name="maltrato_montacargas" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="combada" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="otros_desperdicios" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="suma_total_desperdicios" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Planchas Procesadas" name="planchas">
+                            <group>
+                                <field name="planchas_procesadas" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                            </group>
+                        </page>
+                        <page string="Personal Flexografía" name="personal">
+                            <field name="personal_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Personal" editable="bottom">
+                                    <field name="empleado_id"/>
+                                    <field name="turno"/>
+                                    <field name="tarea_hora_inicio"/>
+                                    <field name="tarea_hora_final"/>
+                                    <field name="fondo_hora_inicio"/>
+                                    <field name="fondo_hora_final"/>
+                                </tree>
+                            </field>
+                        </page>
                         <page string="Materiales" name="materiales">
                             <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
                                 <tree string="Materiales" editable="bottom">

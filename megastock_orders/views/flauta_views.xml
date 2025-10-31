@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista de Formulario -->
+    <record id="view_flauta_form" model="ir.ui.view">
+        <field name="name">megastock.flauta.form</field>
+        <field name="model">megastock.flauta</field>
+        <field name="arch" type="xml">
+            <form string="Flauta">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <widget name="web_ribbon" title="Inactivo" bg_color="bg-danger" attrs="{'invisible': [('activo', '=', True)]}"/>
+                    </div>
+                    <group>
+                        <group name="informacion_basica" string="Información Básica">
+                            <field name="codigo"/>
+                            <field name="nombre"/>
+                            <field name="activo"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group name="compensaciones" string="Valores de Compensación">
+                            <field name="compensacion_largo"/>
+                            <field name="compensacion_ancho"/>
+                            <field name="compensacion_alto"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista -->
+    <record id="view_flauta_tree" model="ir.ui.view">
+        <field name="name">megastock.flauta.tree</field>
+        <field name="model">megastock.flauta</field>
+        <field name="arch" type="xml">
+            <tree string="Catálogo de Flautas" decoration-muted="not activo">
+                <field name="codigo"/>
+                <field name="nombre"/>
+                <field name="compensacion_largo"/>
+                <field name="compensacion_ancho"/>
+                <field name="compensacion_alto"/>
+                <field name="activo"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista de Búsqueda -->
+    <record id="view_flauta_search" model="ir.ui.view">
+        <field name="name">megastock.flauta.search</field>
+        <field name="model">megastock.flauta</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Flautas">
+                <field name="codigo"/>
+                <field name="nombre"/>
+                <filter string="Activos" name="activos" domain="[('activo', '=', True)]"/>
+                <filter string="Inactivos" name="inactivos" domain="[('activo', '=', False)]"/>
+                <group expand="0" string="Agrupar Por">
+                    <filter string="Estado" name="group_activo" context="{'group_by': 'activo'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana -->
+    <record id="action_flauta" model="ir.actions.act_window">
+        <field name="name">Catálogo de Flautas</field>
+        <field name="res_model">megastock.flauta</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_flauta_search"/>
+        <field name="context">{'search_default_activos': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay flautas registradas!
+            </p>
+            <p>
+                Crea el catálogo de tipos de flauta con sus valores de compensación.
+            </p>
+        </field>
+    </record>
+</odoo>

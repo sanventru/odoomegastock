@@ -30,6 +30,21 @@
                     </group>
 
                     <notebook>
+                        <page string="Personal de Empaque" name="personal">
+                            <field name="personal_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Personal de Empaque" editable="bottom">
+                                    <field name="empleado_id"/>
+                                    <field name="hora_inicial"/>
+                                    <field name="hora_final"/>
+                                    <field name="total_horas" readonly="1"/>
+                                    <field name="cantidad_empacada"/>
+                                    <field name="paquetes"/>
+                                    <field name="papel_empaque"/>
+                                    <field name="nota"/>
+                                    <field name="fecha_entrega"/>
+                                </tree>
+                            </field>
+                        </page>
                         <page string="Materiales" name="materiales">
                             <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
                                 <tree string="Materiales" editable="bottom">

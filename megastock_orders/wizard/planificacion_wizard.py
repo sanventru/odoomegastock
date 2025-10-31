@@ -15,28 +15,29 @@ class PlanificacionWizard(models.TransientModel):
 
     cavidad_limite = fields.Integer(
         string='Cavidad Límite',
+        required=False,
+        default=4,
+        readonly=True,
+        help='Cavidad límite fija en 4 (no modificable)'
+    )
+
+    bobinas_seleccionadas = fields.Many2many(
+        'megastock.bobina',
+        string='Bobinas a Utilizar',
         required=True,
-        default=1,
-        help='Cavidad'
+        domain="[('activa', '=', True)]",
+        help='Seleccione las bobinas (anchos) que desea considerar para la planificación. '
+             'Si selecciona 1 bobina: todos los grupos usarán esa bobina. '
+             'Si selecciona 2+ bobinas: cada grupo elegirá la mejor de las seleccionadas.'
     )
-
-    bobina_unica = fields.Boolean(
-        string='Bobina Única',
-        default=False,
-        help='Si está marcado, todos los grupos usarán una sola bobina (la que minimice el desperdicio total). '
-             'Si no está marcado, cada grupo elegirá la bobina que minimice su propio desperdicio.'
-    )
-
-    @api.constrains('cavidad_limite')
-    def _check_cavidad_limite(self):
-        """Validar que la cavidad límite sea mayor a 0"""
-        for wizard in self:
-            if wizard.cavidad_limite <= 0:
-                raise UserError('La cavidad límite debe ser mayor a 0.')
 
     def action_planificar(self):
         """Ejecuta la planificación con los parámetros ingresados"""
         self.ensure_one()
+
+        # Validar que se hayan seleccionado bobinas
+        if not self.bobinas_seleccionadas:
+            raise UserError('Debe seleccionar al menos una bobina para planificar.')
 
         # Obtener las órdenes seleccionadas desde el contexto
         active_ids = self.env.context.get('active_ids', [])
@@ -60,12 +61,19 @@ class PlanificacionWizard(models.TransientModel):
                 }
             }
 
+        # Extraer los anchos de las bobinas seleccionadas y eliminar duplicados
+        anchos_seleccionados = list(set(self.bobinas_seleccionadas.mapped('ancho')))
+
+        # Determinar estrategia automáticamente según cantidad de anchos únicos
+        bobina_unica = len(anchos_seleccionados) == 1
+
         # Ejecutar algoritmo de optimización con los parámetros
         resultado = ordenes_pendientes[0]._optimizar_ordenes(
             ordenes_pendientes,
             test_principal=self.test_principal,
             cavidad_limite=self.cavidad_limite,
-            bobina_unica=self.bobina_unica
+            bobina_unica=bobina_unica,
+            bobinas_disponibles=anchos_seleccionados
         )
 
         # Construir mensaje con información del resultado
@@ -73,11 +81,13 @@ class PlanificacionWizard(models.TransientModel):
         mensaje += f'\nEficiencia promedio: {resultado["eficiencia_promedio"]:.1f}%'
         mensaje += f'\nDesperdicio total: {resultado["desperdicio_total"]:.0f}mm'
 
-        if self.bobina_unica and 'bobina_optima' in resultado:
+        if bobina_unica and 'bobina_optima' in resultado:
             mensaje += f'\n\nBobina única utilizada: {resultado["bobina_optima"]:.0f}mm'
-            mensaje += f'\nTodos los grupos usan la misma bobina que minimiza el desperdicio total.'
+            mensaje += f'\nTodos los grupos usan la misma bobina.'
         else:
-            mensaje += f'\n\nCada grupo ha sido optimizado con la bobina que minimiza su propio desperdicio.'
+            bobinas_usadas = ', '.join([f'{b:.0f}mm' for b in anchos_seleccionados])
+            mensaje += f'\n\nBobinas disponibles: {bobinas_usadas}'
+            mensaje += f'\nCada grupo ha elegido la mejor bobina para minimizar su desperdicio.'
 
         return {
             'type': 'ir.actions.client',

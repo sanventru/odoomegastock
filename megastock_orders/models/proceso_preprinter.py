@@ -36,7 +36,65 @@ class ProcesoPreprinter(models.Model):
         'preprinter_id',
         string='Materiales'
     )
+
+    # Sección COLOR - Tintas
+    tinta_ids = fields.One2many(
+        'megastock.proceso.preprinter.tinta',
+        'preprinter_id',
+        string='Tintas'
+    )
+
+    # Sección DESPERDICIOS
+    cantidad_corrugada = fields.Float(string='Cantidad Corrugada', default=0.0)
+    cuadre = fields.Float(string='Cuadre', default=0.0)
+    operativo_tinta_mala = fields.Float(string='Operativo / Tinta Mala', default=0.0)
+    caida_maltrato_transportacion = fields.Float(string='Caída Maltrato x Transportación', default=0.0)
+    maltrato_montacargas = fields.Float(string='Maltrato a Montacargas', default=0.0)
+    combada = fields.Float(string='Combada', default=0.0)
+    otros_desperdicios = fields.Float(string='Otros', default=0.0)
+    suma_total_desperdicios = fields.Float(string='Suma Total Desperdicios', default=0.0)
+
+    # Sección PLANCHAS PROCESADAS
+    planchas_procesadas = fields.Integer(string='Planchas Procesadas', default=0)
+
+    # Sección PERSONAL FLEXOGRAFÍA
+    personal_ids = fields.One2many(
+        'megastock.proceso.preprinter.personal',
+        'preprinter_id',
+        string='Personal Flexografía'
+    )
+
     observaciones = fields.Text(string='Observaciones')
+
+    def _calcular_suma_desperdicios(self):
+        """Calcula la suma total de desperdicios"""
+        return (
+            (self.cantidad_corrugada or 0.0) +
+            (self.cuadre or 0.0) +
+            (self.operativo_tinta_mala or 0.0) +
+            (self.caida_maltrato_transportacion or 0.0) +
+            (self.maltrato_montacargas or 0.0) +
+            (self.combada or 0.0) +
+            (self.otros_desperdicios or 0.0)
+        )
+
+    @api.model
+    def create(self, vals):
+        record = super(ProcesoPreprinter, self).create(vals)
+        record.suma_total_desperdicios = record._calcular_suma_desperdicios()
+        return record
+
+    def write(self, vals):
+        res = super(ProcesoPreprinter, self).write(vals)
+        campos_desperdicios = ['cantidad_corrugada', 'cuadre', 'operativo_tinta_mala',
+                               'caida_maltrato_transportacion', 'maltrato_montacargas',
+                               'combada', 'otros_desperdicios']
+        if any(campo in vals for campo in campos_desperdicios):
+            for record in self:
+                suma = record._calcular_suma_desperdicios()
+                print(f"========> CALCULANDO SUMA DESPERDICIOS: {suma}")
+                super(ProcesoPreprinter, record).write({'suma_total_desperdicios': suma})
+        return res
 
     def name_get(self):
         result = []
@@ -113,3 +171,73 @@ class ProcesoPreprinterLine(models.Model):
     def _onchange_producto_id(self):
         if self.producto_id:
             self.uom_id = self.producto_id.uom_id
+
+
+class ProcesoPreprinterTinta(models.Model):
+    _name = 'megastock.proceso.preprinter.tinta'
+    _description = 'Línea de Tinta para Preprinter'
+
+    preprinter_id = fields.Many2one(
+        'megastock.proceso.preprinter',
+        string='Preprinter',
+        required=True,
+        ondelete='cascade'
+    )
+    tinta_id = fields.Many2one(
+        'product.product',
+        string='Tinta',
+        required=True,
+        domain=[('type', 'in', ['product', 'consu'])]
+    )
+    porcentaje = fields.Float(
+        string='%',
+        default=0.0
+    )
+    peso_inicial = fields.Float(
+        string='Peso Inicial'
+    )
+    peso_final = fields.Float(
+        string='Peso Final'
+    )
+    consumo_real = fields.Float(
+        string='Consumo Real',
+        compute='_compute_consumo_real',
+        store=True
+    )
+    viscosidad = fields.Float(
+        string='Viscosidad'
+    )
+    ph = fields.Float(
+        string='PH'
+    )
+
+    @api.depends('peso_inicial', 'peso_final')
+    def _compute_consumo_real(self):
+        for record in self:
+            record.consumo_real = record.peso_inicial - record.peso_final
+
+
+class ProcesoPreprinterPersonal(models.Model):
+    _name = 'megastock.proceso.preprinter.personal'
+    _description = 'Personal Flexografía Preprinter'
+
+    preprinter_id = fields.Many2one(
+        'megastock.proceso.preprinter',
+        string='Preprinter',
+        required=True,
+        ondelete='cascade'
+    )
+    empleado_id = fields.Many2one(
+        'hr.employee',
+        string='Empleado',
+        required=True
+    )
+    turno = fields.Selection([
+        ('manana', 'Mañana'),
+        ('tarde', 'Tarde'),
+        ('noche', 'Noche'),
+    ], string='Turno')
+    tarea_hora_inicio = fields.Datetime(string='Tarea - Hora Inicio')
+    tarea_hora_final = fields.Datetime(string='Tarea - Hora Final')
+    fondo_hora_inicio = fields.Datetime(string='Fondo - Hora Inicio')
+    fondo_hora_final = fields.Datetime(string='Fondo - Hora Final')

@@ -36,6 +36,11 @@ class ProcesoEmpaque(models.Model):
         'empaque_id',
         string='Materiales'
     )
+    personal_ids = fields.One2many(
+        'megastock.proceso.empaque.personal',
+        'empaque_id',
+        string='Personal de Empaque'
+    )
     observaciones = fields.Text(string='Observaciones')
 
     def name_get(self):
@@ -112,3 +117,42 @@ class ProcesoEmpaqueLine(models.Model):
     def _onchange_producto_id(self):
         if self.producto_id:
             self.uom_id = self.producto_id.uom_id
+
+
+class ProcesoEmpaquePersonal(models.Model):
+    _name = 'megastock.proceso.empaque.personal'
+    _description = 'Personal de Empaque'
+
+    empaque_id = fields.Many2one(
+        'megastock.proceso.empaque',
+        string='Empaque',
+        required=True,
+        ondelete='cascade'
+    )
+    empleado_id = fields.Many2one(
+        'hr.employee',
+        string='Nombre Personal',
+        required=True
+    )
+    hora_inicial = fields.Datetime(string='Hora Inicial')
+    hora_final = fields.Datetime(string='Hora Final')
+    total_horas = fields.Float(
+        string='Total Horas',
+        compute='_compute_total_horas',
+        store=True,
+        digits=(16, 2)
+    )
+    cantidad_empacada = fields.Float(string='Cantidad Empacada', digits=(16, 2))
+    paquetes = fields.Integer(string='Paquetes')
+    papel_empaque = fields.Char(string='Papel Empaque')
+    nota = fields.Text(string='Nota')
+    fecha_entrega = fields.Date(string='Fecha Entrega')
+
+    @api.depends('hora_inicial', 'hora_final')
+    def _compute_total_horas(self):
+        for record in self:
+            if record.hora_inicial and record.hora_final:
+                delta = record.hora_final - record.hora_inicial
+                record.total_horas = delta.total_seconds() / 3600.0
+            else:
+                record.total_horas = 0.0

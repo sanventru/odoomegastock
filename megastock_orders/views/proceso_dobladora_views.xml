@@ -30,6 +30,38 @@
                     </group>
 
                     <notebook>
+                        <page string="Personal de Doblado" name="personal">
+                            <field name="personal_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
+                                <tree string="Personal de Doblado" editable="bottom">
+                                    <field name="cantidad_doblada"/>
+                                    <field name="fecha_doblado"/>
+                                    <field name="empleado_id"/>
+                                    <field name="hora_inicial"/>
+                                    <field name="hora_final"/>
+                                    <field name="total_horas" readonly="1"/>
+                                </tree>
+                            </field>
+                        </page>
+                        <page string="Desperdicios" name="desperdicios">
+                            <group>
+                                <group string="Desperdicios">
+                                    <field name="cuadre_inicio_final" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="desperdicio_operativo" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="desperdicio_otros" nolabel="1" placeholder="Otros (Especifique)..." attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                            </group>
+                        </page>
+                        <page string="Tipo de Goma" name="tipo_goma">
+                            <group>
+                                <group string="Tipo de Goma">
+                                    <field name="goma_dl2" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="goma_dv6" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                    <field name="goma_ca50" attrs="{'readonly': [('estado', '=', 'finalizado')]}"/>
+                                </group>
+                            </group>
+                        </page>
                         <page string="Materiales" name="materiales">
                             <field name="material_ids" attrs="{'readonly': [('estado', '=', 'finalizado')]}">
                                 <tree string="Materiales" editable="bottom">

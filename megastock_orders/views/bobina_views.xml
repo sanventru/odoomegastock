@@ -184,4 +184,26 @@ action = model.create_default_bobinas()
               parent="menu_bobinas_root"
               action="action_crear_bobinas_default"
               sequence="20"/>
+
+    <!-- Acción para recalcular display names -->
+    <record id="action_recalcular_bobinas_display" model="ir.actions.server">
+        <field name="name">Recalcular Nombres de Bobinas</field>
+        <field name="model_id" ref="model_megastock_bobina"/>
+        <field name="binding_model_id" ref="model_megastock_bobina"/>
+        <field name="binding_view_types">list</field>
+        <field name="state">code</field>
+        <field name="code">
+if records:
+    action = records.action_recalcular_display_name()
+else:
+    action = model.search([]).action_recalcular_display_name()
+        </field>
+    </record>
+
+    <!-- Catálogo de Flautas -->
+    <menuitem id="menu_flauta_catalog"
+              name="Flautas"
+              parent="menu_bobinas_root"
+              action="megastock_orders.action_flauta"
+              sequence="30"/>
 </odoo>
