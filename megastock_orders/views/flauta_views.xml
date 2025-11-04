@@ -78,4 +78,11 @@
             </p>
         </field>
     </record>
+
+    <!-- Menú de Flautas -->
+    <menuitem id="menu_flauta_catalog"
+              name="Flautas"
+              parent="menu_bobinas_root"
+              action="action_flauta"
+              sequence="30"/>
 </odoo>

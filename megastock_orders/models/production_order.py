@@ -804,7 +804,7 @@ class ProductionOrder(models.Model):
         }
 
     def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None):
-        """Algoritmo de optimización basado en el archivo Excel de trimado
+        """Algoritmo de optimización basado en el archivo Excel de trimado con validación iterativa de faltantes
 
         Args:
             ordenes: Recordset de órdenes a optimizar
@@ -889,44 +889,316 @@ class ProductionOrder(models.Model):
 
         # ESTRATEGIA 2: BOBINAS MÚLTIPLES - Cada grupo elige su mejor bobina
         else:
-            grupos_optimizados = []
-            ordenes_procesadas = set()
-            grupo_counter = 1
+            # Proceso iterativo de optimización con validación de faltantes
+            ordenes_a_procesar = ordenes
+            ordenes_descartadas = self.env['megastock.production.order']
+            max_iteraciones = 100  # Prevenir loops infinitos
+            iteracion = 0
 
-            for orden in ordenes:
-                if orden.id in ordenes_procesadas:
-                    continue
+            while iteracion < max_iteraciones:
+                iteracion += 1
 
-                # Buscar mejor combinación considerando TODAS las bobinas disponibles
-                # La función _encontrar_mejor_combinacion ya elige la bobina óptima para este grupo
-                mejor_combinacion = self._encontrar_mejor_combinacion(
-                    orden, ordenes, ordenes_procesadas, bobinas_disponibles, cavidad_limite
-                )
+                # Ejecutar algoritmo de optimización
+                grupos_optimizados = []
+                ordenes_procesadas = set()
+                grupo_counter = 1
 
-                if mejor_combinacion:
-                    grupos_optimizados.append(mejor_combinacion)
+                for orden in ordenes_a_procesar:
+                    if orden.id in ordenes_procesadas:
+                        continue
 
-                    # Marcar órdenes como procesadas
-                    for orden_comb_data in mejor_combinacion['ordenes']:
-                        ordenes_procesadas.add(orden_comb_data['orden'].id)
+                    # Buscar mejor combinación considerando TODAS las bobinas disponibles
+                    mejor_combinacion = self._encontrar_mejor_combinacion(
+                        orden, ordenes_a_procesar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                    )
 
-                    grupo_counter += 1
+                    if mejor_combinacion:
+                        grupos_optimizados.append(mejor_combinacion)
 
-            # Aplicar los grupos encontrados
-            if grupos_optimizados:
-                for idx, grupo in enumerate(grupos_optimizados, start=1):
-                    self._aplicar_combinacion(grupo, idx)
+                        # Marcar órdenes como procesadas
+                        for orden_comb_data in mejor_combinacion['ordenes']:
+                            ordenes_procesadas.add(orden_comb_data['orden'].id)
 
-            # Calcular estadísticas
-            eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_optimizados) if grupos_optimizados else 0
-            eficiencia_promedio = eficiencia_total / len(grupos_optimizados) if grupos_optimizados else 0
-            desperdicio_total = sum(grupo['sobrante'] for grupo in grupos_optimizados) if grupos_optimizados else 0
+                        grupo_counter += 1
+
+                # Aplicar los grupos encontrados
+                if grupos_optimizados:
+                    for idx, grupo in enumerate(grupos_optimizados, start=1):
+                        self._aplicar_combinacion(grupo, idx)
+
+                # Refrescar las órdenes para obtener los faltantes calculados
+                ordenes_a_procesar.invalidate_cache()
+
+                # Validar faltantes y determinar si necesitamos otra iteración
+                ordenes_con_faltante_alto = self.env['megastock.production.order']
+                ordenes_con_faltante_bajo = self.env['megastock.production.order']
+
+                for orden in ordenes_a_procesar:
+                    faltante = orden.faltante
+
+                    if faltante == 0:
+                        # Orden perfecta, no hacer nada
+                        continue
+                    elif faltante >= 500:
+                        # Faltante alto: intentar procesar como nueva orden
+                        ordenes_con_faltante_alto |= orden
+                    elif faltante > 0:  # 0 < faltante < 500
+                        # Faltante bajo: descartar orden
+                        ordenes_con_faltante_bajo |= orden
+
+                # Si no hay órdenes problemáticas, terminamos
+                if not ordenes_con_faltante_alto and not ordenes_con_faltante_bajo:
+                    break
+
+                # Resetear órdenes problemáticas
+                ordenes_a_resetear = ordenes_con_faltante_alto | ordenes_con_faltante_bajo
+                ordenes_a_resetear.write({
+                    'grupo_planificacion': False,
+                    'tipo_combinacion': 'individual',
+                    'ancho_utilizado': 0,
+                    'bobina_utilizada': 0,
+                    'sobrante': 0,
+                    'eficiencia': 0,
+                    'metros_lineales_planificados': 0,
+                    'cortes_planificados': 0,
+                    'cantidad_planificada': 0,
+                    'cavidad_optimizada': 0,
+                })
+
+                # Preparar siguiente iteración
+                ordenes_a_procesar = self.env['megastock.production.order']
+
+                # Procesar órdenes con faltante >= 500
+                for orden in ordenes_con_faltante_alto:
+                    # Guardar el faltante actual antes de resetear
+                    faltante_actual = orden.faltante
+
+                    # Intentar combinar el faltante con órdenes sin grupo
+                    ordenes_sin_grupo = ordenes.filtered(
+                        lambda o: not o.grupo_planificacion and o.id != orden.id and o.id not in ordenes_descartadas.ids
+                    )
+
+                    # Buscar combinación para el faltante
+                    mejor_combinacion_faltante = self._encontrar_mejor_combinacion_para_faltante(
+                        orden, ordenes_sin_grupo, bobinas_disponibles, cavidad_limite
+                    )
+
+                    if mejor_combinacion_faltante:
+                        # Se encontró combinación: ajustar cantidad de la orden al faltante
+                        # y agregar a próxima iteración
+                        orden.write({'cantidad': faltante_actual})
+                        ordenes_a_procesar |= orden
+                    else:
+                        # No se encontró combinación: descartar orden original
+                        ordenes_descartadas |= orden
+
+                # Las órdenes con faltante bajo se descartan directamente
+                ordenes_descartadas |= ordenes_con_faltante_bajo
+
+                # Si no quedan órdenes a procesar, terminamos
+                if not ordenes_a_procesar:
+                    break
+
+            # Calcular estadísticas finales
+            ordenes_finales = ordenes.filtered(lambda o: o.grupo_planificacion)
+
+            if ordenes_finales:
+                eficiencia_total = sum(ordenes_finales.mapped('eficiencia'))
+                eficiencia_promedio = eficiencia_total / len(ordenes_finales)
+                desperdicio_total = sum(ordenes_finales.mapped('sobrante'))
+                num_grupos = len(set(ordenes_finales.mapped('grupo_planificacion')))
+            else:
+                eficiencia_promedio = 0
+                desperdicio_total = 0
+                num_grupos = 0
 
             return {
-                'grupos': len(grupos_optimizados) if grupos_optimizados else 0,
+                'grupos': num_grupos,
                 'eficiencia_promedio': eficiencia_promedio,
-                'desperdicio_total': desperdicio_total
+                'desperdicio_total': desperdicio_total,
+                'ordenes_descartadas': len(ordenes_descartadas),
+                'iteraciones': iteracion
             }
+
+    def _encontrar_mejor_combinacion_para_faltante(self, orden_con_faltante, ordenes_disponibles, bobinas, cavidad_limite=1):
+        """Encuentra la mejor combinación para una orden que tiene faltante >= 500
+
+        Args:
+            orden_con_faltante: Orden que tiene faltante >= 500
+            ordenes_disponibles: Órdenes sin grupo disponibles para combinar
+            bobinas: Lista de anchos de bobinas disponibles
+            cavidad_limite: Límite superior para multiplicar ancho_calculado
+
+        Returns:
+            dict con la mejor combinación encontrada, o None si no se encuentra
+        """
+        mejor_combinacion = None
+        menor_sobrante = float('inf')
+
+        MARGEN_SEGURIDAD = 30
+
+        # Crear una "orden virtual" que representa el faltante
+        # Utilizamos la orden original pero ajustamos la cantidad al faltante
+        faltante = orden_con_faltante.faltante
+
+        # Probar combinaciones con el faltante como orden individual
+        for multiplicador in range(1, cavidad_limite + 1):
+            ancho_util = orden_con_faltante.ancho_calculado * multiplicador
+
+            for bobina in bobinas:
+                if ancho_util <= (bobina - MARGEN_SEGURIDAD):
+                    # Calcular si el faltante cabe con este multiplicador
+                    cavidad_efectiva = orden_con_faltante.cavidad * multiplicador if orden_con_faltante.cavidad else multiplicador
+
+                    if cavidad_efectiva > 0:
+                        cortes_necesarios = faltante / cavidad_efectiva
+
+                        # Crear datos simulados para el faltante
+                        orden_data = [{
+                            'orden': orden_con_faltante,
+                            'multiplicador': multiplicador,
+                            'ancho_efectivo': ancho_util,
+                            'cantidad_override': faltante  # Indicador de que usamos el faltante
+                        }]
+
+                        # Calcular eficiencia simulada
+                        resultado = self._calcular_eficiencia_para_faltante(
+                            orden_con_faltante, faltante, multiplicador, bobina
+                        )
+
+                        if resultado['sobrante'] < menor_sobrante:
+                            menor_sobrante = resultado['sobrante']
+                            mejor_combinacion = {
+                                'ordenes': orden_data,
+                                'tipo': 'individual',
+                                'bobina': bobina,
+                                'ancho_utilizado': ancho_util,
+                                'sobrante': resultado['sobrante'],
+                                'eficiencia': resultado['eficiencia'],
+                                'metros_lineales': resultado['metros_lineales'],
+                                'cortes_totales': resultado['cortes_totales']
+                            }
+
+        # Probar combinaciones del faltante con otras órdenes disponibles
+        for orden2 in ordenes_disponibles:
+            for mult1 in range(1, cavidad_limite + 1):
+                for mult2 in range(1, cavidad_limite + 1):
+                    ancho1 = orden_con_faltante.ancho_calculado * mult1
+                    ancho2 = orden2.ancho_calculado * mult2
+                    ancho_total = ancho1 + ancho2
+
+                    for bobina in bobinas:
+                        if ancho_total <= (bobina - MARGEN_SEGURIDAD):
+                            ordenes_data = [
+                                {
+                                    'orden': orden_con_faltante,
+                                    'multiplicador': mult1,
+                                    'ancho_efectivo': ancho1,
+                                    'cantidad_override': faltante
+                                },
+                                {
+                                    'orden': orden2,
+                                    'multiplicador': mult2,
+                                    'ancho_efectivo': ancho2
+                                }
+                            ]
+
+                            # Calcular eficiencia para dupla con faltante
+                            resultado = self._calcular_eficiencia_dupla_con_faltante(
+                                orden_con_faltante, faltante, mult1,
+                                orden2, mult2, bobina
+                            )
+
+                            if resultado['sobrante'] < menor_sobrante:
+                                menor_sobrante = resultado['sobrante']
+                                mejor_combinacion = {
+                                    'ordenes': ordenes_data,
+                                    'tipo': 'dupla',
+                                    'bobina': bobina,
+                                    'ancho_utilizado': ancho_total,
+                                    'sobrante': resultado['sobrante'],
+                                    'eficiencia': resultado['eficiencia'],
+                                    'metros_lineales': resultado['metros_lineales'],
+                                    'cortes_totales': resultado['cortes_totales']
+                                }
+
+        return mejor_combinacion
+
+    def _calcular_eficiencia_para_faltante(self, orden, faltante, multiplicador, bobina_ancho):
+        """Calcula eficiencia para una orden procesando solo su faltante"""
+        ancho_efectivo = orden.ancho_calculado * multiplicador
+        cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
+
+        if cavidad_efectiva == 0 or ancho_efectivo > bobina_ancho:
+            return {
+                'eficiencia': 0,
+                'sobrante': bobina_ancho,
+                'metros_lineales': 0,
+                'cortes_totales': 0
+            }
+
+        MARGEN_SEGURIDAD = 30
+        espacio_disponible = bobina_ancho - MARGEN_SEGURIDAD
+        sobrante = espacio_disponible - ancho_efectivo
+
+        eficiencia = round((ancho_efectivo / bobina_ancho) * 100)
+
+        cortes_necesarios = faltante / cavidad_efectiva
+        metros_lineales = (cortes_necesarios * orden.largo_calculado) / 1000 if orden.largo_calculado else 0
+
+        return {
+            'eficiencia': eficiencia,
+            'sobrante': sobrante,
+            'metros_lineales': metros_lineales,
+            'cortes_totales': cortes_necesarios
+        }
+
+    def _calcular_eficiencia_dupla_con_faltante(self, orden1, faltante1, mult1, orden2, mult2, bobina_ancho):
+        """Calcula eficiencia para dupla donde orden1 usa su faltante y orden2 usa su cantidad completa"""
+        ancho1 = orden1.ancho_calculado * mult1
+        ancho2 = orden2.ancho_calculado * mult2
+        ancho_total = ancho1 + ancho2
+
+        if ancho_total > bobina_ancho:
+            return {
+                'eficiencia': 0,
+                'sobrante': bobina_ancho,
+                'metros_lineales': 0,
+                'cortes_totales': 0
+            }
+
+        MARGEN_SEGURIDAD = 30
+        num_ordenes = 2
+        espacio_por_orden = (bobina_ancho - MARGEN_SEGURIDAD) / num_ordenes
+
+        sobrante1 = espacio_por_orden - ancho1
+        sobrante2 = espacio_por_orden - ancho2
+        sobrante_total = sobrante1 + sobrante2
+
+        eficiencia = round((ancho_total / bobina_ancho) * 100)
+
+        # Calcular metros lineales
+        cavidad_efectiva1 = orden1.cavidad * mult1 if orden1.cavidad else mult1
+        cavidad_efectiva2 = orden2.cavidad * mult2 if orden2.cavidad else mult2
+
+        metros1 = 0
+        cortes1 = 0
+        if cavidad_efectiva1 > 0 and orden1.largo_calculado:
+            cortes1 = faltante1 / cavidad_efectiva1
+            metros1 = (cortes1 * orden1.largo_calculado) / 1000
+
+        metros2 = 0
+        cortes2 = 0
+        if cavidad_efectiva2 > 0 and orden2.largo_calculado:
+            cortes2 = orden2.cantidad / cavidad_efectiva2
+            metros2 = (cortes2 * orden2.largo_calculado) / 1000
+
+        return {
+            'eficiencia': eficiencia,
+            'sobrante': sobrante_total,
+            'metros_lineales': max(metros1, metros2),  # En duplas se usa el mayor
+            'cortes_totales': cortes1 + cortes2
+        }
 
     def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
         """Encuentra la mejor combinación para una orden principal

@@ -199,11 +199,4 @@ else:
     action = model.search([]).action_recalcular_display_name()
         </field>
     </record>
-
-    <!-- Catálogo de Flautas -->
-    <menuitem id="menu_flauta_catalog"
-              name="Flautas"
-              parent="menu_bobinas_root"
-              action="megastock_orders.action_flauta"
-              sequence="30"/>
 </odoo>
