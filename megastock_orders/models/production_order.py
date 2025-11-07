@@ -249,6 +249,10 @@ class ProductionOrder(models.Model):
     cavidad_optimizada = fields.Integer(string='Cavidad Optimizada', help='Multiplicador de cavidad óptimo encontrado por el algoritmo de optimización', group_operator='max')
     faltante = fields.Integer(string='Faltante', compute='_compute_faltante', store=True, help='Cantidad faltante: cantidad solicitada - cantidad planificada')
 
+    # Campos para manejo de pedidos temporales en replanificación
+    es_temporal = fields.Boolean(string='Es Temporal', default=False, help='Indica si este pedido es temporal creado para replanificar faltantes >= 500')
+    pedido_original_id = fields.Many2one('megastock.production.order', string='Pedido Original', help='Referencia al pedido original del cual este temporal proviene')
+
     # Test calculado automáticamente desde descripción del producto
     test_name = fields.Char(
         string='TEST',
@@ -803,6 +807,69 @@ class ProductionOrder(models.Model):
             }
         }
 
+    def _crear_pedido_temporal(self, orden_original, faltante):
+        """Crea un pedido temporal para replanificar un faltante >= 500
+
+        Args:
+            orden_original: Pedido original del cual proviene el faltante
+            faltante: Cantidad faltante a planificar
+
+        Returns:
+            Nuevo pedido temporal creado
+        """
+        return self.create({
+            'orden_produccion': f"{orden_original.orden_produccion}-TEMP-{faltante}",
+            'cliente': orden_original.cliente,
+            'codigo': orden_original.codigo,
+            'descripcion': f"TEMPORAL - {orden_original.descripcion}",
+            'pedido': orden_original.pedido,
+            'largo': orden_original.largo,
+            'ancho': orden_original.ancho,
+            'alto': orden_original.alto,
+            'cantidad': faltante,
+            'cavidad': orden_original.cavidad,
+            'flauta': orden_original.flauta,
+            'troquel': orden_original.troquel,
+            'tipo_producto': orden_original.tipo_producto,
+            'sustrato': orden_original.sustrato,
+            'over_superior': orden_original.over_superior,
+            'over_inferior': orden_original.over_inferior,
+            'fecha_pedido_cliente': orden_original.fecha_pedido_cliente,
+            'fecha_entrega_cliente': orden_original.fecha_entrega_cliente,
+            'fecha_produccion': orden_original.fecha_produccion,
+            'estado': 'pendiente',
+            'es_temporal': True,
+            'pedido_original_id': orden_original.id,
+        })
+
+    def _resetear_planificacion(self, ordenes):
+        """Resetea todos los campos de planificación de las órdenes
+
+        Args:
+            ordenes: Recordset de órdenes a resetear
+        """
+        ordenes.write({
+            'grupo_planificacion': False,
+            'tipo_combinacion': 'individual',
+            'ancho_utilizado': 0,
+            'bobina_utilizada': 0,
+            'sobrante': 0,
+            'eficiencia': 0,
+            'metros_lineales_planificados': 0,
+            'cortes_planificados': 0,
+            'cantidad_planificada': 0,
+            'cavidad_optimizada': 0,
+        })
+
+    def _eliminar_pedidos_temporales(self, pedidos_temporales):
+        """Elimina pedidos temporales del sistema
+
+        Args:
+            pedidos_temporales: Recordset de pedidos temporales a eliminar
+        """
+        if pedidos_temporales:
+            pedidos_temporales.unlink()
+
     def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None):
         """Algoritmo de optimización basado en el archivo Excel de trimado con validación iterativa de faltantes
 
@@ -828,88 +895,171 @@ class ProductionOrder(models.Model):
                 "o selecciona bobinas en el wizard de planificación."
             )
 
-        # ESTRATEGIA 1: BOBINA ÚNICA - Todos los grupos usan la misma bobina
+        # ESTRATEGIA 1: BOBINA ÚNICA - Replanificación iterativa con una sola bobina
         if bobina_unica:
-            mejor_bobina = None
-            menor_desperdicio_total = float('inf')
-            mejores_grupos = None
+            # Solo hay una bobina seleccionada
+            bobina_seleccionada = bobinas_disponibles[0]
+            print(f"[BOBINA ÚNICA] Usando bobina de {bobina_seleccionada}mm")
 
-            for bobina_candidata in bobinas_disponibles:
-                # Optimizar todas las órdenes usando solo esta bobina
-                grupos_con_esta_bobina = []
+            # Separar órdenes originales (no temporales)
+            ordenes_originales = ordenes.filtered(lambda o: not o.es_temporal)
+            pedidos_temporales = self.env['megastock.production.order']
+            ordenes_pendientes = self.env['megastock.production.order']
+
+            max_iteraciones = 100  # Prevenir loops infinitos
+            iteracion = 0
+            grupos_finales = []
+
+            while iteracion < max_iteraciones:
+                iteracion += 1
+                print(f"\n[BOBINA ÚNICA - ITERACIÓN {iteracion}] Iniciando...")
+
+                # PASO 1: Conjunto completo a planificar (originales + temporales)
+                ordenes_a_planificar = ordenes_originales | pedidos_temporales
+                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Órdenes a planificar: {len(ordenes_a_planificar)} ({len(ordenes_originales)} originales + {len(pedidos_temporales)} temporales)")
+
+                # PASO 2: Ejecutar algoritmo de optimización con la bobina única
+                grupos_optimizados = []
                 ordenes_procesadas = set()
                 grupo_counter = 1
-                desperdicio_total = 0
 
-                for orden in ordenes:
+                for orden in ordenes_a_planificar:
                     if orden.id in ordenes_procesadas:
                         continue
 
-                    # Buscar mejor combinación SOLO con esta bobina específica
+                    # Buscar mejor combinación usando SOLO la bobina seleccionada
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, ordenes, ordenes_procesadas, [bobina_candidata], cavidad_limite
+                        orden, ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite
                     )
 
                     if mejor_combinacion:
-                        grupos_con_esta_bobina.append(mejor_combinacion)
-                        desperdicio_total += mejor_combinacion['sobrante']
+                        grupos_optimizados.append(mejor_combinacion)
 
                         # Marcar órdenes como procesadas
                         for orden_comb_data in mejor_combinacion['ordenes']:
                             ordenes_procesadas.add(orden_comb_data['orden'].id)
 
                         grupo_counter += 1
-                    else:
-                        # CRÍTICO: Si una orden no cabe en esta bobina, penalizar mucho
-                        # Esto asegura que bobinas pequeñas no sean elegidas si no procesan todas las órdenes
-                        desperdicio_total += 999999  # Penalización enorme
 
-                # Verificar si esta bobina es mejor que las anteriores
-                # Solo si procesa TODAS las órdenes (sin penalización)
-                if desperdicio_total < menor_desperdicio_total:
-                    menor_desperdicio_total = desperdicio_total
-                    mejor_bobina = bobina_candidata
-                    mejores_grupos = grupos_con_esta_bobina
+                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos encontrados: {len(grupos_optimizados)}")
 
-            # Aplicar los mejores grupos encontrados
-            if mejores_grupos:
-                for idx, grupo in enumerate(mejores_grupos, start=1):
-                    self._aplicar_combinacion(grupo, idx)
+                # PASO 3: Aplicar grupos encontrados
+                if grupos_optimizados:
+                    for idx, grupo in enumerate(grupos_optimizados, start=1):
+                        self._aplicar_combinacion(grupo, idx)
+                    grupos_finales = grupos_optimizados
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos aplicados exitosamente")
+                else:
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] ⚠️ NO se encontraron combinaciones posibles con esta bobina")
 
-            # Calcular estadísticas
-            eficiencia_total = sum(grupo['eficiencia'] for grupo in mejores_grupos) if mejores_grupos else 0
-            eficiencia_promedio = eficiencia_total / len(mejores_grupos) if mejores_grupos else 0
+                # Forzar recálculo de campos computados
+                ordenes_originales.invalidate_cache()
+
+                # PASO 4: Clasificar faltantes de órdenes originales
+                con_faltante_alto = ordenes_originales.filtered(lambda o: o.faltante >= 500)
+                con_faltante_bajo = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500)
+
+                # Debug: Mostrar faltantes detectados
+                if con_faltante_alto:
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Faltantes ALTOS (>= 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_alto]}")
+                if con_faltante_bajo:
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Faltantes BAJOS (< 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_bajo]}")
+
+                # PASO 5: Condición de salida - Todos cumplidos ✅
+                if not con_faltante_alto and not con_faltante_bajo:
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Todos los pedidos cumplidos. Finalizando.")
+                    # Limpiar temporales
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
+                    break
+
+                # PASO 6: Condición de salida - Solo quedan faltantes < 500 ⚠️
+                if not con_faltante_alto and con_faltante_bajo:
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Solo quedan faltantes < 500. Reseteando {len(con_faltante_bajo)} pedidos.")
+                    # Resetear órdenes con faltante bajo (quedan PENDIENTES sin grupo)
+                    self._resetear_planificacion(con_faltante_bajo)
+                    ordenes_pendientes = con_faltante_bajo
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo]}")
+                    # Limpiar temporales
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
+                    break
+
+                # PASO 7: Hay faltantes >= 500, continuar iterando
+                if con_faltante_alto:
+                    # Verificar si podemos continuar iterando
+                    if iteracion >= max_iteraciones:
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Manteniendo grupos actuales y reseteando faltantes >= 500")
+                        # NO resetear los grupos, solo resetear las órdenes con faltante alto
+                        self._resetear_planificacion(con_faltante_alto)
+                        ordenes_pendientes |= con_faltante_alto
+                        break
+
+                    # 7.1 Resetear TODA la planificación (originales + temporales)
+                    self._resetear_planificacion(ordenes_originales)
+                    self._resetear_planificacion(pedidos_temporales)
+
+                    # 7.2 Eliminar todos los pedidos temporales anteriores
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
+                    pedidos_temporales = self.env['megastock.production.order']
+
+                    # 7.3 Crear nuevos pedidos temporales SOLO para faltantes >= 500
+                    for orden_con_faltante in con_faltante_alto:
+                        pedido_temporal = self._crear_pedido_temporal(orden_con_faltante, orden_con_faltante.faltante)
+                        pedidos_temporales |= pedido_temporal
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Creado temporal: {pedido_temporal.orden_produccion} (cantidad: {pedido_temporal.cantidad})")
+
+                    # Los pedidos con faltante < 500 NO se convierten en temporales
+                    # Solo se desagrupan y se intentan reagrupar en la siguiente iteración
+
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Continuando con {len(pedidos_temporales)} pedidos temporales...")
+
+            # Calcular estadísticas finales
+            eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_finales) if grupos_finales else 0
+            eficiencia_promedio = eficiencia_total / len(grupos_finales) if grupos_finales else 0
+            desperdicio_total = sum(grupo['sobrante'] for grupo in grupos_finales) if grupos_finales else 0
+
+            print(f"[BOBINA ÚNICA] Planificación completada:")
+            print(f"  - Iteraciones: {iteracion}")
+            print(f"  - Grupos creados: {len(grupos_finales)}")
+            print(f"  - Eficiencia promedio: {eficiencia_promedio:.2f}%")
+            print(f"  - Órdenes pendientes: {len(ordenes_pendientes)}")
 
             return {
-                'grupos': len(mejores_grupos) if mejores_grupos else 0,
+                'grupos': len(grupos_finales),
                 'eficiencia_promedio': eficiencia_promedio,
-                'bobina_optima': mejor_bobina,
-                'desperdicio_total': menor_desperdicio_total
+                'bobina_optima': bobina_seleccionada,
+                'desperdicio_total': desperdicio_total,
+                'ordenes_pendientes': len(ordenes_pendientes),
+                'iteraciones': iteracion
             }
 
-        # ESTRATEGIA 2: BOBINAS MÚLTIPLES - Cada grupo elige su mejor bobina
+        # ESTRATEGIA 2: BOBINAS MÚLTIPLES - Replanificación iterativa con manejo de faltantes
         else:
-            # Proceso iterativo de optimización con validación de faltantes
-            ordenes_a_procesar = ordenes
-            ordenes_descartadas = self.env['megastock.production.order']
+            # Separar órdenes originales (no temporales)
+            ordenes_originales = ordenes.filtered(lambda o: not o.es_temporal)
+            pedidos_temporales = self.env['megastock.production.order']
+            ordenes_pendientes = self.env['megastock.production.order']
+
             max_iteraciones = 100  # Prevenir loops infinitos
             iteracion = 0
 
             while iteracion < max_iteraciones:
                 iteracion += 1
 
-                # Ejecutar algoritmo de optimización
+                # PASO 1: Conjunto completo a planificar (originales + temporales)
+                ordenes_a_planificar = ordenes_originales | pedidos_temporales
+
+                # PASO 2: Ejecutar algoritmo de optimización
                 grupos_optimizados = []
                 ordenes_procesadas = set()
                 grupo_counter = 1
 
-                for orden in ordenes_a_procesar:
+                for orden in ordenes_a_planificar:
                     if orden.id in ordenes_procesadas:
                         continue
 
                     # Buscar mejor combinación considerando TODAS las bobinas disponibles
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, ordenes_a_procesar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                        orden, ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
                     )
 
                     if mejor_combinacion:
@@ -926,83 +1076,74 @@ class ProductionOrder(models.Model):
                     for idx, grupo in enumerate(grupos_optimizados, start=1):
                         self._aplicar_combinacion(grupo, idx)
 
-                # Refrescar las órdenes para obtener los faltantes calculados
-                ordenes_a_procesar.invalidate_cache()
+                # PASO 3: Refrescar y calcular faltantes (SOLO en órdenes originales)
+                ordenes_originales.invalidate_cache()
 
-                # Validar faltantes y determinar si necesitamos otra iteración
-                ordenes_con_faltante_alto = self.env['megastock.production.order']
-                ordenes_con_faltante_bajo = self.env['megastock.production.order']
+                # PASO 4: Clasificar faltantes de órdenes originales
+                con_faltante_alto = ordenes_originales.filtered(lambda o: o.faltante >= 500)
+                con_faltante_bajo = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500)
 
-                for orden in ordenes_a_procesar:
-                    faltante = orden.faltante
+                # Debug: Mostrar faltantes detectados
+                if con_faltante_alto:
+                    print(f"[ITERACIÓN {iteracion}] Faltantes ALTOS (>= 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_alto]}")
+                if con_faltante_bajo:
+                    print(f"[ITERACIÓN {iteracion}] Faltantes BAJOS (< 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_bajo]}")
 
-                    if faltante == 0:
-                        # Orden perfecta, no hacer nada
-                        continue
-                    elif faltante >= 500:
-                        # Faltante alto: intentar procesar como nueva orden
-                        ordenes_con_faltante_alto |= orden
-                    elif faltante > 0:  # 0 < faltante < 500
-                        # Faltante bajo: descartar orden
-                        ordenes_con_faltante_bajo |= orden
-
-                # Si no hay órdenes problemáticas, terminamos
-                if not ordenes_con_faltante_alto and not ordenes_con_faltante_bajo:
+                # PASO 5: Condición de salida - Todos cumplidos ✅
+                if not con_faltante_alto and not con_faltante_bajo:
+                    print(f"[ITERACIÓN {iteracion}] Todos los pedidos cumplidos. Finalizando.")
+                    # Limpiar temporales
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
                     break
 
-                # Resetear órdenes problemáticas
-                ordenes_a_resetear = ordenes_con_faltante_alto | ordenes_con_faltante_bajo
-                ordenes_a_resetear.write({
-                    'grupo_planificacion': False,
-                    'tipo_combinacion': 'individual',
-                    'ancho_utilizado': 0,
-                    'bobina_utilizada': 0,
-                    'sobrante': 0,
-                    'eficiencia': 0,
-                    'metros_lineales_planificados': 0,
-                    'cortes_planificados': 0,
-                    'cantidad_planificada': 0,
-                    'cavidad_optimizada': 0,
-                })
-
-                # Preparar siguiente iteración
-                ordenes_a_procesar = self.env['megastock.production.order']
-
-                # Procesar órdenes con faltante >= 500
-                for orden in ordenes_con_faltante_alto:
-                    # Guardar el faltante actual y la bobina del grupo original
-                    faltante_actual = orden.faltante
-                    bobina_grupo_original = orden.bobina_utilizada
-
-                    # Intentar combinar el faltante con órdenes sin grupo
-                    ordenes_sin_grupo = ordenes.filtered(
-                        lambda o: not o.grupo_planificacion and o.id != orden.id and o.id not in ordenes_descartadas.ids
-                    )
-
-                    # IMPORTANTE: Buscar combinación usando SOLO la bobina del grupo original
-                    # para mantener consistencia en el grupo
-                    mejor_combinacion_faltante = self._encontrar_mejor_combinacion_para_faltante(
-                        orden, ordenes_sin_grupo, [bobina_grupo_original], cavidad_limite
-                    )
-
-                    if mejor_combinacion_faltante:
-                        # Se encontró combinación: ajustar cantidad de la orden al faltante
-                        # y agregar a próxima iteración
-                        orden.write({'cantidad': faltante_actual})
-                        ordenes_a_procesar |= orden
-                    else:
-                        # No se encontró combinación: descartar orden original
-                        ordenes_descartadas |= orden
-
-                # Las órdenes con faltante bajo se descartan directamente
-                ordenes_descartadas |= ordenes_con_faltante_bajo
-
-                # Si no quedan órdenes a procesar, terminamos
-                if not ordenes_a_procesar:
+                # PASO 6: Condición de salida - Solo quedan faltantes < 500 ⚠️
+                if not con_faltante_alto and con_faltante_bajo:
+                    print(f"[ITERACIÓN {iteracion}] Solo quedan faltantes < 500. Reseteando {len(con_faltante_bajo)} pedidos.")
+                    # Resetear órdenes con faltante bajo (quedan PENDIENTES sin grupo)
+                    self._resetear_planificacion(con_faltante_bajo)
+                    ordenes_pendientes = con_faltante_bajo
+                    print(f"[ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo]}")
+                    # Limpiar temporales
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
                     break
 
-            # Calcular estadísticas finales
-            ordenes_finales = ordenes.filtered(lambda o: o.grupo_planificacion)
+                # PASO 7: Hay faltantes >= 500, continuar iterando
+                if con_faltante_alto:
+                    # Verificar si podemos continuar iterando
+                    if iteracion >= max_iteraciones:
+                        print(f"[ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Manteniendo grupos actuales y reseteando faltantes >= 500")
+                        # NO resetear los grupos, solo resetear las órdenes con faltante alto
+                        self._resetear_planificacion(con_faltante_alto)
+                        ordenes_pendientes |= con_faltante_alto
+                        # Limpiar temporales
+                        self._eliminar_pedidos_temporales(pedidos_temporales)
+                        break
+
+                    # 7.1 Resetear TODA la planificación (originales + temporales)
+                    self._resetear_planificacion(ordenes_originales)
+                    self._resetear_planificacion(pedidos_temporales)
+
+                    # 7.2 Eliminar temporales anteriores
+                    self._eliminar_pedidos_temporales(pedidos_temporales)
+                    pedidos_temporales = self.env['megastock.production.order']
+
+                    # 7.3 Crear nuevos pedidos temporales SOLO para faltantes >= 500
+                    for orden in con_faltante_alto:
+                        temp = self._crear_pedido_temporal(orden, orden.faltante)
+                        pedidos_temporales |= temp
+
+                    # IMPORTANTE: Las órdenes con faltante < 500 NO generan temporal
+                    # Solo quedan desagrupadas y volverán a intentar agruparse
+
+            # PASO 8: Limpieza final - Resetear pedidos con faltante < 500 que quedaron agrupados
+            ordenes_originales.invalidate_cache()
+            ordenes_con_faltante_final = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500)
+            if ordenes_con_faltante_final:
+                self._resetear_planificacion(ordenes_con_faltante_final)
+                ordenes_pendientes = ordenes_con_faltante_final
+
+            # PASO 9: Calcular estadísticas finales
+            ordenes_finales = ordenes_originales.filtered(lambda o: o.grupo_planificacion)
 
             if ordenes_finales:
                 eficiencia_total = sum(ordenes_finales.mapped('eficiencia'))
@@ -1018,7 +1159,7 @@ class ProductionOrder(models.Model):
                 'grupos': num_grupos,
                 'eficiencia_promedio': eficiencia_promedio,
                 'desperdicio_total': desperdicio_total,
-                'ordenes_descartadas': len(ordenes_descartadas),
+                'ordenes_pendientes': len(ordenes_pendientes),
                 'iteraciones': iteracion
             }
 
