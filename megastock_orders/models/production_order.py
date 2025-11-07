@@ -993,19 +993,23 @@ class ProductionOrder(models.Model):
                         ordenes_pendientes |= con_faltante_alto
                         break
 
-                    # 7.1 Resetear TODA la planificación (originales + temporales)
+                    # 7.1 GUARDAR faltantes ANTES de resetear (¡CRÍTICO!)
+                    faltantes_a_replanificar = [(orden, orden.faltante) for orden in con_faltante_alto]
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Guardando faltantes para replanificar: {[(o.orden_produccion, f) for o, f in faltantes_a_replanificar]}")
+
+                    # 7.2 Resetear TODA la planificación (originales + temporales)
                     self._resetear_planificacion(ordenes_originales)
                     self._resetear_planificacion(pedidos_temporales)
 
-                    # 7.2 Eliminar todos los pedidos temporales anteriores
+                    # 7.3 Eliminar todos los pedidos temporales anteriores
                     self._eliminar_pedidos_temporales(pedidos_temporales)
                     pedidos_temporales = self.env['megastock.production.order']
 
-                    # 7.3 Crear nuevos pedidos temporales SOLO para faltantes >= 500
-                    for orden_con_faltante in con_faltante_alto:
-                        pedido_temporal = self._crear_pedido_temporal(orden_con_faltante, orden_con_faltante.faltante)
+                    # 7.4 Crear nuevos pedidos temporales con los faltantes guardados
+                    for orden_original, faltante_guardado in faltantes_a_replanificar:
+                        pedido_temporal = self._crear_pedido_temporal(orden_original, faltante_guardado)
                         pedidos_temporales |= pedido_temporal
-                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Creado temporal: {pedido_temporal.orden_produccion} (cantidad: {pedido_temporal.cantidad})")
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Creado temporal: {pedido_temporal.orden_produccion} con {faltante_guardado} unidades (restante del pedido original)")
 
                     # Los pedidos con faltante < 500 NO se convierten en temporales
                     # Solo se desagrupan y se intentan reagrupar en la siguiente iteración
@@ -1119,18 +1123,23 @@ class ProductionOrder(models.Model):
                         self._eliminar_pedidos_temporales(pedidos_temporales)
                         break
 
-                    # 7.1 Resetear TODA la planificación (originales + temporales)
+                    # 7.1 GUARDAR faltantes ANTES de resetear (¡CRÍTICO!)
+                    faltantes_a_replanificar = [(orden, orden.faltante) for orden in con_faltante_alto]
+                    print(f"[ITERACIÓN {iteracion}] Guardando faltantes para replanificar: {[(o.orden_produccion, f) for o, f in faltantes_a_replanificar]}")
+
+                    # 7.2 Resetear TODA la planificación (originales + temporales)
                     self._resetear_planificacion(ordenes_originales)
                     self._resetear_planificacion(pedidos_temporales)
 
-                    # 7.2 Eliminar temporales anteriores
+                    # 7.3 Eliminar temporales anteriores
                     self._eliminar_pedidos_temporales(pedidos_temporales)
                     pedidos_temporales = self.env['megastock.production.order']
 
-                    # 7.3 Crear nuevos pedidos temporales SOLO para faltantes >= 500
-                    for orden in con_faltante_alto:
-                        temp = self._crear_pedido_temporal(orden, orden.faltante)
+                    # 7.4 Crear nuevos pedidos temporales con los faltantes guardados
+                    for orden_original, faltante_guardado in faltantes_a_replanificar:
+                        temp = self._crear_pedido_temporal(orden_original, faltante_guardado)
                         pedidos_temporales |= temp
+                        print(f"[ITERACIÓN {iteracion}] Creado temporal: {temp.orden_produccion} con {faltante_guardado} unidades (restante del pedido original)")
 
                     # IMPORTANTE: Las órdenes con faltante < 500 NO generan temporal
                     # Solo quedan desagrupadas y volverán a intentar agruparse
