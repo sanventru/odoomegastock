@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+#calculos
 from odoo import models, fields, api
 from datetime import datetime
 import math

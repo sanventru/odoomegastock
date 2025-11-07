@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+#compensacion
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
 
