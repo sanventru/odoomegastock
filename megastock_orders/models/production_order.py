@@ -970,17 +970,19 @@ class ProductionOrder(models.Model):
 
                 # Procesar órdenes con faltante >= 500
                 for orden in ordenes_con_faltante_alto:
-                    # Guardar el faltante actual antes de resetear
+                    # Guardar el faltante actual y la bobina del grupo original
                     faltante_actual = orden.faltante
+                    bobina_grupo_original = orden.bobina_utilizada
 
                     # Intentar combinar el faltante con órdenes sin grupo
                     ordenes_sin_grupo = ordenes.filtered(
                         lambda o: not o.grupo_planificacion and o.id != orden.id and o.id not in ordenes_descartadas.ids
                     )
 
-                    # Buscar combinación para el faltante
+                    # IMPORTANTE: Buscar combinación usando SOLO la bobina del grupo original
+                    # para mantener consistencia en el grupo
                     mejor_combinacion_faltante = self._encontrar_mejor_combinacion_para_faltante(
-                        orden, ordenes_sin_grupo, bobinas_disponibles, cavidad_limite
+                        orden, ordenes_sin_grupo, [bobina_grupo_original], cavidad_limite
                     )
 
                     if mejor_combinacion_faltante:
