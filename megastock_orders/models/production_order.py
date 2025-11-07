@@ -906,7 +906,7 @@ class ProductionOrder(models.Model):
             pedidos_temporales = self.env['megastock.production.order']
             ordenes_pendientes = self.env['megastock.production.order']
 
-            max_iteraciones = 100  # Prevenir loops infinitos
+            max_iteraciones = 50  # Reducir para evitar cálculos innecesarios
             iteracion = 0
             grupos_finales = []
 
@@ -987,10 +987,28 @@ class ProductionOrder(models.Model):
                 if con_faltante_alto:
                     # Verificar si podemos continuar iterando
                     if iteracion >= max_iteraciones:
-                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Manteniendo grupos actuales y reseteando faltantes >= 500")
-                        # NO resetear los grupos, solo resetear las órdenes con faltante alto
-                        self._resetear_planificacion(con_faltante_alto)
-                        ordenes_pendientes |= con_faltante_alto
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Intentando planificación forzada individual")
+
+                        # ESTRATEGIA FINAL: Planificar individualmente los faltantes restantes
+                        for orden_faltante in con_faltante_alto:
+                            # Intentar planificar el faltante como orden individual
+                            mejor_comb = self._encontrar_mejor_combinacion(
+                                orden_faltante, self.env['megastock.production.order'], set(), [bobina_seleccionada], 1
+                            )
+                            if mejor_comb:
+                                # Aplicar como nuevo grupo
+                                grupo_counter = len(grupos_finales) + 1
+                                self._aplicar_combinacion(mejor_comb, grupo_counter)
+                                grupos_finales.append(mejor_comb)
+                                print(f"[BOBINA ÚNICA] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
+                            else:
+                                # Si no cabe ni individual, resetear
+                                self._resetear_planificacion(orden_faltante)
+                                ordenes_pendientes |= orden_faltante
+                                print(f"[BOBINA ÚNICA] ⚠️ Orden NO cabe en bobina: {orden_faltante.orden_produccion}")
+
+                        # Limpiar temporales
+                        self._eliminar_pedidos_temporales(pedidos_temporales)
                         break
 
                     # 7.1 GUARDAR faltantes ANTES de resetear (¡CRÍTICO!)
@@ -1043,7 +1061,7 @@ class ProductionOrder(models.Model):
             pedidos_temporales = self.env['megastock.production.order']
             ordenes_pendientes = self.env['megastock.production.order']
 
-            max_iteraciones = 100  # Prevenir loops infinitos
+            max_iteraciones = 50  # Reducir para evitar cálculos innecesarios
             iteracion = 0
 
             while iteracion < max_iteraciones:
@@ -1115,10 +1133,27 @@ class ProductionOrder(models.Model):
                 if con_faltante_alto:
                     # Verificar si podemos continuar iterando
                     if iteracion >= max_iteraciones:
-                        print(f"[ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Manteniendo grupos actuales y reseteando faltantes >= 500")
-                        # NO resetear los grupos, solo resetear las órdenes con faltante alto
-                        self._resetear_planificacion(con_faltante_alto)
-                        ordenes_pendientes |= con_faltante_alto
+                        print(f"[ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Intentando planificación forzada individual")
+
+                        # ESTRATEGIA FINAL: Planificar individualmente los faltantes restantes
+                        grupo_counter = len(set(ordenes_originales.filtered(lambda o: o.grupo_planificacion).mapped('grupo_planificacion'))) + 1
+
+                        for orden_faltante in con_faltante_alto:
+                            # Intentar planificar el faltante como orden individual
+                            mejor_comb = self._encontrar_mejor_combinacion(
+                                orden_faltante, self.env['megastock.production.order'], set(), bobinas_disponibles, 1
+                            )
+                            if mejor_comb:
+                                # Aplicar como nuevo grupo
+                                self._aplicar_combinacion(mejor_comb, grupo_counter)
+                                grupo_counter += 1
+                                print(f"[ITERACIÓN {iteracion}] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
+                            else:
+                                # Si no cabe ni individual, resetear
+                                self._resetear_planificacion(orden_faltante)
+                                ordenes_pendientes |= orden_faltante
+                                print(f"[ITERACIÓN {iteracion}] ⚠️ Orden NO cabe en bobinas disponibles: {orden_faltante.orden_produccion}")
+
                         # Limpiar temporales
                         self._eliminar_pedidos_temporales(pedidos_temporales)
                         break
@@ -1189,6 +1224,9 @@ class ProductionOrder(models.Model):
 
         MARGEN_SEGURIDAD = 30
 
+        # IMPORTANTE: Ordenar bobinas de MENOR a MAYOR para minimizar sobrante
+        bobinas_ordenadas = sorted(bobinas)
+
         # Crear una "orden virtual" que representa el faltante
         # Utilizamos la orden original pero ajustamos la cantidad al faltante
         faltante = orden_con_faltante.faltante
@@ -1197,7 +1235,7 @@ class ProductionOrder(models.Model):
         for multiplicador in range(1, cavidad_limite + 1):
             ancho_util = orden_con_faltante.ancho_calculado * multiplicador
 
-            for bobina in bobinas:
+            for bobina in bobinas_ordenadas:
                 if ancho_util <= (bobina - MARGEN_SEGURIDAD):
                     # Calcular si el faltante cabe con este multiplicador
                     cavidad_efectiva = orden_con_faltante.cavidad * multiplicador if orden_con_faltante.cavidad else multiplicador
@@ -1239,7 +1277,7 @@ class ProductionOrder(models.Model):
                     ancho2 = orden2.ancho_calculado * mult2
                     ancho_total = ancho1 + ancho2
 
-                    for bobina in bobinas:
+                    for bobina in bobinas_ordenadas:
                         if ancho_total <= (bobina - MARGEN_SEGURIDAD):
                             ordenes_data = [
                                 {
@@ -1368,11 +1406,14 @@ class ProductionOrder(models.Model):
         # Margen de seguridad para cortes (30mm)
         MARGEN_SEGURIDAD = 30
 
+        # IMPORTANTE: Ordenar bobinas de MENOR a MAYOR para encontrar la más pequeña que quepa
+        bobinas_ordenadas = sorted(bobinas)
+
         # Probar combinaciones individuales con diferentes multiplicadores de cavidad
         for multiplicador in range(1, cavidad_limite + 1):
             ancho_util = orden_principal.ancho_calculado * multiplicador
 
-            for bobina in bobinas:
+            for bobina in bobinas_ordenadas:
                 if ancho_util <= (bobina - MARGEN_SEGURIDAD):
                     # Crear datos de orden con multiplicador
                     orden_data = [{
@@ -1409,7 +1450,7 @@ class ProductionOrder(models.Model):
                     ancho2 = orden2.ancho_calculado * mult2
                     ancho_total = ancho1 + ancho2
 
-                    for bobina in bobinas:
+                    for bobina in bobinas_ordenadas:
                         if ancho_total <= (bobina - MARGEN_SEGURIDAD):
                             # Crear datos de órdenes con multiplicadores
                             ordenes_data = [
@@ -1628,10 +1669,21 @@ class ProductionOrder(models.Model):
             cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
 
             # 1. cortes_planificados = cantidad / cavidad_efectiva
-            # SIN redondeo (descomentar si NO se requiere redondeo):
-            # cortes_planificados = int(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
-            # CON redondeo (comentar si NO se requiere redondeo):
-            cortes_planificados = round(orden.cantidad / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+            # Usar ceil para asegurar que se produzca al menos la cantidad solicitada
+            # pero sin exceder el umbral de faltante aceptable (< 500)
+            import math
+            if cavidad_efectiva > 0:
+                # Calcular con cantidad_override si existe (para faltantes)
+                cantidad_a_usar = orden_data.get('cantidad_override', orden.cantidad)
+                cortes_exactos = cantidad_a_usar / cavidad_efectiva
+                cortes_planificados = int(cortes_exactos)  # Truncar, no redondear
+
+                # Solo agregar un corte extra si el faltante resultante sería >= 500
+                faltante_potencial = cantidad_a_usar - (cortes_planificados * cavidad_efectiva)
+                if faltante_potencial >= 500:
+                    cortes_planificados += 1
+            else:
+                cortes_planificados = 0
 
             # 2. cantidad_planificada = cortes_planificados * cavidad_efectiva
             cantidad_planificada = cortes_planificados * cavidad_efectiva
@@ -1680,19 +1732,18 @@ class ProductionOrder(models.Model):
 
                 # Fórmula especial para el pedido de cantidad mayor:
                 # cantidad_planificada = ((metros_lineales_menor / largo_calculado_mayor) * 1000)
+                # IMPORTANTE: Limitar a la cantidad original para evitar faltantes negativos
                 cantidad_planificada = 0
                 if orden_mayor.largo_calculado and orden_mayor.largo_calculado > 0:
-                    # SIN redondeo (descomentar si NO se requiere redondeo):
-                    # cantidad_planificada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
-                    # CON redondeo (comentar si NO se requiere redondeo):
-                    cantidad_planificada = round((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+                    import math
+                    cantidad_calculada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+                    # NO exceder la cantidad original del pedido
+                    cantidad_planificada = min(cantidad_calculada, orden_mayor.cantidad)
 
                 # Para este pedido, cortes_planificados se calcula al revés desde cantidad_planificada
                 cavidad_efectiva = orden_mayor.cavidad * multiplicador if orden_mayor.cavidad else multiplicador
-                # SIN redondeo (descomentar si NO se requiere redondeo):
-                # cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
-                # CON redondeo (comentar si NO se requiere redondeo):
-                cortes_planificados = round(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
+                # Usar int() para evitar sobrepasarse de la cantidad planificada
+                cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
 
                 # metros_lineales_planificados usa la fórmula estándar
                 metros_lineales_planificados = 0
