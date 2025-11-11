@@ -1034,6 +1034,53 @@ class ProductionOrder(models.Model):
 
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Continuando con {len(pedidos_temporales)} pedidos temporales...")
 
+            # VALIDACIÓN Y CORRECCIÓN FINAL - Verificar tipos de combinación
+            ordenes_con_grupo = ordenes.filtered(lambda o: o.grupo_planificacion)
+
+            if ordenes_con_grupo:
+                # Agrupar por grupo_planificacion
+                grupos_dict = {}
+                for orden in ordenes_con_grupo:
+                    grupo = orden.grupo_planificacion
+                    if grupo not in grupos_dict:
+                        grupos_dict[grupo] = []
+                    grupos_dict[grupo].append(orden)
+
+                # Verificar y corregir cada grupo
+                grupos_corregidos = 0
+                for grupo_nombre, ordenes_grupo in grupos_dict.items():
+                    num_ordenes = len(ordenes_grupo)
+                    tipo_actual = ordenes_grupo[0].tipo_combinacion if ordenes_grupo else None
+
+                    # Determinar el tipo correcto
+                    if num_ordenes == 1:
+                        tipo_correcto = 'individual'
+                    elif num_ordenes == 2:
+                        tipo_correcto = 'dupla'
+                    else:
+                        tipo_correcto = 'individual'  # Triplas no soportadas
+
+                    # Si el tipo está mal, corregirlo
+                    if tipo_actual != tipo_correcto:
+                        print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
+
+                        # Actualizar todas las órdenes del grupo
+                        for orden in ordenes_grupo:
+                            # Recalcular sobrante con el tipo correcto
+                            MARGEN_SEGURIDAD = 30
+                            espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
+                            sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+
+                            orden.write({
+                                'tipo_combinacion': tipo_correcto,
+                                'sobrante': sobrante_correcto
+                            })
+
+                        grupos_corregidos += 1
+
+                if grupos_corregidos > 0:
+                    print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] ✅ {grupos_corregidos} grupo(s) corregidos")
+
             # Calcular estadísticas finales
             eficiencia_total = sum(grupo['eficiencia'] for grupo in grupos_finales) if grupos_finales else 0
             eficiencia_promedio = eficiencia_total / len(grupos_finales) if grupos_finales else 0
@@ -1064,6 +1111,11 @@ class ProductionOrder(models.Model):
             max_iteraciones = 50  # Reducir para evitar cálculos innecesarios
             iteracion = 0
 
+            # Historial de faltantes para detectar bucles infinitos
+            historial_faltantes = []
+            iteraciones_sin_cambio = 0
+            max_sin_cambio = 3  # Si 3 iteraciones consecutivas sin cambios, salir
+
             while iteracion < max_iteraciones:
                 iteracion += 1
 
@@ -1071,26 +1123,84 @@ class ProductionOrder(models.Model):
                 ordenes_a_planificar = ordenes_originales | pedidos_temporales
 
                 # PASO 2: Ejecutar algoritmo de optimización
+                # ESTRATEGIA: Buscar DUPLAS primero, luego INDIVIDUALES
                 grupos_optimizados = []
                 ordenes_procesadas = set()
                 grupo_counter = 1
+
+                # FASE 1: Buscar todas las duplas posibles (minimiza sobrante)
+                print(f"[ITERACIÓN {iteracion}] FASE 1: Buscando duplas óptimas...")
+                duplas_encontradas = []
+
+                ordenes_list = list(ordenes_a_planificar)
+                print(f"[ITERACIÓN {iteracion}] Total órdenes a evaluar: {len(ordenes_list)}")
+
+                for i, orden1 in enumerate(ordenes_list):
+                    if orden1.id in ordenes_procesadas:
+                        continue
+
+                    mejor_dupla = None
+                    menor_sobrante_dupla = float('inf')
+
+                    # Probar con todas las demás órdenes para formar dupla
+                    for j, orden2 in enumerate(ordenes_list):
+                        if i == j or orden2.id in ordenes_procesadas:  # FIX: cambiar i >= j a i == j
+                            continue
+
+                        # Buscar mejor combinación para esta dupla potencial
+                        ordenes_dupla = self.env['megastock.production.order'].browse([orden1.id, orden2.id])
+                        mejor_comb = self._encontrar_mejor_combinacion(
+                            orden1, ordenes_dupla, set(), bobinas_disponibles, cavidad_limite
+                        )
+
+                        # Solo considerar si es realmente una dupla (2 órdenes)
+                        if mejor_comb and mejor_comb['tipo'] == 'dupla' and len(mejor_comb['ordenes']) == 2:
+                            if mejor_comb['sobrante'] < menor_sobrante_dupla:
+                                menor_sobrante_dupla = mejor_comb['sobrante']
+                                mejor_dupla = mejor_comb
+                                print(f"[ITERACIÓN {iteracion}] → Dupla candidata: {orden1.orden_produccion} + {orden2.orden_produccion} = sobrante {menor_sobrante_dupla}mm")
+
+                    # Si encontramos una dupla válida, agregarla
+                    if mejor_dupla:
+                        duplas_encontradas.append({
+                            'combinacion': mejor_dupla,
+                            'sobrante': menor_sobrante_dupla,
+                            'orden1_id': orden1.id,
+                            'orden2_id': mejor_dupla['ordenes'][1]['orden'].id
+                        })
+                        print(f"[ITERACIÓN {iteracion}] ✓ Mejor dupla para {orden1.orden_produccion}: sobrante {menor_sobrante_dupla}mm")
+
+                # Ordenar duplas por menor sobrante y aplicar las mejores
+                duplas_encontradas.sort(key=lambda x: x['sobrante'])
+                print(f"[ITERACIÓN {iteracion}] Total duplas candidatas encontradas: {len(duplas_encontradas)}")
+
+                duplas_aplicadas = 0
+                for dupla_info in duplas_encontradas:
+                    # Verificar que ambas órdenes aún no estén procesadas
+                    if dupla_info['orden1_id'] not in ordenes_procesadas and dupla_info['orden2_id'] not in ordenes_procesadas:
+                        grupos_optimizados.append(dupla_info['combinacion'])
+                        ordenes_procesadas.add(dupla_info['orden1_id'])
+                        ordenes_procesadas.add(dupla_info['orden2_id'])
+                        duplas_aplicadas += 1
+                        print(f"[ITERACIÓN {iteracion}] ✓ Dupla #{duplas_aplicadas} agregada con sobrante {dupla_info['sobrante']}mm")
+
+                print(f"[ITERACIÓN {iteracion}] Total duplas aplicadas: {duplas_aplicadas}")
+
+                # FASE 2: Procesar órdenes restantes como individuales
+                print(f"[ITERACIÓN {iteracion}] FASE 2: Procesando {len(ordenes_list) - len(ordenes_procesadas)} órdenes individuales...")
 
                 for orden in ordenes_a_planificar:
                     if orden.id in ordenes_procesadas:
                         continue
 
-                    # Buscar mejor combinación considerando TODAS las bobinas disponibles
+                    # Buscar mejor combinación individual
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                        orden, self.env['megastock.production.order'].browse([orden.id]), set(), bobinas_disponibles, cavidad_limite
                     )
 
                     if mejor_combinacion:
                         grupos_optimizados.append(mejor_combinacion)
-
-                        # Marcar órdenes como procesadas
-                        for orden_comb_data in mejor_combinacion['ordenes']:
-                            ordenes_procesadas.add(orden_comb_data['orden'].id)
-
+                        ordenes_procesadas.add(orden.id)
                         grupo_counter += 1
 
                 # Aplicar los grupos encontrados
@@ -1110,6 +1220,30 @@ class ProductionOrder(models.Model):
                     print(f"[ITERACIÓN {iteracion}] Faltantes ALTOS (>= 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_alto]}")
                 if con_faltante_bajo:
                     print(f"[ITERACIÓN {iteracion}] Faltantes BAJOS (< 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_bajo]}")
+
+                # PASO 4.5: Detectar bucle infinito - Faltantes que no cambian
+                faltantes_actuales = set((o.orden_produccion, o.faltante) for o in con_faltante_alto)
+
+                if historial_faltantes and faltantes_actuales == historial_faltantes[-1]:
+                    iteraciones_sin_cambio += 1
+                    print(f"[ITERACIÓN {iteracion}] ⚠️ Faltantes SIN CAMBIO ({iteraciones_sin_cambio}/{max_sin_cambio})")
+
+                    if iteraciones_sin_cambio >= max_sin_cambio:
+                        print(f"[ITERACIÓN {iteracion}] 🛑 BUCLE INFINITO DETECTADO - Los faltantes no han cambiado en {max_sin_cambio} iteraciones")
+                        print(f"[ITERACIÓN {iteracion}] Órdenes con faltantes persistentes: {[o.orden_produccion for o in con_faltante_alto]}")
+
+                        # Resetear estas órdenes como no planificables (dejar pendientes)
+                        self._resetear_planificacion(con_faltante_alto)
+                        ordenes_pendientes |= con_faltante_alto
+                        print(f"[ITERACIÓN {iteracion}] Órdenes marcadas como PENDIENTES (no planificables con bobinas disponibles)")
+
+                        # Limpiar temporales
+                        self._eliminar_pedidos_temporales(pedidos_temporales)
+                        break
+                else:
+                    iteraciones_sin_cambio = 0
+
+                historial_faltantes.append(faltantes_actuales)
 
                 # PASO 5: Condición de salida - Todos cumplidos ✅
                 if not con_faltante_alto and not con_faltante_bajo:
@@ -1186,10 +1320,54 @@ class ProductionOrder(models.Model):
                 self._resetear_planificacion(ordenes_con_faltante_final)
                 ordenes_pendientes = ordenes_con_faltante_final
 
-            # PASO 9: Calcular estadísticas finales
+            # PASO 9: VALIDACIÓN Y CORRECCIÓN FINAL - Verificar tipos de combinación
             ordenes_finales = ordenes_originales.filtered(lambda o: o.grupo_planificacion)
 
             if ordenes_finales:
+                # Agrupar por grupo_planificacion
+                grupos_dict = {}
+                for orden in ordenes_finales:
+                    grupo = orden.grupo_planificacion
+                    if grupo not in grupos_dict:
+                        grupos_dict[grupo] = []
+                    grupos_dict[grupo].append(orden)
+
+                # Verificar y corregir cada grupo
+                grupos_corregidos = 0
+                for grupo_nombre, ordenes_grupo in grupos_dict.items():
+                    num_ordenes = len(ordenes_grupo)
+                    tipo_actual = ordenes_grupo[0].tipo_combinacion if ordenes_grupo else None
+
+                    # Determinar el tipo correcto
+                    if num_ordenes == 1:
+                        tipo_correcto = 'individual'
+                    elif num_ordenes == 2:
+                        tipo_correcto = 'dupla'
+                    else:
+                        tipo_correcto = 'individual'  # Triplas no soportadas
+
+                    # Si el tipo está mal, corregirlo
+                    if tipo_actual != tipo_correcto:
+                        print(f"[CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
+
+                        # Actualizar todas las órdenes del grupo
+                        for orden in ordenes_grupo:
+                            # Recalcular sobrante con el tipo correcto
+                            MARGEN_SEGURIDAD = 30
+                            espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
+                            sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+
+                            orden.write({
+                                'tipo_combinacion': tipo_correcto,
+                                'sobrante': sobrante_correcto
+                            })
+
+                        grupos_corregidos += 1
+
+                if grupos_corregidos > 0:
+                    print(f"[CORRECCIÓN FINAL] ✅ {grupos_corregidos} grupo(s) corregidos")
+
+                # Calcular estadísticas finales
                 eficiencia_total = sum(ordenes_finales.mapped('eficiencia'))
                 eficiencia_promedio = eficiencia_total / len(ordenes_finales)
                 desperdicio_total = sum(ordenes_finales.mapped('sobrante'))
@@ -1625,10 +1803,46 @@ class ProductionOrder(models.Model):
             grupo_id: ID del grupo de planificación
         """
         grupo_nombre = f"GRUPO-{grupo_id:03d}"
+        print(f"\n{'='*80}")
+        print(f"[_APLICAR_COMBINACION] INICIO - {grupo_nombre}")
+        print(f"  Tipo combinación: {combinacion.get('tipo')}")
+        print(f"  Número de órdenes: {len(combinacion.get('ordenes', []))}")
+        print(f"{'='*80}\n")
+
+        # VALIDACIÓN PREVENTIVA: Filtrar órdenes que ya tienen grupo asignado
+        ordenes_disponibles = []
+        for orden_data in combinacion['ordenes']:
+            orden = orden_data['orden']
+            if not orden.grupo_planificacion:
+                ordenes_disponibles.append(orden_data)
+            else:
+                print(f"[ADVERTENCIA] {grupo_nombre}: Orden {orden.orden_produccion} ya está en {orden.grupo_planificacion}, omitiendo")
+
+        # Si no quedan órdenes disponibles, abortar
+        if not ordenes_disponibles:
+            print(f"[ERROR] {grupo_nombre}: No hay órdenes disponibles para aplicar, abortando")
+            return
+
+        # Actualizar la combinación con solo las órdenes disponibles
+        combinacion['ordenes'] = ordenes_disponibles
 
         # Calcular sobrante individual para cada orden
         MARGEN_SEGURIDAD = 30
         num_ordenes = len(combinacion['ordenes'])
+
+        # CORRECCIÓN DE BUG: Si solo hay 1 orden, forzar tipo 'individual'
+        # Esto previene inconsistencias donde una dupla perdió una orden
+        if num_ordenes == 1:
+            if combinacion['tipo'] != 'individual':
+                print(f"[BUG FIX] {grupo_nombre}: Corrigiendo tipo '{combinacion['tipo']}' → 'individual' (solo 1 pedido)")
+            combinacion['tipo'] = 'individual'
+
+        # VALIDACIÓN ADICIONAL: Si el tipo es 'dupla', DEBE haber exactamente 2 órdenes
+        elif combinacion['tipo'] == 'dupla' and num_ordenes != 2:
+            print(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
+            # Forzar a individual si no son exactamente 2
+            combinacion['tipo'] = 'individual'
+
         espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
 
         # Para DUPLAS: Identificar el pedido con menor cantidad
@@ -1700,9 +1914,17 @@ class ProductionOrder(models.Model):
             if combinacion['tipo'] == 'dupla' and orden.id == orden_menor.id:
                 metros_lineales_menor = metros_lineales_planificados
 
+            # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
+            tipo_final = combinacion['tipo']
+            if tipo_final == 'dupla' and len(combinacion['ordenes']) != 2:
+                print(f"[ERROR CRÍTICO] Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
+                tipo_final = 'individual'
+            elif tipo_final == 'individual' and len(combinacion['ordenes']) > 1:
+                print(f"[ADVERTENCIA] Tipo 'individual' con {len(combinacion['ordenes'])} órdenes")
+
             orden.write({
                 'grupo_planificacion': grupo_nombre,
-                'tipo_combinacion': combinacion['tipo'],
+                'tipo_combinacion': tipo_final,
                 'ancho_utilizado': combinacion['ancho_utilizado'],
                 'bobina_utilizada': combinacion['bobina'],
                 'sobrante': sobrante_individual,
@@ -1753,9 +1975,15 @@ class ProductionOrder(models.Model):
                     # CON redondeo (comentar si NO se requiere redondeo):
                     metros_lineales_planificados = round(((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000)
 
+                # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
+                tipo_final = combinacion['tipo']
+                if tipo_final == 'dupla' and len(combinacion['ordenes']) != 2:
+                    print(f"[ERROR CRÍTICO] Orden mayor: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
+                    tipo_final = 'individual'
+
                 orden_mayor.write({
                     'grupo_planificacion': grupo_nombre,
-                    'tipo_combinacion': combinacion['tipo'],
+                    'tipo_combinacion': tipo_final,
                     'ancho_utilizado': combinacion['ancho_utilizado'],
                     'bobina_utilizada': combinacion['bobina'],
                     'sobrante': sobrante_individual,
