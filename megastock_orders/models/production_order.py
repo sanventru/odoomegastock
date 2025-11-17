@@ -542,28 +542,65 @@ class ProductionOrder(models.Model):
 
             record.largo_indice_flauta = largo_indice
 
+    def _get_cavidad_para_calculos(self):
+        """
+        Obtiene la cavidad a usar en cálculos.
+
+        MÉTODO CENTRALIZADO - Cambiar SOLO AQUÍ para modificar lógica de cavidad
+
+        Orden de prioridad ACTUAL:
+        1. cavidad (si está definido manualmente)
+        2. cavidad_optimizada (calculado por algoritmo de planificación)
+        3. 1 (valor por defecto seguro)
+
+        OPCIONES FUTURAS - Modificar este método para:
+        ────────────────────────────────────────────────────────────
+        A) Cargar desde Excel/CSV:
+           return self.cavidad or self.cavidad_desde_excel or 1
+
+        B) Usar valor fijo configurable:
+           cavidad_default = self.env['ir.config_parameter'].get_param('megastock.cavidad_default', 1)
+           return self.cavidad or int(cavidad_default)
+
+        C) Obtener desde catálogo de productos:
+           if self.producto_id:
+               return self.cavidad or self.producto_id.cavidad_default or 1
+
+        D) Calcular según tipo de producto:
+           if self.tipo_producto == 'cajas':
+               return self.cavidad or 2
+           elif self.tipo_producto == 'laminas':
+               return self.cavidad or 1
+
+        Returns:
+            int: Cavidad a usar en cálculos (siempre > 0)
+        """
+        return self.cavidad or self.cavidad_optimizada or 1
+
     @api.depends('cantidad', 'cantidad_planificada')
     def _compute_faltante(self):
         """Calcula el faltante: cantidad solicitada - cantidad planificada"""
         for record in self:
             record.faltante = (record.cantidad or 0) - (record.cantidad_planificada or 0)
 
-    @api.depends('cantidad', 'cavidad')
+    @api.depends('cantidad', 'cavidad', 'cavidad_optimizada')
     def _compute_cantidad_ajustada(self):
         """Optimiza cantidad según cavidad: ceil(cantidad/cavidad) * cavidad"""
         for record in self:
-            if record.cantidad and record.cavidad and record.cavidad > 0:
-                cortes_necesarios = math.ceil(record.cantidad / record.cavidad)
-                record.cantidad_ajustada = cortes_necesarios * record.cavidad
+            cavidad_usar = record._get_cavidad_para_calculos()
+            if record.cantidad and cavidad_usar > 0:
+                cortes_necesarios = math.ceil(record.cantidad / cavidad_usar)
+                record.cantidad_ajustada = cortes_necesarios * cavidad_usar
             else:
                 record.cantidad_ajustada = record.cantidad or 0
 
-    @api.depends('cantidad_ajustada', 'largo_calculado', 'cavidad')
+    @api.depends('cantidad_ajustada', 'largo_calculado', 'cavidad', 'cavidad_optimizada')
     def _compute_metros_lineales_calculados(self):
         """Calcula metros lineales: ((cantidad_ajustada * largo_calculado) / cavidad) / 1000"""
         for record in self:
-            if record.cantidad_ajustada and record.largo_calculado and record.cavidad and record.cavidad > 0:
-                metros = ((record.cantidad_ajustada * record.largo_calculado) / record.cavidad) / 1000
+            cavidad_usar = record._get_cavidad_para_calculos()
+            if record.cantidad_ajustada and record.largo_calculado and cavidad_usar > 0:
+                metros = ((record.cantidad_ajustada * record.largo_calculado) / cavidad_usar) / 1000
                 record.metros_lineales_calculados = metros
             else:
                 record.metros_lineales_calculados = 0
@@ -646,11 +683,12 @@ class ProductionOrder(models.Model):
             else:
                 record.cumplimiento_calculado = 'pendiente'
 
-    @api.depends('cantidad', 'cavidad')
+    @api.depends('cantidad', 'cavidad', 'cavidad_optimizada')
     def _compute_cortes(self):
         for record in self:
-            if record.cavidad and record.cavidad > 0:
-                record.cortes = int(record.cantidad / record.cavidad)
+            cavidad_usar = record._get_cavidad_para_calculos()
+            if cavidad_usar > 0:
+                record.cortes = int(record.cantidad / cavidad_usar)
             else:
                 record.cortes = 0
     
@@ -665,11 +703,12 @@ class ProductionOrder(models.Model):
             else:
                 record.metros_lineales = 0.0
     
-    @api.onchange('cantidad', 'cavidad')
+    @api.onchange('cantidad', 'cavidad', 'cavidad_optimizada')
     def _onchange_cantidad_cavidad(self):
         """Actualizar cortes cuando cambie cantidad o cavidad"""
-        if self.cavidad and self.cavidad > 0:
-            self.cortes = int(self.cantidad / self.cavidad)
+        cavidad_usar = self._get_cavidad_para_calculos()
+        if cavidad_usar > 0:
+            self.cortes = int(self.cantidad / cavidad_usar)
         else:
             self.cortes = 0
     
@@ -858,7 +897,7 @@ class ProductionOrder(models.Model):
             'metros_lineales_planificados': 0,
             'cortes_planificados': 0,
             'cantidad_planificada': 0,
-            'cavidad_optimizada': 0,
+            'cavidad_optimizada': False,  # Usar False en lugar de 0 para evitar división por 0
         })
 
     def _eliminar_pedidos_temporales(self, pedidos_temporales):
@@ -946,7 +985,7 @@ class ProductionOrder(models.Model):
                 # PASO 3: Aplicar grupos encontrados
                 if grupos_optimizados:
                     for idx, grupo in enumerate(grupos_optimizados, start=1):
-                        self._aplicar_combinacion(grupo, idx)
+                        self._aplicar_combinacion(grupo, idx, bobinas_disponibles)
                     grupos_finales = grupos_optimizados
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos aplicados exitosamente")
                 else:
@@ -998,7 +1037,7 @@ class ProductionOrder(models.Model):
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
                                 grupo_counter = len(grupos_finales) + 1
-                                self._aplicar_combinacion(mejor_comb, grupo_counter)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles)
                                 grupos_finales.append(mejor_comb)
                                 print(f"[BOBINA ÚNICA] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1064,17 +1103,59 @@ class ProductionOrder(models.Model):
                     if tipo_actual != tipo_correcto:
                         print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
 
-                        # Actualizar todas las órdenes del grupo
-                        for orden in ordenes_grupo:
-                            # Recalcular sobrante con el tipo correcto
-                            MARGEN_SEGURIDAD = 30
-                            espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
-                            sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+                        # Si queda solo 1 orden, RECALCULAR bobina óptima
+                        if num_ordenes == 1:
+                            orden = ordenes_grupo[0]
+                            bobina_original = orden.bobina_utilizada
 
-                            orden.write({
-                                'tipo_combinacion': tipo_correcto,
-                                'sobrante': sobrante_correcto
-                            })
+                            print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: Recalculando bobina óptima...")
+
+                            # Buscar la bobina más pequeña que quepa
+                            # USAR LAS BOBINAS SELECCIONADAS, no todas las activas
+                            bobinas_ordenadas = sorted(bobinas_disponibles)
+
+                            MARGEN_SEGURIDAD = 30
+                            # IMPORTANTE: Considerar el multiplicador (cavidad_optimizada) para calcular el ancho REAL necesario
+                            ancho_necesario = orden.ancho_calculado * (orden.cavidad_optimizada or 1)
+
+                            bobina_optima = None
+                            menor_sobrante = float('inf')
+
+                            for bobina in bobinas_ordenadas:
+                                espacio_disponible = bobina - MARGEN_SEGURIDAD
+                                if ancho_necesario <= espacio_disponible:
+                                    sobrante = espacio_disponible - ancho_necesario
+                                    if sobrante < menor_sobrante:
+                                        menor_sobrante = sobrante
+                                        bobina_optima = bobina
+                                        break
+
+                            if bobina_optima:
+                                eficiencia_nueva = round((ancho_necesario / bobina_optima) * 100)
+
+                                orden.write({
+                                    'tipo_combinacion': tipo_correcto,
+                                    'bobina_utilizada': bobina_optima,
+                                    'ancho_utilizado': ancho_necesario,
+                                    'sobrante': menor_sobrante,
+                                    'eficiencia': eficiencia_nueva
+                                })
+
+                                if bobina_optima != bobina_original:
+                                    print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: Bobina corregida: {bobina_original}mm → {bobina_optima}mm")
+                                else:
+                                    print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
+                        else:
+                            # Para duplas, solo actualizar tipo y sobrante
+                            for orden in ordenes_grupo:
+                                MARGEN_SEGURIDAD = 30
+                                espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
+                                sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+
+                                orden.write({
+                                    'tipo_combinacion': tipo_correcto,
+                                    'sobrante': sobrante_correcto
+                                })
 
                         grupos_corregidos += 1
 
@@ -1206,7 +1287,7 @@ class ProductionOrder(models.Model):
                 # Aplicar los grupos encontrados
                 if grupos_optimizados:
                     for idx, grupo in enumerate(grupos_optimizados, start=1):
-                        self._aplicar_combinacion(grupo, idx)
+                        self._aplicar_combinacion(grupo, idx, bobinas_disponibles)
 
                 # PASO 3: Refrescar y calcular faltantes (SOLO en órdenes originales)
                 ordenes_originales.invalidate_cache()
@@ -1279,7 +1360,7 @@ class ProductionOrder(models.Model):
                             )
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
-                                self._aplicar_combinacion(mejor_comb, grupo_counter)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles)
                                 grupo_counter += 1
                                 print(f"[ITERACIÓN {iteracion}] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1350,17 +1431,60 @@ class ProductionOrder(models.Model):
                     if tipo_actual != tipo_correcto:
                         print(f"[CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
 
-                        # Actualizar todas las órdenes del grupo
-                        for orden in ordenes_grupo:
-                            # Recalcular sobrante con el tipo correcto
-                            MARGEN_SEGURIDAD = 30
-                            espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
-                            sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+                        # Si queda solo 1 orden, RECALCULAR bobina óptima
+                        if num_ordenes == 1:
+                            orden = ordenes_grupo[0]
+                            bobina_original = orden.bobina_utilizada
 
-                            orden.write({
-                                'tipo_combinacion': tipo_correcto,
-                                'sobrante': sobrante_correcto
-                            })
+                            print(f"[CORRECCIÓN FINAL] {grupo_nombre}: Recalculando bobina óptima para orden individual...")
+
+                            # Buscar la bobina más pequeña que quepa
+                            # USAR LAS BOBINAS SELECCIONADAS, no todas las activas
+                            bobinas_ordenadas = sorted(bobinas_disponibles)
+
+                            MARGEN_SEGURIDAD = 30
+                            # IMPORTANTE: Considerar el multiplicador (cavidad_optimizada) para calcular el ancho REAL necesario
+                            ancho_necesario = orden.ancho_calculado * (orden.cavidad_optimizada or 1)
+
+                            bobina_optima = None
+                            menor_sobrante = float('inf')
+
+                            for bobina in bobinas_ordenadas:
+                                espacio_disponible = bobina - MARGEN_SEGURIDAD
+                                if ancho_necesario <= espacio_disponible:
+                                    sobrante = espacio_disponible - ancho_necesario
+                                    if sobrante < menor_sobrante:
+                                        menor_sobrante = sobrante
+                                        bobina_optima = bobina
+                                        break
+
+                            if bobina_optima:
+                                eficiencia_nueva = round((ancho_necesario / bobina_optima) * 100)
+
+                                orden.write({
+                                    'tipo_combinacion': tipo_correcto,
+                                    'bobina_utilizada': bobina_optima,
+                                    'ancho_utilizado': ancho_necesario,
+                                    'sobrante': menor_sobrante,
+                                    'eficiencia': eficiencia_nueva
+                                })
+
+                                if bobina_optima != bobina_original:
+                                    print(f"[CORRECCIÓN FINAL] {grupo_nombre}: Bobina corregida: {bobina_original}mm → {bobina_optima}mm")
+                                    print(f"[CORRECCIÓN FINAL] {grupo_nombre}: Sobrante: {menor_sobrante}mm, Eficiencia: {eficiencia_nueva}%")
+                                else:
+                                    print(f"[CORRECCIÓN FINAL] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
+                        else:
+                            # Para duplas, solo actualizar tipo y sobrante
+                            for orden in ordenes_grupo:
+                                MARGEN_SEGURIDAD = 30
+                                espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
+                                sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+
+                                orden.write({
+                                    'tipo_combinacion': tipo_correcto,
+                                    'sobrante': sobrante_correcto
+                                })
 
                         grupos_corregidos += 1
 
@@ -1617,6 +1741,14 @@ class ProductionOrder(models.Model):
                         }
 
         # Probar duplas con diferentes multiplicadores de cavidad para cada orden
+        # IMPORTANTE: Si todas_ordenes solo tiene 1 orden, NO evaluar duplas
+        ordenes_disponibles_para_dupla = [o for o in todas_ordenes if o.id != orden_principal.id and o.id not in procesadas]
+
+        if len(ordenes_disponibles_para_dupla) == 0:
+            # No hay otras órdenes para formar dupla, retornar la mejor individual
+            print(f"[OPTIMIZACION] No hay otras órdenes disponibles para dupla, usando mejor individual")
+            return mejor_combinacion
+
         for orden2 in todas_ordenes:
             if orden2.id == orden_principal.id or orden2.id in procesadas:
                 continue
@@ -1795,12 +1927,13 @@ class ProductionOrder(models.Model):
             'cortes_totales': cortes_totales
         }
 
-    def _aplicar_combinacion(self, combinacion, grupo_id):
+    def _aplicar_combinacion(self, combinacion, grupo_id, bobinas_disponibles):
         """Aplica la combinación encontrada a las órdenes
 
         Args:
             combinacion: dict con la estructura de la combinación óptima
             grupo_id: ID del grupo de planificación
+            bobinas_disponibles: Lista de anchos de bobinas seleccionadas por el usuario
         """
         grupo_nombre = f"GRUPO-{grupo_id:03d}"
         print(f"\n{'='*80}")
@@ -1830,11 +1963,65 @@ class ProductionOrder(models.Model):
         MARGEN_SEGURIDAD = 30
         num_ordenes = len(combinacion['ordenes'])
 
-        # CORRECCIÓN DE BUG: Si solo hay 1 orden, forzar tipo 'individual'
-        # Esto previene inconsistencias donde una dupla perdió una orden
-        if num_ordenes == 1:
-            if combinacion['tipo'] != 'individual':
-                print(f"[BUG FIX] {grupo_nombre}: Corrigiendo tipo '{combinacion['tipo']}' → 'individual' (solo 1 pedido)")
+        # CORRECCIÓN DE BUG: Si solo hay 1 orden Y el tipo original es 'individual'
+        # RECALCULAR la bobina óptima para ese pedido individual
+        # IMPORTANTE: NO recalcular si el tipo original era 'dupla' porque significa
+        # que la dupla perdió una orden y la bobina 1880 es la correcta para el grupo
+        if num_ordenes == 1 and combinacion['tipo'] == 'individual':
+            # Guardar bobina original para debug
+            bobina_original = combinacion.get('bobina')
+            sobrante_original = combinacion.get('sobrante')
+
+            print(f"[BUG FIX] {grupo_nombre}: Detectada orden individual (num_ordenes=1)")
+            print(f"[BUG FIX] {grupo_nombre}: Bobina actual: {bobina_original}mm, Tipo: {combinacion['tipo']}")
+            print(f"[BUG FIX] {grupo_nombre}: Recalculando bobina óptima para pedido individual...")
+
+            # Recalcular la mejor bobina para este pedido individual
+            orden_unica = combinacion['ordenes'][0]['orden']
+            # IMPORTANTE: Usar el multiplicador calculado por _encontrar_mejor_combinacion
+            # NO usar cavidad_optimizada del registro porque aún no está guardado
+            multiplicador = combinacion['ordenes'][0].get('multiplicador', 1)
+            ancho_necesario = orden_unica.ancho_calculado * multiplicador
+
+            print(f"[BUG FIX] {grupo_nombre}: ancho_calculado={orden_unica.ancho_calculado}mm, multiplicador={multiplicador}, ancho_real={ancho_necesario}mm")
+
+            # Buscar la bobina más pequeña que quepa (minimizar sobrante)
+            # USAR LAS BOBINAS SELECCIONADAS, no todas las activas
+            bobinas_ordenadas = sorted(bobinas_disponibles)  # De menor a mayor
+
+            bobina_optima = None
+            menor_sobrante = float('inf')
+
+            for bobina in bobinas_ordenadas:
+                espacio_disponible = bobina - MARGEN_SEGURIDAD
+                if ancho_necesario <= espacio_disponible:
+                    sobrante = espacio_disponible - ancho_necesario
+                    if sobrante < menor_sobrante:
+                        menor_sobrante = sobrante
+                        bobina_optima = bobina
+                        # Tomar la primera que cabe (la más pequeña)
+                        break
+
+            if bobina_optima:
+                # Actualizar combinación con valores correctos para individual
+                combinacion['bobina'] = bobina_optima
+                combinacion['ancho_utilizado'] = ancho_necesario
+                combinacion['sobrante'] = menor_sobrante
+                combinacion['eficiencia'] = round((ancho_necesario / bobina_optima) * 100)
+
+                # CRÍTICO: Actualizar también el ancho_efectivo en orden_data
+                # para que el cálculo de sobrante_individual use el valor correcto
+                combinacion['ordenes'][0]['ancho_efectivo'] = ancho_necesario
+
+                if bobina_optima != bobina_original:
+                    print(f"[BUG FIX] {grupo_nombre}: Bobina corregida: {bobina_original}mm → {bobina_optima}mm")
+                    print(f"[BUG FIX] {grupo_nombre}: Sobrante reducido: {sobrante_original}mm → {menor_sobrante:.2f}mm")
+                    print(f"[BUG FIX] {grupo_nombre}: Eficiencia mejorada: {combinacion['eficiencia']:.2f}%")
+                else:
+                    print(f"[BUG FIX] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
+            else:
+                print(f"[ERROR] {grupo_nombre}: No se encontró bobina óptima para ancho {ancho_necesario}mm")
+
             combinacion['tipo'] = 'individual'
 
         # VALIDACIÓN ADICIONAL: Si el tipo es 'dupla', DEBE haber exactamente 2 órdenes
@@ -1842,6 +2029,9 @@ class ProductionOrder(models.Model):
             print(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
             # Forzar a individual si no son exactamente 2
             combinacion['tipo'] = 'individual'
+
+            # El recálculo ya se hará en el primer bloque if num_ordenes == 1
+            # Este bloque solo corrige el tipo, el recálculo se hace arriba
 
         espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
 
