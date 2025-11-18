@@ -341,6 +341,20 @@ class ProductionOrder(models.Model):
             record._compute_test_from_description()
         return True
 
+    def action_recalcular_campos_flauta(self):
+        """
+        Fuerza el recálculo de todos los campos que dependen de flauta.
+        Útil cuando se actualizan las compensaciones en megastock_flauta.
+        """
+        for record in self:
+            # Forzar recálculo de campos índice flauta
+            record._compute_ancho_indice_flauta()
+            record._compute_alto_indice_flauta()
+            record._compute_largo_indice_flauta()
+            # Forzar recálculo de campos que dependen de índice flauta
+            record._compute_ancho_calculado()
+        return True
+
     @api.depends('alto_indice_flauta')
     def _compute_largo_rayado(self):
         """Calcula largo rayado según fórmula: alto_indice_flauta + 2"""
@@ -1146,12 +1160,14 @@ class ProductionOrder(models.Model):
                                 else:
                                     print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
                         else:
-                            # Para duplas, solo actualizar tipo y sobrante
-                            for orden in ordenes_grupo:
-                                MARGEN_SEGURIDAD = 30
-                                espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
-                                sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+                            # Para duplas, calcular sobrante total y dividir entre órdenes
+                            MARGEN_SEGURIDAD = 30
+                            espacio_disponible = ordenes_grupo[0].bobina_utilizada - MARGEN_SEGURIDAD
+                            ancho_total = sum(o.ancho_calculado * (o.cavidad_optimizada or 1) for o in ordenes_grupo)
+                            sobrante_total = espacio_disponible - ancho_total
+                            sobrante_correcto = round(sobrante_total / num_ordenes)
 
+                            for orden in ordenes_grupo:
                                 orden.write({
                                     'tipo_combinacion': tipo_correcto,
                                     'sobrante': sobrante_correcto
@@ -1475,12 +1491,14 @@ class ProductionOrder(models.Model):
                                 else:
                                     print(f"[CORRECCIÓN FINAL] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
                         else:
-                            # Para duplas, solo actualizar tipo y sobrante
-                            for orden in ordenes_grupo:
-                                MARGEN_SEGURIDAD = 30
-                                espacio_por_orden = (orden.bobina_utilizada - MARGEN_SEGURIDAD) / num_ordenes
-                                sobrante_correcto = round(espacio_por_orden - orden.ancho_calculado * orden.cavidad_optimizada)
+                            # Para duplas, calcular sobrante total y dividir entre órdenes
+                            MARGEN_SEGURIDAD = 30
+                            espacio_disponible = ordenes_grupo[0].bobina_utilizada - MARGEN_SEGURIDAD
+                            ancho_total = sum(o.ancho_calculado * (o.cavidad_optimizada or 1) for o in ordenes_grupo)
+                            sobrante_total = espacio_disponible - ancho_total
+                            sobrante_correcto = round(sobrante_total / num_ordenes)
 
+                            for orden in ordenes_grupo:
                                 orden.write({
                                     'tipo_combinacion': tipo_correcto,
                                     'sobrante': sobrante_correcto
@@ -1833,6 +1851,16 @@ class ProductionOrder(models.Model):
         for data in ordenes_data:
             # ancho_efectivo ya incluye el multiplicador
             sobrante_individual = espacio_por_orden - data['ancho_efectivo']
+
+            # VALIDACIÓN CRÍTICA: Si el pedido no cabe en su espacio, rechazar la combinación
+            if sobrante_individual < 0:
+                return {
+                    'eficiencia': 0,
+                    'sobrante': bobina_ancho,
+                    'metros_lineales': 0,
+                    'cortes_totales': 0
+                }
+
             sobrante_ancho += sobrante_individual
 
         # Calcular eficiencia: porcentaje de bobina utilizado
@@ -1845,13 +1873,56 @@ class ProductionOrder(models.Model):
         metros_lineales = 0
         cortes_totales = 0
 
-        for data in ordenes_data:
-            orden = data['orden']
-            multiplicador = data['multiplicador']
+        # NUEVA LÓGICA PARA DUPLAS:
+        # Si hay 2 órdenes (dupla), aplicar nueva fórmula para cantidad_ajustada del segundo pedido
+        if len(ordenes_data) == 2:
+            # Determinar cuál es la orden MENOR (menor cantidad) y cuál es la MAYOR
+            orden1_data = ordenes_data[0]
+            orden2_data = ordenes_data[1]
 
-            if orden.cavidad and orden.cavidad > 0:
+            if orden1_data['orden'].cantidad <= orden2_data['orden'].cantidad:
+                orden_menor_data = orden1_data
+                orden_mayor_data = orden2_data
+            else:
+                orden_menor_data = orden2_data
+                orden_mayor_data = orden1_data
+
+            # PASO 1: Calcular metros lineales del pedido MENOR (fórmula normal)
+            orden_menor = orden_menor_data['orden']
+            mult_menor = orden_menor_data['multiplicador']
+            cavidad_menor = orden_menor.cavidad if orden_menor.cavidad and orden_menor.cavidad > 0 else 1
+            cavidad_efectiva_menor = cavidad_menor * mult_menor
+            cortes_menor = orden_menor.cantidad / cavidad_efectiva_menor
+            metros_menor = (cortes_menor * orden_menor.largo_calculado) / 1000
+
+            # PASO 2: Calcular cantidad_ajustada del pedido MAYOR usando metros del menor
+            orden_mayor = orden_mayor_data['orden']
+            # Nueva fórmula: cantidad_ajustada = (metros_lineales_menor / largo_calculado_mayor) × 1000
+            cantidad_ajustada_mayor = (metros_menor / orden_mayor.largo_calculado) * 1000
+
+            # Calcular metros del pedido mayor (que deben ser iguales a metros del menor)
+            mult_mayor = orden_mayor_data['multiplicador']
+            cavidad_mayor = orden_mayor.cavidad if orden_mayor.cavidad and orden_mayor.cavidad > 0 else 1
+            cavidad_efectiva_mayor = cavidad_mayor * mult_mayor
+            cortes_mayor = cantidad_ajustada_mayor / cavidad_efectiva_mayor
+            metros_mayor = (cortes_mayor * orden_mayor.largo_calculado) / 1000
+
+            # Guardar cantidad_ajustada calculada en data para usarla después
+            orden_mayor_data['cantidad_ajustada_dupla'] = cantidad_ajustada_mayor
+
+            # Total de metros y cortes (en duplas, metros deben ser prácticamente iguales)
+            metros_lineales = metros_menor  # Usamos los metros del menor como referencia
+            cortes_totales = cortes_menor + cortes_mayor
+
+        else:
+            # INDIVIDUAL o más de 2 órdenes: usar cálculo normal
+            for data in ordenes_data:
+                orden = data['orden']
+                multiplicador = data['multiplicador']
+
+                cavidad = orden.cavidad if orden.cavidad and orden.cavidad > 0 else 1
                 # La cavidad efectiva se multiplica por el multiplicador
-                cavidad_efectiva = orden.cavidad * multiplicador
+                cavidad_efectiva = cavidad * multiplicador
                 cortes_necesarios = orden.cantidad / cavidad_efectiva
                 metros_por_orden = (cortes_necesarios * orden.largo_calculado) / 1000  # mm a metros
                 metros_lineales += metros_por_orden
@@ -2058,11 +2129,16 @@ class ProductionOrder(models.Model):
             multiplicador = orden_data.get('multiplicador', 1)
             ancho_efectivo = orden_data.get('ancho_efectivo', orden.ancho_calculado)
 
-            # Calcular sobrante individual de esta orden
-            # SIN redondeo (descomentar si NO se requiere redondeo):
-            # sobrante_individual = espacio_por_orden - ancho_efectivo
-            # CON redondeo (comentar si NO se requiere redondeo):
-            sobrante_individual = round(espacio_por_orden - ancho_efectivo)
+            # Calcular sobrante según tipo de combinación
+            if combinacion['tipo'] == 'dupla':
+                # Para duplas: sobrante total dividido entre ambas órdenes
+                ancho_total = sum(od.get('ancho_efectivo', od['orden'].ancho_calculado) for od in combinacion['ordenes'])
+                espacio_disponible = combinacion['bobina'] - MARGEN_SEGURIDAD
+                sobrante_total = espacio_disponible - ancho_total
+                sobrante_individual = round(sobrante_total / num_ordenes)
+            else:
+                # Para individuales: espacio disponible menos ancho usado
+                sobrante_individual = round(espacio_por_orden - ancho_efectivo)
 
             # Si es DUPLA y esta es la orden MAYOR, saltarla por ahora
             if combinacion['tipo'] == 'dupla' and orden.id == orden_mayor.id:
@@ -2137,10 +2213,12 @@ class ProductionOrder(models.Model):
             if orden_mayor_data:
                 multiplicador = orden_mayor_data.get('multiplicador', 1)
                 ancho_efectivo = orden_mayor_data.get('ancho_efectivo', orden_mayor.ancho_calculado)
-                # SIN redondeo (descomentar si NO se requiere redondeo):
-                # sobrante_individual = espacio_por_orden - ancho_efectivo
-                # CON redondeo (comentar si NO se requiere redondeo):
-                sobrante_individual = round(espacio_por_orden - ancho_efectivo)
+
+                # Para duplas: usar el mismo cálculo que la primera pasada
+                ancho_total = sum(od.get('ancho_efectivo', od['orden'].ancho_calculado) for od in combinacion['ordenes'])
+                espacio_disponible = combinacion['bobina'] - MARGEN_SEGURIDAD
+                sobrante_total = espacio_disponible - ancho_total
+                sobrante_individual = round(sobrante_total / num_ordenes)
 
                 # Fórmula especial para el pedido de cantidad mayor:
                 # cantidad_planificada = ((metros_lineales_menor / largo_calculado_mayor) * 1000)
