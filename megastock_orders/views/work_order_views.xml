@@ -147,6 +147,7 @@
                                     <field name="cantidad"/>
                                     <field name="largo"/>
                                     <field name="ancho"/>
+                                    <field name="cavidad_optimizada" string="Cavidad"/>
                                     <field name="cortes_planificados" string="Cortes"/>
                                     <field name="cantidad_planificada" string="Cant. Planif."/>
                                     <field name="metros_lineales_planificados" string="Metros Lin."/>
