@@ -20,6 +20,14 @@
                         </p>
                     </group>
                 </group>
+                <group>
+                    <group>
+                        <field name="porcentaje_sobrante" placeholder="Ej: 15"/>
+                        <p class="text-muted">
+                            Porcentaje de sobrante permitido
+                        </p>
+                    </group>
+                </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>
                     <ul>

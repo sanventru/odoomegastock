@@ -31,6 +31,13 @@ class PlanificacionWizard(models.TransientModel):
              'Si selecciona 2+ bobinas: cada grupo elegirá la mejor de las seleccionadas.'
     )
 
+    porcentaje_sobrante = fields.Float(
+        string='Porcentaje de Sobrante (%)',
+        required=False,
+        default=0.0,
+        help='Porcentaje de sobrante permitido para la planificación'
+    )
+
     def action_planificar(self):
         """Ejecuta la planificación con los parámetros ingresados"""
         self.ensure_one()

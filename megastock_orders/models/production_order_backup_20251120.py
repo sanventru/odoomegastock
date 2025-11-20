@@ -971,75 +971,29 @@ class ProductionOrder(models.Model):
                 ordenes_a_planificar = ordenes_originales | pedidos_temporales
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Órdenes a planificar: {len(ordenes_a_planificar)} ({len(ordenes_originales)} originales + {len(pedidos_temporales)} temporales)")
 
-                # PASO 2: Ejecutar algoritmo de optimización EXHAUSTIVA con la bobina única
+                # PASO 2: Ejecutar algoritmo de optimización con la bobina única
                 grupos_optimizados = []
                 ordenes_procesadas = set()
                 grupo_counter = 1
 
-                # ========================================================================
-                # FASE 1: Evaluar TODAS las duplas exhaustivamente
-                # ========================================================================
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
-
-                todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite
-                )
-
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
-
-                if todas_las_duplas:
-                    # Mostrar top 5 mejores duplas
-                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Top 5 mejores duplas:")
-                    for idx, dupla in enumerate(todas_las_duplas[:5], 1):
-                        categoria = "SIN FALTANTE" if dupla['faltante_max'] == 0 else (
-                            "FALTANTE BAJO" if dupla['faltante_max'] < 500 else "FALTANTE ALTO"
-                        )
-                        orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
-                        orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  {idx}. {orden1_nombre} + {orden2_nombre}")
-                        print(f"     Bobina: {dupla['bobina']}mm | Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']} ({categoria})")
-
-                # ========================================================================
-                # FASE 2: Aplicar duplas evitando conflictos
-                # ========================================================================
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] FASE 2: Aplicando duplas sin conflictos...")
-
-                duplas_aplicadas = 0
-                for dupla in todas_las_duplas:
-                    # Verificar que ninguna orden esté ya procesada
-                    if dupla['orden1_id'] not in ordenes_procesadas and dupla['orden2_id'] not in ordenes_procesadas:
-                        grupos_optimizados.append(dupla)
-                        ordenes_procesadas.add(dupla['orden1_id'])
-                        ordenes_procesadas.add(dupla['orden2_id'])
-                        duplas_aplicadas += 1
-
-                        orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
-                        orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  [OK] Aplicada: {orden1_nombre} + {orden2_nombre}")
-                        print(f"       Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']}")
-
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Total duplas aplicadas: {duplas_aplicadas}")
-
-                # ========================================================================
-                # FASE 3: Aplicar individuales para órdenes restantes
-                # ========================================================================
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] FASE 3: Aplicando individuales para órdenes restantes...")
-
-                individuales_aplicados = 0
                 for orden in ordenes_a_planificar:
-                    if orden.id not in ordenes_procesadas and orden.faltante > 0:
-                        # Buscar mejor combinación individual
-                        mejor_individual = self._encontrar_mejor_combinacion(
-                            orden, self.env['megastock.production.order'], ordenes_procesadas, [bobina_seleccionada], cavidad_limite
-                        )
+                    if orden.id in ordenes_procesadas:
+                        continue
 
-                        if mejor_individual:
-                            grupos_optimizados.append(mejor_individual)
-                            ordenes_procesadas.add(orden.id)
-                            individuales_aplicados += 1
-                            print(f"  [OK] Aplicada individual: {orden.orden_produccion}")
+                    # Buscar mejor combinación usando SOLO la bobina seleccionada
+                    mejor_combinacion = self._encontrar_mejor_combinacion(
+                        orden, ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite
+                    )
 
-                print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Total individuales aplicadas: {individuales_aplicados}")
+                    if mejor_combinacion:
+                        grupos_optimizados.append(mejor_combinacion)
+
+                        # Marcar órdenes como procesadas
+                        for orden_comb_data in mejor_combinacion['ordenes']:
+                            ordenes_procesadas.add(orden_comb_data['orden'].id)
+
+                        grupo_counter += 1
+
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos encontrados: {len(grupos_optimizados)}")
 
                 # PASO 3: Aplicar grupos encontrados
@@ -1265,77 +1219,86 @@ class ProductionOrder(models.Model):
                 # PASO 1: Conjunto completo a planificar (originales + temporales)
                 ordenes_a_planificar = ordenes_originales | pedidos_temporales
 
-                # PASO 2: Ejecutar algoritmo de optimización EXHAUSTIVA
+                # PASO 2: Ejecutar algoritmo de optimización
+                # ESTRATEGIA: Buscar DUPLAS primero, luego INDIVIDUALES
                 grupos_optimizados = []
                 ordenes_procesadas = set()
                 grupo_counter = 1
 
-                # ========================================================================
-                # FASE 1: Evaluar TODAS las duplas exhaustivamente
-                # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
+                # FASE 1: Buscar todas las duplas posibles (minimiza sobrante)
+                print(f"[ITERACIÓN {iteracion}] FASE 1: Buscando duplas óptimas...")
+                duplas_encontradas = []
 
-                todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
-                )
+                ordenes_list = list(ordenes_a_planificar)
+                print(f"[ITERACIÓN {iteracion}] Total órdenes a evaluar: {len(ordenes_list)}")
 
-                print(f"[ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
+                for i, orden1 in enumerate(ordenes_list):
+                    if orden1.id in ordenes_procesadas:
+                        continue
 
-                if todas_las_duplas:
-                    # Mostrar top 5 mejores duplas
-                    print(f"[ITERACIÓN {iteracion}] Top 5 mejores duplas:")
-                    for idx, dupla in enumerate(todas_las_duplas[:5], 1):
-                        categoria = "SIN FALTANTE" if dupla['faltante_max'] == 0 else (
-                            "FALTANTE BAJO" if dupla['faltante_max'] < 500 else "FALTANTE ALTO"
+                    mejor_dupla = None
+                    menor_sobrante_dupla = float('inf')
+
+                    # Probar con todas las demás órdenes para formar dupla
+                    for j, orden2 in enumerate(ordenes_list):
+                        if i == j or orden2.id in ordenes_procesadas:  # FIX: cambiar i >= j a i == j
+                            continue
+
+                        # Buscar mejor combinación para esta dupla potencial
+                        ordenes_dupla = self.env['megastock.production.order'].browse([orden1.id, orden2.id])
+                        mejor_comb = self._encontrar_mejor_combinacion(
+                            orden1, ordenes_dupla, set(), bobinas_disponibles, cavidad_limite
                         )
-                        orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
-                        orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  {idx}. {orden1_nombre} + {orden2_nombre}")
-                        print(f"     Bobina: {dupla['bobina']}mm | Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']} ({categoria})")
 
-                # ========================================================================
-                # FASE 2: Aplicar duplas evitando conflictos
-                # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 2: Aplicando duplas sin conflictos...")
+                        # Solo considerar si es realmente una dupla (2 órdenes)
+                        if mejor_comb and mejor_comb['tipo'] == 'dupla' and len(mejor_comb['ordenes']) == 2:
+                            if mejor_comb['sobrante'] < menor_sobrante_dupla:
+                                menor_sobrante_dupla = mejor_comb['sobrante']
+                                mejor_dupla = mejor_comb
+                                print(f"[ITERACIÓN {iteracion}] → Dupla candidata: {orden1.orden_produccion} + {orden2.orden_produccion} = sobrante {menor_sobrante_dupla}mm")
+
+                    # Si encontramos una dupla válida, agregarla
+                    if mejor_dupla:
+                        duplas_encontradas.append({
+                            'combinacion': mejor_dupla,
+                            'sobrante': menor_sobrante_dupla,
+                            'orden1_id': orden1.id,
+                            'orden2_id': mejor_dupla['ordenes'][1]['orden'].id
+                        })
+                        print(f"[ITERACIÓN {iteracion}] ✓ Mejor dupla para {orden1.orden_produccion}: sobrante {menor_sobrante_dupla}mm")
+
+                # Ordenar duplas por menor sobrante y aplicar las mejores
+                duplas_encontradas.sort(key=lambda x: x['sobrante'])
+                print(f"[ITERACIÓN {iteracion}] Total duplas candidatas encontradas: {len(duplas_encontradas)}")
 
                 duplas_aplicadas = 0
-                for dupla in todas_las_duplas:
-                    # Verificar que ninguna orden esté ya procesada
-                    if dupla['orden1_id'] not in ordenes_procesadas and dupla['orden2_id'] not in ordenes_procesadas:
-                        grupos_optimizados.append(dupla)
-                        ordenes_procesadas.add(dupla['orden1_id'])
-                        ordenes_procesadas.add(dupla['orden2_id'])
+                for dupla_info in duplas_encontradas:
+                    # Verificar que ambas órdenes aún no estén procesadas
+                    if dupla_info['orden1_id'] not in ordenes_procesadas and dupla_info['orden2_id'] not in ordenes_procesadas:
+                        grupos_optimizados.append(dupla_info['combinacion'])
+                        ordenes_procesadas.add(dupla_info['orden1_id'])
+                        ordenes_procesadas.add(dupla_info['orden2_id'])
                         duplas_aplicadas += 1
-
-                        orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
-                        orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  [OK] Aplicada: {orden1_nombre} + {orden2_nombre}")
-                        print(f"       Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']}")
+                        print(f"[ITERACIÓN {iteracion}] ✓ Dupla #{duplas_aplicadas} agregada con sobrante {dupla_info['sobrante']}mm")
 
                 print(f"[ITERACIÓN {iteracion}] Total duplas aplicadas: {duplas_aplicadas}")
 
-                # ========================================================================
-                # FASE 3: Aplicar individuales para órdenes restantes
-                # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 3: Aplicando individuales para órdenes restantes...")
+                # FASE 2: Procesar órdenes restantes como individuales
+                print(f"[ITERACIÓN {iteracion}] FASE 2: Procesando {len(ordenes_list) - len(ordenes_procesadas)} órdenes individuales...")
 
-                individuales_aplicados = 0
                 for orden in ordenes_a_planificar:
-                    if orden.id in ordenes_procesadas and orden.faltante > 0:
+                    if orden.id in ordenes_procesadas:
                         continue
 
                     # Buscar mejor combinación individual
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, self.env['megastock.production.order'], ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                        orden, self.env['megastock.production.order'].browse([orden.id]), set(), bobinas_disponibles, cavidad_limite
                     )
 
                     if mejor_combinacion:
                         grupos_optimizados.append(mejor_combinacion)
                         ordenes_procesadas.add(orden.id)
-                        individuales_aplicados += 1
-                        print(f"  [OK] Aplicada individual: {orden.orden_produccion}")
-
-                print(f"[ITERACIÓN {iteracion}] Total individuales aplicadas: {individuales_aplicados}")
+                        grupo_counter += 1
 
                 # Aplicar los grupos encontrados
                 if grupos_optimizados:
@@ -1744,129 +1707,6 @@ class ProductionOrder(models.Model):
             'metros_lineales': max(metros1, metros2),  # En duplas se usa el mayor
             'cortes_totales': cortes1 + cortes2
         }
-
-    def _pre_calcular_faltante_dupla(self, orden1, orden2, mult1=1, mult2=1):
-        """Pre-calcula el faltante esperado de una dupla sin aplicarla
-
-        Args:
-            orden1: Primera orden
-            orden2: Segunda orden
-            mult1: Multiplicador para orden1
-            mult2: Multiplicador para orden2
-
-        Returns:
-            dict con faltante_menor, faltante_mayor, faltante_max
-        """
-        # Identificar cuál es menor y cuál es mayor por faltante
-        if orden1.faltante <= orden2.faltante:
-            menor, mayor = orden1, orden2
-            mult_menor, mult_mayor = mult1, mult2
-        else:
-            menor, mayor = orden2, orden1
-            mult_menor, mult_mayor = mult2, mult1
-
-        # Calcular para pedido menor (cantidad completa)
-        cavidad_menor = (menor.cavidad or 1) * mult_menor
-        cantidad_menor = menor.faltante
-        cortes_menor = cantidad_menor / cavidad_menor
-        metros_menor = (cortes_menor * menor.largo_calculado) / 1000
-        faltante_menor = 0  # Se cumple completo
-
-        # Calcular para pedido mayor con nueva fórmula
-        cantidad_ajustada_mayor = (metros_menor / mayor.largo_calculado) * 1000
-        cantidad_planificada_mayor = int(cantidad_ajustada_mayor)
-        faltante_mayor = mayor.faltante - cantidad_planificada_mayor
-
-        return {
-            'faltante_menor': faltante_menor,
-            'faltante_mayor': faltante_mayor,
-            'faltante_max': max(faltante_menor, faltante_mayor),
-            'orden_menor': menor.orden_produccion,
-            'orden_mayor': mayor.orden_produccion
-        }
-
-    def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
-        """Evalúa TODAS las duplas posibles de forma exhaustiva
-
-        Args:
-            todas_ordenes: Todas las órdenes disponibles
-            procesadas: Set de IDs de órdenes ya procesadas
-            bobinas: Lista de anchos de bobinas disponibles
-            cavidad_limite: Límite superior para multiplicar ancho_calculado
-
-        Returns:
-            Lista de duplas ordenadas por (faltante_max, sobrante)
-        """
-        import itertools
-
-        MARGEN_SEGURIDAD = 30
-        bobinas_ordenadas = sorted(bobinas)
-
-        # Filtrar órdenes disponibles (no procesadas y con faltante > 0)
-        ordenes_disponibles = [o for o in todas_ordenes if o.id not in procesadas and o.faltante > 0]
-
-        if len(ordenes_disponibles) < 2:
-            return []
-
-        todas_las_duplas = []
-
-        # Generar TODAS las combinaciones de 2 órdenes
-        for orden1, orden2 in itertools.combinations(ordenes_disponibles, 2):
-            # Probar con diferentes multiplicadores
-            for mult1 in range(1, cavidad_limite + 1):
-                for mult2 in range(1, cavidad_limite + 1):
-                    ancho1 = orden1.ancho_calculado * mult1
-                    ancho2 = orden2.ancho_calculado * mult2
-                    ancho_total = ancho1 + ancho2
-
-                    # Buscar la bobina más pequeña que quepa
-                    for bobina in bobinas_ordenadas:
-                        if ancho_total <= (bobina - MARGEN_SEGURIDAD):
-                            sobrante = (bobina - MARGEN_SEGURIDAD) - ancho_total
-
-                            # Pre-calcular faltantes
-                            faltantes = self._pre_calcular_faltante_dupla(orden1, orden2, mult1, mult2)
-
-                            # Crear datos de órdenes
-                            ordenes_data = [
-                                {
-                                    'orden': orden1,
-                                    'multiplicador': mult1,
-                                    'ancho_efectivo': ancho1
-                                },
-                                {
-                                    'orden': orden2,
-                                    'multiplicador': mult2,
-                                    'ancho_efectivo': ancho2
-                                }
-                            ]
-
-                            # Calcular eficiencia
-                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina)
-
-                            dupla = {
-                                'ordenes': ordenes_data,
-                                'tipo': 'dupla',
-                                'bobina': bobina,
-                                'ancho_utilizado': ancho_total,
-                                'sobrante': sobrante,
-                                'eficiencia': resultado['eficiencia'],
-                                'metros_lineales': resultado['metros_lineales'],
-                                'cortes_totales': resultado['cortes_totales'],
-                                'faltante_max': faltantes['faltante_max'],
-                                'faltante_menor': faltantes['faltante_menor'],
-                                'faltante_mayor': faltantes['faltante_mayor'],
-                                'orden1_id': orden1.id,
-                                'orden2_id': orden2.id
-                            }
-
-                            todas_las_duplas.append(dupla)
-                            break  # Tomar la primera bobina que quepa
-
-        # Ordenar GLOBALMENTE por (faltante_max, sobrante)
-        todas_las_duplas.sort(key=lambda x: (x['faltante_max'], x['sobrante']))
-
-        return todas_las_duplas
 
     def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
         """Encuentra la mejor combinación para una orden principal
