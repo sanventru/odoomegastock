@@ -2362,22 +2362,26 @@ class ProductionOrder(models.Model):
 
         espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
 
-        # Para DUPLAS: Identificar el pedido con menor cantidad
+        # Para DUPLAS: Identificar el pedido con menor/mayor FALTANTE
+        # y obtener el escenario a usar (ESC-1 o ESC-2)
         orden_menor = None
         orden_mayor = None
-        metros_lineales_menor = 0
+        metros_lineales_base = 0  # Metros de la orden que se completa primero
+        escenario = combinacion.get('escenario', 'ESC-1')  # Por defecto ESC-1
 
         if combinacion['tipo'] == 'dupla' and num_ordenes == 2:
-            # Identificar cuál orden tiene menor cantidad
+            # Identificar cuál orden tiene menor FALTANTE (consistente con evaluación)
             orden1 = combinacion['ordenes'][0]['orden']
             orden2 = combinacion['ordenes'][1]['orden']
 
-            if orden1.cantidad <= orden2.cantidad:
+            if orden1.faltante <= orden2.faltante:
                 orden_menor = orden1
                 orden_mayor = orden2
             else:
                 orden_menor = orden2
                 orden_mayor = orden1
+
+            print(f"[DUPLA] {grupo_nombre}: Escenario={escenario}, MENOR={orden_menor.orden_produccion}(faltante={orden_menor.faltante}), MAYOR={orden_mayor.orden_produccion}(faltante={orden_mayor.faltante})")
 
         # Primera pasada: Calcular orden con cantidad menor (o todas si es individual)
         for orden_data in combinacion['ordenes']:
@@ -2396,9 +2400,14 @@ class ProductionOrder(models.Model):
                 # Para individuales: espacio disponible menos ancho usado
                 sobrante_individual = round(espacio_por_orden - ancho_efectivo)
 
-            # Si es DUPLA y esta es la orden MAYOR, saltarla por ahora
-            if combinacion['tipo'] == 'dupla' and orden.id == orden_mayor.id:
-                continue
+            # Si es DUPLA, saltar la orden que se ajustará en la segunda pasada
+            # ESC-1: Saltar MAYOR (se ajustará después basándose en MENOR)
+            # ESC-2: Saltar MENOR (se ajustará después basándose en MAYOR)
+            if combinacion['tipo'] == 'dupla':
+                if escenario == 'ESC-1' and orden.id == orden_mayor.id:
+                    continue
+                elif escenario == 'ESC-2' and orden.id == orden_menor.id:
+                    continue
 
             # Calcular valores de planificación según especificaciones:
             # cavidad_efectiva = cavidad * multiplicador
@@ -2432,9 +2441,13 @@ class ProductionOrder(models.Model):
                 # CON redondeo (comentar si NO se requiere redondeo):
                 metros_lineales_planificados = round(((cantidad_planificada * orden.largo_calculado) / cavidad_efectiva) / 1000)
 
-            # Guardar metros_lineales de la orden menor para usar en el cálculo de la orden mayor
-            if combinacion['tipo'] == 'dupla' and orden.id == orden_menor.id:
-                metros_lineales_menor = metros_lineales_planificados
+            # Guardar metros_lineales de la orden BASE (la que se completa primero)
+            # ESC-1: La orden base es MENOR
+            # ESC-2: La orden base es MAYOR
+            if combinacion['tipo'] == 'dupla':
+                if (escenario == 'ESC-1' and orden.id == orden_menor.id) or \
+                   (escenario == 'ESC-2' and orden.id == orden_mayor.id):
+                    metros_lineales_base = metros_lineales_planificados
 
             # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
             tipo_final = combinacion['tipo']
@@ -2457,18 +2470,28 @@ class ProductionOrder(models.Model):
                 'cavidad_optimizada': multiplicador,
             })
 
-        # Segunda pasada: Calcular orden MAYOR en duplas con fórmula especial
-        if combinacion['tipo'] == 'dupla' and orden_mayor:
-            # Encontrar orden_data del pedido mayor
-            orden_mayor_data = None
+        # Segunda pasada: Calcular la orden AJUSTADA en duplas con fórmula especial
+        # ESC-1: Ajustar MAYOR basándose en metros de MENOR (orden_base = MENOR)
+        # ESC-2: Ajustar MENOR basándose en metros de MAYOR (orden_base = MAYOR)
+        if combinacion['tipo'] == 'dupla' and orden_mayor and orden_menor:
+            # Determinar cuál orden se ajusta según el escenario
+            if escenario == 'ESC-1':
+                orden_ajustada = orden_mayor
+                orden_base = orden_menor
+            else:  # ESC-2
+                orden_ajustada = orden_menor
+                orden_base = orden_mayor
+
+            # Encontrar orden_data de la orden a ajustar
+            orden_ajustada_data = None
             for od in combinacion['ordenes']:
-                if od['orden'].id == orden_mayor.id:
-                    orden_mayor_data = od
+                if od['orden'].id == orden_ajustada.id:
+                    orden_ajustada_data = od
                     break
 
-            if orden_mayor_data:
-                multiplicador = orden_mayor_data.get('multiplicador', 1)
-                ancho_efectivo = orden_mayor_data.get('ancho_efectivo', orden_mayor.ancho_calculado)
+            if orden_ajustada_data:
+                multiplicador = orden_ajustada_data.get('multiplicador', 1)
+                ancho_efectivo = orden_ajustada_data.get('ancho_efectivo', orden_ajustada.ancho_calculado)
 
                 # Para duplas: usar el mismo cálculo que la primera pasada
                 ancho_total = sum(od.get('ancho_efectivo', od['orden'].ancho_calculado) for od in combinacion['ordenes'])
@@ -2476,48 +2499,45 @@ class ProductionOrder(models.Model):
                 sobrante_total = espacio_disponible - ancho_total
                 sobrante_individual = round(sobrante_total / num_ordenes)
 
-                # Fórmula especial para el pedido de cantidad mayor:
-                # cantidad_planificada = ((metros_lineales_menor / largo_calculado_mayor) * 1000)
+                # Fórmula especial para la orden AJUSTADA:
+                # cantidad_planificada = round((metros_lineales_base / largo_calculado_ajustada) * 1000)
                 # IMPORTANTE: Limitar a la cantidad original para evitar faltantes negativos
                 cantidad_planificada = 0
-                if orden_mayor.largo_calculado and orden_mayor.largo_calculado > 0:
-                    import math
-                    cantidad_calculada = int((metros_lineales_menor / orden_mayor.largo_calculado) * 1000)
+                if orden_ajustada.largo_calculado and orden_ajustada.largo_calculado > 0:
+                    # Usar round() para mayor precisión (consistente con evaluación bidireccional)
+                    cantidad_calculada = round((metros_lineales_base / orden_ajustada.largo_calculado) * 1000)
                     # NO exceder la cantidad original del pedido
-                    cantidad_planificada = min(cantidad_calculada, orden_mayor.cantidad)
+                    cantidad_planificada = min(cantidad_calculada, orden_ajustada.cantidad)
 
                 # Para este pedido, cortes_planificados se calcula al revés desde cantidad_planificada
-                cavidad_efectiva = orden_mayor.cavidad * multiplicador if orden_mayor.cavidad else multiplicador
+                cavidad_efectiva = orden_ajustada.cavidad * multiplicador if orden_ajustada.cavidad else multiplicador
                 # Usar int() para evitar sobrepasarse de la cantidad planificada
                 cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
 
                 # metros_lineales_planificados usa la fórmula estándar
-                metros_lineales_mayor = 0
-                if cavidad_efectiva > 0 and orden_mayor.largo_calculado:
-                    # SIN redondeo (descomentar si NO se requiere redondeo):
-                    # metros_lineales_mayor = ((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000
-                    # CON redondeo (comentar si NO se requiere redondeo):
-                    metros_lineales_mayor = round(((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000)
+                metros_lineales_ajustada = 0
+                if cavidad_efectiva > 0 and orden_ajustada.largo_calculado:
+                    metros_lineales_ajustada = round(((cantidad_planificada * orden_ajustada.largo_calculado) / cavidad_efectiva) / 1000)
 
-                print(f"[DUPLA] {grupo_nombre}: Metros calculados")
-                print(f"  - Metros menor ({orden_menor.orden_produccion}): {metros_lineales_menor}")
-                print(f"  - Metros mayor ({orden_mayor.orden_produccion}): {metros_lineales_mayor}")
+                print(f"[DUPLA] {grupo_nombre}: {escenario} - Metros calculados")
+                print(f"  - Orden BASE ({orden_base.orden_produccion}): {metros_lineales_base}m")
+                print(f"  - Orden AJUSTADA ({orden_ajustada.orden_produccion}): {metros_lineales_ajustada}m")
 
                 # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
                 tipo_final = combinacion['tipo']
                 if tipo_final == 'dupla' and len(combinacion['ordenes']) != 2:
-                    print(f"[ERROR CRÍTICO] Orden mayor: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
+                    print(f"[ERROR CRÍTICO] Orden ajustada: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
                     tipo_final = 'individual'
 
-                # Actualizar orden MAYOR
-                orden_mayor.write({
+                # Actualizar orden AJUSTADA
+                orden_ajustada.write({
                     'grupo_planificacion': grupo_nombre,
                     'tipo_combinacion': tipo_final,
                     'ancho_utilizado': combinacion['ancho_utilizado'],
                     'bobina_utilizada': combinacion['bobina'],
                     'sobrante': sobrante_individual,
                     'eficiencia': combinacion['eficiencia'],
-                    'metros_lineales_planificados': metros_lineales_mayor,
+                    'metros_lineales_planificados': metros_lineales_ajustada,
                     'cortes_planificados': cortes_planificados,
                     'cantidad_planificada': cantidad_planificada,
                     'cavidad_optimizada': multiplicador,
