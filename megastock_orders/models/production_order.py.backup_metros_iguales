@@ -1746,11 +1746,7 @@ class ProductionOrder(models.Model):
         }
 
     def _pre_calcular_faltante_dupla(self, orden1, orden2, mult1=1, mult2=1):
-        """Pre-calcula el faltante esperado de una dupla con EVALUACIÓN BIDIRECCIONAL
-
-        Evalúa ambos escenarios:
-        - ESC-1: MENOR completo → ajustar MAYOR
-        - ESC-2: MAYOR completo → ajustar MENOR
+        """Pre-calcula el faltante esperado de una dupla sin aplicarla
 
         Args:
             orden1: Primera orden
@@ -1759,7 +1755,7 @@ class ProductionOrder(models.Model):
             mult2: Multiplicador para orden2
 
         Returns:
-            dict con datos del mejor escenario válido, o None si ninguno es válido
+            dict con faltante_menor, faltante_mayor, faltante_max
         """
         # Identificar cuál es menor y cuál es mayor por faltante
         if orden1.faltante <= orden2.faltante:
@@ -1769,99 +1765,25 @@ class ProductionOrder(models.Model):
             menor, mayor = orden2, orden1
             mult_menor, mult_mayor = mult2, mult1
 
+        # Calcular para pedido menor (cantidad completa)
         cavidad_menor = (menor.cavidad or 1) * mult_menor
-        cavidad_mayor = (mayor.cavidad or 1) * mult_mayor
+        cantidad_menor = menor.faltante
+        cortes_menor = cantidad_menor / cavidad_menor
+        metros_menor = (cortes_menor * menor.largo_calculado) / 1000
+        faltante_menor = 0  # Se cumple completo
 
-        # ========================================================================
-        # ESCENARIO 1: MENOR completo → ajustar MAYOR
-        # ========================================================================
-        # Calcular MENOR completo
-        cantidad_menor_esc1 = menor.faltante
-        cortes_menor_esc1 = cantidad_menor_esc1 / cavidad_menor
-        metros_menor_esc1 = (cortes_menor_esc1 * menor.largo_calculado) / 1000
-        faltante_menor_esc1 = 0  # Se cumple completo
+        # Calcular para pedido mayor con nueva fórmula
+        cantidad_ajustada_mayor = (metros_menor / mayor.largo_calculado) * 1000
+        cantidad_planificada_mayor = int(cantidad_ajustada_mayor)
+        faltante_mayor = mayor.faltante - cantidad_planificada_mayor
 
-        # Ajustar MAYOR basándose en metros del MENOR
-        cantidad_ajustada_mayor = (metros_menor_esc1 / mayor.largo_calculado) * 1000
-        cantidad_calculada_mayor = round(cantidad_ajustada_mayor)
-        cantidad_planificada_mayor_esc1 = min(cantidad_calculada_mayor, mayor.cantidad)
-
-        cortes_mayor_esc1 = cantidad_planificada_mayor_esc1 / cavidad_mayor
-        metros_mayor_esc1 = (cortes_mayor_esc1 * mayor.largo_calculado) / 1000
-        faltante_mayor_esc1 = mayor.faltante - cantidad_planificada_mayor_esc1
-
-        # Validar ESC-1
-        esc1_valido = round(metros_menor_esc1) == round(metros_mayor_esc1)
-        faltante_max_esc1 = max(faltante_menor_esc1, faltante_mayor_esc1)
-
-        # ========================================================================
-        # ESCENARIO 2: MAYOR completo → ajustar MENOR
-        # ========================================================================
-        # Calcular MAYOR completo
-        cantidad_mayor_esc2 = mayor.faltante
-        cortes_mayor_esc2 = cantidad_mayor_esc2 / cavidad_mayor
-        metros_mayor_esc2 = (cortes_mayor_esc2 * mayor.largo_calculado) / 1000
-        faltante_mayor_esc2 = 0  # Se cumple completo
-
-        # Ajustar MENOR basándose en metros del MAYOR
-        cantidad_ajustada_menor = (metros_mayor_esc2 / menor.largo_calculado) * 1000
-        cantidad_calculada_menor = round(cantidad_ajustada_menor)
-        cantidad_planificada_menor_esc2 = min(cantidad_calculada_menor, menor.cantidad)
-
-        cortes_menor_esc2 = cantidad_planificada_menor_esc2 / cavidad_menor
-        metros_menor_esc2 = (cortes_menor_esc2 * menor.largo_calculado) / 1000
-        faltante_menor_esc2 = menor.faltante - cantidad_planificada_menor_esc2
-
-        # Validar ESC-2
-        esc2_valido = round(metros_mayor_esc2) == round(metros_menor_esc2)
-        faltante_max_esc2 = max(faltante_menor_esc2, faltante_mayor_esc2)
-
-        # ========================================================================
-        # ELEGIR EL MEJOR ESCENARIO VÁLIDO
-        # ========================================================================
-        escenario_elegido = None
-
-        if esc1_valido and esc2_valido:
-            # Ambos válidos: elegir el de menor faltante_max
-            if faltante_max_esc1 <= faltante_max_esc2:
-                escenario_elegido = 'ESC-1'
-            else:
-                escenario_elegido = 'ESC-2'
-        elif esc1_valido:
-            escenario_elegido = 'ESC-1'
-        elif esc2_valido:
-            escenario_elegido = 'ESC-2'
-        else:
-            # Ningún escenario válido
-            return None
-
-        # Retornar datos del escenario elegido
-        if escenario_elegido == 'ESC-1':
-            return {
-                'faltante_menor': faltante_menor_esc1,
-                'faltante_mayor': faltante_mayor_esc1,
-                'faltante_max': faltante_max_esc1,
-                'orden_menor': menor.orden_produccion,
-                'orden_mayor': mayor.orden_produccion,
-                'metros_menor': metros_menor_esc1,
-                'metros_mayor': metros_mayor_esc1,
-                'escenario': 'ESC-1',
-                'esc1_valido': esc1_valido,
-                'esc2_valido': esc2_valido
-            }
-        else:  # ESC-2
-            return {
-                'faltante_menor': faltante_menor_esc2,
-                'faltante_mayor': faltante_mayor_esc2,
-                'faltante_max': faltante_max_esc2,
-                'orden_menor': menor.orden_produccion,
-                'orden_mayor': mayor.orden_produccion,
-                'metros_menor': metros_menor_esc2,
-                'metros_mayor': metros_mayor_esc2,
-                'escenario': 'ESC-2',
-                'esc1_valido': esc1_valido,
-                'esc2_valido': esc2_valido
-            }
+        return {
+            'faltante_menor': faltante_menor,
+            'faltante_mayor': faltante_mayor,
+            'faltante_max': max(faltante_menor, faltante_mayor),
+            'orden_menor': menor.orden_produccion,
+            'orden_mayor': mayor.orden_produccion
+        }
 
     def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
         """Evalúa TODAS las duplas posibles de forma exhaustiva
@@ -1902,20 +1824,8 @@ class ProductionOrder(models.Model):
                         if ancho_total <= (bobina - MARGEN_SEGURIDAD):
                             sobrante = (bobina - MARGEN_SEGURIDAD) - ancho_total
 
-                            # Pre-calcular faltantes y metros con EVALUACIÓN BIDIRECCIONAL
-                            # Retorna None si ningún escenario (ESC-1 o ESC-2) produce metros iguales
+                            # Pre-calcular faltantes
                             faltantes = self._pre_calcular_faltante_dupla(orden1, orden2, mult1, mult2)
-
-                            # ========================================================================
-                            # VALIDACIÓN: Si ningún escenario es válido, descartar dupla
-                            # ========================================================================
-                            if faltantes is None:
-                                # Descartar esta dupla: ningún escenario produce metros iguales
-                                print(f"[DUPLA DESCARTADA] {orden1.orden_produccion} + {orden2.orden_produccion}: "
-                                      f"ningún escenario produce metros iguales")
-                                break
-
-                            metros_redondeados = round(faltantes['metros_menor'])
 
                             # Crear datos de órdenes
                             ordenes_data = [
@@ -1947,15 +1857,8 @@ class ProductionOrder(models.Model):
                                 'faltante_menor': faltantes['faltante_menor'],
                                 'faltante_mayor': faltantes['faltante_mayor'],
                                 'orden1_id': orden1.id,
-                                'orden2_id': orden2.id,
-                                'escenario': faltantes['escenario']
+                                'orden2_id': orden2.id
                             }
-
-                            escenario_info = faltantes['escenario']
-                            if faltantes['esc1_valido'] and faltantes['esc2_valido']:
-                                escenario_info += " (AMBOS válidos)"
-                            print(f"[DUPLA VÁLIDA] {faltantes['orden_menor']} + {faltantes['orden_mayor']}: "
-                                  f"{escenario_info} - {metros_redondeados}m")
 
                             todas_las_duplas.append(dupla)
                             break  # Tomar la primera bobina que quepa
@@ -2499,9 +2402,16 @@ class ProductionOrder(models.Model):
                     # CON redondeo (comentar si NO se requiere redondeo):
                     metros_lineales_mayor = round(((cantidad_planificada * orden_mayor.largo_calculado) / cavidad_efectiva) / 1000)
 
-                print(f"[DUPLA] {grupo_nombre}: Metros calculados")
+                # ========================================================================
+                # FIX CRÍTICO: En duplas, ambas órdenes deben tener los MISMOS metros lineales
+                # porque se cortan de la misma bobina simultáneamente
+                # ========================================================================
+                metros_finales_dupla = max(metros_lineales_menor, metros_lineales_mayor)
+
+                print(f"[DUPLA SYNC] {grupo_nombre}: Sincronizando metros lineales")
                 print(f"  - Metros menor ({orden_menor.orden_produccion}): {metros_lineales_menor}")
                 print(f"  - Metros mayor ({orden_mayor.orden_produccion}): {metros_lineales_mayor}")
+                print(f"  - Metros finales (max): {metros_finales_dupla}")
 
                 # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
                 tipo_final = combinacion['tipo']
@@ -2509,7 +2419,7 @@ class ProductionOrder(models.Model):
                     print(f"[ERROR CRÍTICO] Orden mayor: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
                     tipo_final = 'individual'
 
-                # Actualizar orden MAYOR
+                # Actualizar orden MAYOR con metros finales
                 orden_mayor.write({
                     'grupo_planificacion': grupo_nombre,
                     'tipo_combinacion': tipo_final,
@@ -2517,10 +2427,15 @@ class ProductionOrder(models.Model):
                     'bobina_utilizada': combinacion['bobina'],
                     'sobrante': sobrante_individual,
                     'eficiencia': combinacion['eficiencia'],
-                    'metros_lineales_planificados': metros_lineales_mayor,
+                    'metros_lineales_planificados': metros_finales_dupla,
                     'cortes_planificados': cortes_planificados,
                     'cantidad_planificada': cantidad_planificada,
                     'cavidad_optimizada': multiplicador,
+                })
+
+                # Actualizar también la orden MENOR con metros finales (para garantizar sincronización)
+                orden_menor.write({
+                    'metros_lineales_planificados': metros_finales_dupla,
                 })
 
     def action_generar_ordenes_trabajo(self):
