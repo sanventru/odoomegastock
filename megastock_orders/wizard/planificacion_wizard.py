@@ -38,6 +38,13 @@ class PlanificacionWizard(models.TransientModel):
         help='Porcentaje de sobrante permitido para la planificación'
     )
 
+    margen = fields.Integer(
+        string='Margen de Seguridad (mm)',
+        required=False,
+        default=30,
+        help='Margen de seguridad en milímetros para los cortes. Por defecto: 30mm'
+    )
+
     def action_planificar(self):
         """Ejecuta la planificación con los parámetros ingresados"""
         self.ensure_one()
@@ -80,7 +87,8 @@ class PlanificacionWizard(models.TransientModel):
             test_principal=self.test_principal,
             cavidad_limite=self.cavidad_limite,
             bobina_unica=bobina_unica,
-            bobinas_disponibles=anchos_seleccionados
+            bobinas_disponibles=anchos_seleccionados,
+            margen_seguridad=self.margen or 30  # Usar valor ingresado o 30 por defecto
         )
 
         # Construir mensaje con información del resultado

@@ -27,6 +27,12 @@
                             Porcentaje de sobrante permitido
                         </p>
                     </group>
+                    <group>
+                        <field name="margen" placeholder="Ej: 30"/>
+                        <p class="text-muted">
+                            Margen de seguridad en milímetros (por defecto: 30mm)
+                        </p>
+                    </group>
                 </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>

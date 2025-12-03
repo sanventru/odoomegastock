@@ -215,12 +215,23 @@ class OrderImportWizard(models.TransientModel):
         # 6=LARGO, 7=ANCHO, 8=ALTO, 9=CANTIDAD, 10=FECHA_ENTREGA_CLIENTE, 11=FECHA_PRODUCCION,
         # 12=CUMPLIMIENTO, 13=TIPO, 14=FLAUTA, 15=TEST, 16=SUSTRATO, 17=OVER SUPERIOR, 18=OVER INFERIOR, 19=TROQUEL
         # LARGO_RAYADO = alto + 2, ALTO_RAYADO = alto + 2, ANCHO_RAYADO = ancho_calculado - (alto_rayado * 2)
+
+        # Obtener descripción y test del CSV
+        descripcion_base = safe_get(4)
+        test_value = safe_get(15)
+
+        # Si hay un valor de TEST y la descripción NO lo incluye, agregarlo
+        if test_value and 'TEST' not in descripcion_base.upper():
+            descripcion = f"{descripcion_base} TEST{test_value}"
+        else:
+            descripcion = descripcion_base
+
         order_data = {
             'orden_produccion': safe_get(0),                 # ORDEN DE PRODUCCION
             'pedido': safe_get(1),                           # PEDIDO
             'codigo': safe_get(2),                           # CODIGO
             'cliente': safe_get(3),                          # CLIENTE
-            'descripcion': safe_get(4),                      # DESCRIPCIÓN
+            'descripcion': descripcion,                      # DESCRIPCIÓN (con TEST agregado si es necesario)
             'fecha_pedido_cliente': safe_date(safe_get(5)),  # FECHA PEDIDO CLIENTE
             'largo': safe_float(safe_get(6)),                # LARGO
             'ancho': safe_float(safe_get(7)),                # ANCHO

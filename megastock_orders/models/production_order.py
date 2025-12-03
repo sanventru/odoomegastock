@@ -238,7 +238,7 @@ class ProductionOrder(models.Model):
     tipo_combinacion = fields.Selection([
         ('individual', 'Individual'),
         ('dupla', 'Dupla'),
-    ], string='Tipo de Combinación', default='individual')
+    ], string='Tipo de Combinación')
     ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina', group_operator='max')
     bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada', group_operator='max')
     sobrante = fields.Float(string='Sobrante (mm)', help='Material sobrante después del corte')
@@ -307,8 +307,8 @@ class ProductionOrder(models.Model):
         for record in self:
             test_name = ''
             if record.descripcion:
-                # Buscar patrones como "TEST 200", "Test 150", etc.
-                match = re.search(r'TEST\s+(\d+)', record.descripcion.upper())
+                # Buscar patrones como "TEST 200", "TEST250", "Test 150", etc.
+                match = re.search(r'TEST\s*(\d+)', record.descripcion.upper())
                 if match:
                     test_number = match.group(1)
                     test_name = test_number  # Solo el número, sin "Test"
@@ -847,8 +847,8 @@ class ProductionOrder(models.Model):
                 }
             }
         
-        # Ejecutar algoritmo de optimización
-        resultado = self._optimizar_ordenes(ordenes_pendientes)
+        # Ejecutar algoritmo de optimización con cavidad_limite=4
+        resultado = self._optimizar_ordenes(ordenes_pendientes, cavidad_limite=4)
         
         return {
             'type': 'ir.actions.client',
@@ -903,7 +903,7 @@ class ProductionOrder(models.Model):
         """
         ordenes.write({
             'grupo_planificacion': False,
-            'tipo_combinacion': 'individual',
+            'tipo_combinacion': False,  # CAMBIADO: era 'individual', ahora False
             'ancho_utilizado': 0,
             'bobina_utilizada': 0,
             'sobrante': 0,
@@ -923,7 +923,7 @@ class ProductionOrder(models.Model):
         if pedidos_temporales:
             pedidos_temporales.unlink()
 
-    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None):
+    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None, margen_seguridad=30):
         """Algoritmo de optimización basado en el archivo Excel de trimado con validación iterativa de faltantes
 
         Args:
@@ -932,6 +932,7 @@ class ProductionOrder(models.Model):
             cavidad_limite: Límite superior para multiplicar ancho_calculado (default: 1)
             bobina_unica: Si True, todos los grupos usan una sola bobina (default: False)
             bobinas_disponibles: Lista de anchos de bobinas a considerar (default: None, usa todas las activas)
+            margen_seguridad: Margen de seguridad en mm para los cortes (default: 30)
         """
         from odoo.exceptions import UserError
 
@@ -963,6 +964,9 @@ class ProductionOrder(models.Model):
             iteracion = 0
             grupos_finales = []
 
+            # CONTADOR DE GRUPOS PERSISTENTE entre iteraciones
+            grupo_counter = 1
+
             while iteracion < max_iteraciones:
                 iteracion += 1
                 print(f"\n[BOBINA ÚNICA - ITERACIÓN {iteracion}] Iniciando...")
@@ -974,7 +978,6 @@ class ProductionOrder(models.Model):
                 # PASO 2: Ejecutar algoritmo de optimización EXHAUSTIVA con la bobina única
                 grupos_optimizados = []
                 ordenes_procesadas = set()
-                grupo_counter = 1
 
                 # ========================================================================
                 # FASE 1: Evaluar TODAS las duplas exhaustivamente
@@ -982,7 +985,7 @@ class ProductionOrder(models.Model):
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
 
                 todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite
+                    ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad
                 )
 
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
@@ -1030,7 +1033,7 @@ class ProductionOrder(models.Model):
                     if orden.id not in ordenes_procesadas and orden.faltante > 0:
                         # Buscar mejor combinación individual
                         mejor_individual = self._encontrar_mejor_combinacion(
-                            orden, self.env['megastock.production.order'], ordenes_procesadas, [bobina_seleccionada], cavidad_limite
+                            orden, self.env['megastock.production.order'], ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad
                         )
 
                         if mejor_individual:
@@ -1044,8 +1047,9 @@ class ProductionOrder(models.Model):
 
                 # PASO 3: Aplicar grupos encontrados
                 if grupos_optimizados:
-                    for idx, grupo in enumerate(grupos_optimizados, start=1):
-                        self._aplicar_combinacion(grupo, idx, bobinas_disponibles)
+                    for grupo in grupos_optimizados:
+                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, log_file)
+                        grupo_counter += 1  # Incrementar para el siguiente grupo
                     grupos_finales = grupos_optimizados
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos aplicados exitosamente")
                 else:
@@ -1071,16 +1075,32 @@ class ProductionOrder(models.Model):
                     self._eliminar_pedidos_temporales(pedidos_temporales)
                     break
 
-                # PASO 6: Condición de salida - Solo quedan faltantes < 500 ⚠️
+                # PASO 6: Condición de salida - Solo quedan faltantes < 500
                 if not con_faltante_alto and con_faltante_bajo:
-                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Solo quedan faltantes < 500. Reseteando {len(con_faltante_bajo)} pedidos.")
-                    # Resetear órdenes con faltante bajo (quedan PENDIENTES sin grupo)
-                    self._resetear_planificacion(con_faltante_bajo)
-                    ordenes_pendientes = con_faltante_bajo
-                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo]}")
-                    # Limpiar temporales
-                    self._eliminar_pedidos_temporales(pedidos_temporales)
-                    break
+                    # CAMBIO CRÍTICO: NO resetear inmediatamente
+                    # Verificar si en esta iteración se aplicaron nuevas combinaciones
+                    if duplas_aplicadas == 0 and individuales_aplicados == 0:
+                        # NO se aplicó nada en esta iteración: ya no hay más combinaciones posibles
+                        # PERO NO resetear duplas - mantenerlas intactas
+                        con_faltante_bajo_no_duplas = con_faltante_bajo.filtered(lambda o: o.tipo_combinacion != 'dupla')
+                        con_faltante_bajo_duplas = con_faltante_bajo.filtered(lambda o: o.tipo_combinacion == 'dupla')
+
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] No se aplicaron nuevas combinaciones.")
+                        if con_faltante_bajo_duplas:
+                            print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] PRESERVANDO {len(con_faltante_bajo_duplas)} duplas con faltante < 500:")
+                            print(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in con_faltante_bajo_duplas]}")
+
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Reseteando {len(con_faltante_bajo_no_duplas)} pedidos NO-duplas con faltante < 500.")
+                        self._resetear_planificacion(con_faltante_bajo_no_duplas)
+                        ordenes_pendientes = con_faltante_bajo_no_duplas
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo_no_duplas]}")
+                        self._eliminar_pedidos_temporales(pedidos_temporales)
+                        break
+                    else:
+                        # SÍ se aplicaron combinaciones: continuar iterando
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Quedan faltantes < 500, pero se aplicaron {duplas_aplicadas} duplas y {individuales_aplicados} individuales.")
+                        print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Continuando para buscar más combinaciones...")
+                        # NO hacer break, continuar con siguiente iteración
 
                 # PASO 7: Hay faltantes >= 500, continuar iterando
                 if con_faltante_alto:
@@ -1092,12 +1112,12 @@ class ProductionOrder(models.Model):
                         for orden_faltante in con_faltante_alto:
                             # Intentar planificar el faltante como orden individual
                             mejor_comb = self._encontrar_mejor_combinacion(
-                                orden_faltante, self.env['megastock.production.order'], set(), [bobina_seleccionada], 1
+                                orden_faltante, self.env['megastock.production.order'], set(), [bobina_seleccionada], 1, margen_seguridad
                             )
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
                                 grupo_counter = len(grupos_finales) + 1
-                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, log_file)
                                 grupos_finales.append(mejor_comb)
                                 print(f"[BOBINA ÚNICA] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1114,8 +1134,27 @@ class ProductionOrder(models.Model):
                     faltantes_a_replanificar = [(orden, orden.faltante) for orden in con_faltante_alto]
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Guardando faltantes para replanificar: {[(o.orden_produccion, f) for o, f in faltantes_a_replanificar]}")
 
-                    # 7.2 Resetear TODA la planificación (originales + temporales)
-                    self._resetear_planificacion(ordenes_originales)
+                    # 7.2 SOLO resetear órdenes con faltante >= 500 Y que NO sean duplas
+                    # MANTENER:
+                    # - órdenes con faltante=0 (ya completamente planificadas)
+                    # - órdenes que son parte de duplas (aunque tengan faltante >= 500)
+                    ordenes_a_resetear = ordenes_originales.filtered(lambda o: o.faltante >= 500 and o.tipo_combinacion != 'dupla')
+                    ordenes_completas = ordenes_originales.filtered(lambda o: o.faltante == 0)
+                    ordenes_duplas_preservadas = ordenes_originales.filtered(lambda o: o.faltante >= 500 and o.tipo_combinacion == 'dupla')
+
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] MANTENIENDO {len(ordenes_completas)} órdenes completas (faltante=0):")
+                    if ordenes_completas:
+                        print(f"  Órdenes completas: {[o.orden_produccion for o in ordenes_completas]}")
+
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] MANTENIENDO {len(ordenes_duplas_preservadas)} órdenes en duplas (con faltante >= 500):")
+                    if ordenes_duplas_preservadas:
+                        print(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in ordenes_duplas_preservadas]}")
+
+                    print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] RESETEANDO {len(ordenes_a_resetear)} órdenes con faltante >= 500 NO-duplas:")
+                    if ordenes_a_resetear:
+                        print(f"  Órdenes a resetear: {[(o.orden_produccion, o.faltante) for o in ordenes_a_resetear]}")
+
+                    self._resetear_planificacion(ordenes_a_resetear)
                     self._resetear_planificacion(pedidos_temporales)
 
                     # 7.3 Eliminar todos los pedidos temporales anteriores
@@ -1134,9 +1173,11 @@ class ProductionOrder(models.Model):
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Continuando con {len(pedidos_temporales)} pedidos temporales...")
 
             # VALIDACIÓN Y CORRECCIÓN FINAL - Verificar tipos de combinación
-            ordenes_con_grupo = ordenes.filtered(lambda o: o.grupo_planificacion)
+            # DESHABILITADO: La corrección final estaba causando problemas al convertir duplas válidas a individuales
+            # Las duplas se escriben correctamente en _aplicar_combinacion, no necesitamos corregirlas
+            print(f"[INFO] Corrección final DESHABILITADA - confiando en _aplicar_combinacion")
 
-            if ordenes_con_grupo:
+            if False:  # CORRECCIÓN FINAL DESHABILITADA
                 # Agrupar por grupo_planificacion
                 grupos_dict = {}
                 for orden in ordenes_con_grupo:
@@ -1151,6 +1192,10 @@ class ProductionOrder(models.Model):
                     num_ordenes = len(ordenes_grupo)
                     tipo_actual = ordenes_grupo[0].tipo_combinacion if ordenes_grupo else None
 
+                    # DEBUG: Mostrar qué órdenes encuentra en este grupo
+                    ordenes_en_grupo = ', '.join([f"{o.orden_produccion}({o.cantidad})" for o in ordenes_grupo])
+                    print(f"[DEBUG CORRECCIÓN] {grupo_nombre}: {num_ordenes} orden(es) encontradas: {ordenes_en_grupo}, tipo_actual='{tipo_actual}'")
+
                     # Determinar el tipo correcto
                     if num_ordenes == 1:
                         tipo_correcto = 'individual'
@@ -1161,7 +1206,7 @@ class ProductionOrder(models.Model):
 
                     # Si el tipo está mal, corregirlo
                     if tipo_actual != tipo_correcto:
-                        print(f"[BOBINA ÚNICA - CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
+                        print(f"[CORRECCIÓN FINAL] {grupo_nombre}: {num_ordenes} orden(es) con tipo='{tipo_actual}' → corrigiendo a '{tipo_correcto}'")
 
                         # Si queda solo 1 orden, RECALCULAR bobina óptima
                         if num_ordenes == 1:
@@ -1246,10 +1291,35 @@ class ProductionOrder(models.Model):
 
         # ESTRATEGIA 2: BOBINAS MÚLTIPLES - Replanificación iterativa con manejo de faltantes
         else:
+            import sys
+            from datetime import datetime
+
+            # Abrir archivo de log
+            log_path = r"C:\Program Files\Odoo 16.0.20250630\planificacion_log.txt"
+            log_file = open(log_path, 'w', encoding='utf-8')
+
+            def log(msg):
+                """Escribe en archivo y en consola"""
+                print(msg)
+                log_file.write(msg + '\n')
+                log_file.flush()
+                sys.stdout.flush()
+
+            log("\n" + "="*100)
+            log(f"🚀 [MÚLTIPLES BOBINAS] INICIANDO PLANIFICACIÓN - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            log(f"   Bobinas disponibles: {bobinas_disponibles}")
+            log(f"   Cavidad límite: {cavidad_limite}")
+            log(f"   Margen seguridad: {margen_seguridad}mm")
+            log(f"   Archivo de log: {log_path}")
+            log("="*100)
+
             # Separar órdenes originales (no temporales)
             ordenes_originales = ordenes.filtered(lambda o: not o.es_temporal)
             pedidos_temporales = self.env['megastock.production.order']
             ordenes_pendientes = self.env['megastock.production.order']
+
+            log(f"📦 Total órdenes a planificar: {len(ordenes_originales)}")
+            log(f"📦 Órdenes: {[o.orden_produccion for o in ordenes_originales]}")
 
             max_iteraciones = 50  # Reducir para evitar cálculos innecesarios
             iteracion = 0
@@ -1259,44 +1329,54 @@ class ProductionOrder(models.Model):
             iteraciones_sin_cambio = 0
             max_sin_cambio = 3  # Si 3 iteraciones consecutivas sin cambios, salir
 
+            # CONTADOR DE GRUPOS PERSISTENTE entre iteraciones
+            grupo_counter = 1
+
+            log(f"\n🔄 Entrando al loop de iteraciones (máx: {max_iteraciones})...")
+
             while iteracion < max_iteraciones:
                 iteracion += 1
+
+                log(f"\n{'#'*100}")
+                log(f"### ITERACIÓN {iteracion} - INICIO ###")
+                log(f"{'#'*100}")
 
                 # PASO 1: Conjunto completo a planificar (originales + temporales)
                 ordenes_a_planificar = ordenes_originales | pedidos_temporales
 
+                log(f"[ITERACIÓN {iteracion}] Órdenes a planificar: {len(ordenes_a_planificar)} ({len(ordenes_originales)} originales + {len(pedidos_temporales)} temporales)")
+
                 # PASO 2: Ejecutar algoritmo de optimización EXHAUSTIVA
                 grupos_optimizados = []
                 ordenes_procesadas = set()
-                grupo_counter = 1
 
                 # ========================================================================
                 # FASE 1: Evaluar TODAS las duplas exhaustivamente
                 # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
+                log(f"[ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
 
                 todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                    ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad, log_file
                 )
 
-                print(f"[ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
+                log(f"[ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
 
                 if todas_las_duplas:
                     # Mostrar top 5 mejores duplas
-                    print(f"[ITERACIÓN {iteracion}] Top 5 mejores duplas:")
+                    log(f"[ITERACIÓN {iteracion}] Top 5 mejores duplas:")
                     for idx, dupla in enumerate(todas_las_duplas[:5], 1):
                         categoria = "SIN FALTANTE" if dupla['faltante_max'] == 0 else (
                             "FALTANTE BAJO" if dupla['faltante_max'] < 500 else "FALTANTE ALTO"
                         )
                         orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
                         orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  {idx}. {orden1_nombre} + {orden2_nombre}")
-                        print(f"     Bobina: {dupla['bobina']}mm | Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']} ({categoria})")
+                        log(f"  {idx}. {orden1_nombre} + {orden2_nombre}")
+                        log(f"     Bobina: {dupla['bobina']}mm | Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']} ({categoria})")
 
                 # ========================================================================
                 # FASE 2: Aplicar duplas evitando conflictos
                 # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 2: Aplicando duplas sin conflictos...")
+                log(f"[ITERACIÓN {iteracion}] FASE 2: Aplicando duplas sin conflictos...")
 
                 duplas_aplicadas = 0
                 for dupla in todas_las_duplas:
@@ -1309,38 +1389,41 @@ class ProductionOrder(models.Model):
 
                         orden1_nombre = dupla['ordenes'][0]['orden'].orden_produccion
                         orden2_nombre = dupla['ordenes'][1]['orden'].orden_produccion
-                        print(f"  [OK] Aplicada: {orden1_nombre} + {orden2_nombre}")
-                        print(f"       Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']}")
+                        log(f"  [OK] Aplicada: {orden1_nombre} + {orden2_nombre}")
+                        log(f"       Sobrante: {dupla['sobrante']}mm | Faltante: {dupla['faltante_max']}")
 
-                print(f"[ITERACIÓN {iteracion}] Total duplas aplicadas: {duplas_aplicadas}")
+                log(f"[ITERACIÓN {iteracion}] Total duplas aplicadas: {duplas_aplicadas}")
 
                 # ========================================================================
                 # FASE 3: Aplicar individuales para órdenes restantes
                 # ========================================================================
-                print(f"[ITERACIÓN {iteracion}] FASE 3: Aplicando individuales para órdenes restantes...")
+                log(f"[ITERACIÓN {iteracion}] FASE 3: Aplicando individuales para órdenes restantes...")
 
                 individuales_aplicados = 0
                 for orden in ordenes_a_planificar:
-                    if orden.id in ordenes_procesadas and orden.faltante > 0:
+                    # FIX CRÍTICO: La lógica estaba al revés
+                    # Solo procesar órdenes que NO estén procesadas Y tengan faltante > 0
+                    if orden.id in ordenes_procesadas or orden.faltante <= 0:
                         continue
 
                     # Buscar mejor combinación individual
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, self.env['megastock.production.order'], ordenes_procesadas, bobinas_disponibles, cavidad_limite
+                        orden, self.env['megastock.production.order'], ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad
                     )
 
                     if mejor_combinacion:
                         grupos_optimizados.append(mejor_combinacion)
                         ordenes_procesadas.add(orden.id)
                         individuales_aplicados += 1
-                        print(f"  [OK] Aplicada individual: {orden.orden_produccion}")
+                        log(f"  [OK] Aplicada individual: {orden.orden_produccion}")
 
-                print(f"[ITERACIÓN {iteracion}] Total individuales aplicadas: {individuales_aplicados}")
+                log(f"[ITERACIÓN {iteracion}] Total individuales aplicadas: {individuales_aplicados}")
 
                 # Aplicar los grupos encontrados
                 if grupos_optimizados:
-                    for idx, grupo in enumerate(grupos_optimizados, start=1):
-                        self._aplicar_combinacion(grupo, idx, bobinas_disponibles)
+                    for grupo in grupos_optimizados:
+                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, log_file)
+                        grupo_counter += 1  # Incrementar para el siguiente grupo
 
                 # PASO 3: Refrescar y calcular faltantes (SOLO en órdenes originales)
                 ordenes_originales.invalidate_cache()
@@ -1351,28 +1434,37 @@ class ProductionOrder(models.Model):
 
                 # Debug: Mostrar faltantes detectados
                 if con_faltante_alto:
-                    print(f"[ITERACIÓN {iteracion}] Faltantes ALTOS (>= 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_alto]}")
+                    log(f"[ITERACIÓN {iteracion}] Faltantes ALTOS (>= 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_alto]}")
                 if con_faltante_bajo:
-                    print(f"[ITERACIÓN {iteracion}] Faltantes BAJOS (< 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_bajo]}")
+                    log(f"[ITERACIÓN {iteracion}] Faltantes BAJOS (< 500): {[(o.orden_produccion, o.faltante) for o in con_faltante_bajo]}")
 
                 # PASO 4.5: Detectar bucle infinito - Faltantes que no cambian
                 faltantes_actuales = set((o.orden_produccion, o.faltante) for o in con_faltante_alto)
 
                 if historial_faltantes and faltantes_actuales == historial_faltantes[-1]:
                     iteraciones_sin_cambio += 1
-                    print(f"[ITERACIÓN {iteracion}] ⚠️ Faltantes SIN CAMBIO ({iteraciones_sin_cambio}/{max_sin_cambio})")
+                    log(f"[ITERACIÓN {iteracion}] ⚠️ Faltantes SIN CAMBIO ({iteraciones_sin_cambio}/{max_sin_cambio})")
 
                     if iteraciones_sin_cambio >= max_sin_cambio:
-                        print(f"[ITERACIÓN {iteracion}] 🛑 BUCLE INFINITO DETECTADO - Los faltantes no han cambiado en {max_sin_cambio} iteraciones")
-                        print(f"[ITERACIÓN {iteracion}] Órdenes con faltantes persistentes: {[o.orden_produccion for o in con_faltante_alto]}")
+                        log(f"[ITERACIÓN {iteracion}] 🛑 BUCLE INFINITO DETECTADO - Los faltantes no han cambiado en {max_sin_cambio} iteraciones")
+                        log(f"[ITERACIÓN {iteracion}] Órdenes con faltantes persistentes: {[o.orden_produccion for o in con_faltante_alto]}")
 
                         # Resetear estas órdenes como no planificables (dejar pendientes)
-                        self._resetear_planificacion(con_faltante_alto)
-                        ordenes_pendientes |= con_faltante_alto
-                        print(f"[ITERACIÓN {iteracion}] Órdenes marcadas como PENDIENTES (no planificables con bobinas disponibles)")
+                        # PERO NO resetear duplas - mantenerlas intactas
+                        con_faltante_alto_no_duplas = con_faltante_alto.filtered(lambda o: o.tipo_combinacion != 'dupla')
+                        con_faltante_alto_duplas = con_faltante_alto.filtered(lambda o: o.tipo_combinacion == 'dupla')
+
+                        log(f"[ITERACIÓN {iteracion}] PRESERVANDO {len(con_faltante_alto_duplas)} duplas con faltante alto:")
+                        if con_faltante_alto_duplas:
+                            log(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in con_faltante_alto_duplas]}")
+
+                        self._resetear_planificacion(con_faltante_alto_no_duplas)
+                        ordenes_pendientes |= con_faltante_alto_no_duplas
+                        log(f"[ITERACIÓN {iteracion}] {len(con_faltante_alto_no_duplas)} órdenes NO-duplas marcadas como PENDIENTES (no planificables con bobinas disponibles)")
 
                         # Limpiar temporales
                         self._eliminar_pedidos_temporales(pedidos_temporales)
+                        log_file.close()
                         break
                 else:
                     iteraciones_sin_cambio = 0
@@ -1381,27 +1473,45 @@ class ProductionOrder(models.Model):
 
                 # PASO 5: Condición de salida - Todos cumplidos ✅
                 if not con_faltante_alto and not con_faltante_bajo:
-                    print(f"[ITERACIÓN {iteracion}] Todos los pedidos cumplidos. Finalizando.")
+                    log(f"[ITERACIÓN {iteracion}] Todos los pedidos cumplidos. Finalizando.")
                     # Limpiar temporales
                     self._eliminar_pedidos_temporales(pedidos_temporales)
+                    log_file.close()
                     break
 
-                # PASO 6: Condición de salida - Solo quedan faltantes < 500 ⚠️
+                # PASO 6: Condición de salida - Solo quedan faltantes < 500
                 if not con_faltante_alto and con_faltante_bajo:
-                    print(f"[ITERACIÓN {iteracion}] Solo quedan faltantes < 500. Reseteando {len(con_faltante_bajo)} pedidos.")
-                    # Resetear órdenes con faltante bajo (quedan PENDIENTES sin grupo)
-                    self._resetear_planificacion(con_faltante_bajo)
-                    ordenes_pendientes = con_faltante_bajo
-                    print(f"[ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo]}")
-                    # Limpiar temporales
-                    self._eliminar_pedidos_temporales(pedidos_temporales)
-                    break
+                    # CAMBIO CRÍTICO: NO resetear inmediatamente
+                    # Verificar si en esta iteración se aplicaron nuevas combinaciones
+                    if duplas_aplicadas == 0 and individuales_aplicados == 0:
+                        # NO se aplicó nada en esta iteración: ya no hay más combinaciones posibles
+                        # PERO NO resetear duplas - mantenerlas intactas
+                        con_faltante_bajo_no_duplas = con_faltante_bajo.filtered(lambda o: o.tipo_combinacion != 'dupla')
+                        con_faltante_bajo_duplas = con_faltante_bajo.filtered(lambda o: o.tipo_combinacion == 'dupla')
+
+                        log(f"[ITERACIÓN {iteracion}] No se aplicaron nuevas combinaciones.")
+                        if con_faltante_bajo_duplas:
+                            log(f"[ITERACIÓN {iteracion}] PRESERVANDO {len(con_faltante_bajo_duplas)} duplas con faltante < 500:")
+                            log(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in con_faltante_bajo_duplas]}")
+
+                        log(f"[ITERACIÓN {iteracion}] Reseteando {len(con_faltante_bajo_no_duplas)} pedidos NO-duplas con faltante < 500.")
+                        self._resetear_planificacion(con_faltante_bajo_no_duplas)
+                        ordenes_pendientes = con_faltante_bajo_no_duplas
+                        log(f"[ITERACIÓN {iteracion}] Pedidos reseteados: {[o.orden_produccion for o in con_faltante_bajo_no_duplas]}")
+                        self._eliminar_pedidos_temporales(pedidos_temporales)
+                        log_file.close()
+                        break
+                    else:
+                        # SÍ se aplicaron combinaciones: continuar iterando
+                        log(f"[ITERACIÓN {iteracion}] Quedan faltantes < 500, pero se aplicaron {duplas_aplicadas} duplas y {individuales_aplicados} individuales.")
+                        log(f"[ITERACIÓN {iteracion}] Continuando para buscar más combinaciones...")
+                        # NO hacer break, continuar con siguiente iteración
 
                 # PASO 7: Hay faltantes >= 500, continuar iterando
                 if con_faltante_alto:
                     # Verificar si podemos continuar iterando
                     if iteracion >= max_iteraciones:
-                        print(f"[ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Intentando planificación forzada individual")
+                        log(f"[ITERACIÓN {iteracion}] ⚠️ LÍMITE ALCANZADO - Intentando planificación forzada individual")
 
                         # ESTRATEGIA FINAL: Planificar individualmente los faltantes restantes
                         grupo_counter = len(set(ordenes_originales.filtered(lambda o: o.grupo_planificacion).mapped('grupo_planificacion'))) + 1
@@ -1409,11 +1519,11 @@ class ProductionOrder(models.Model):
                         for orden_faltante in con_faltante_alto:
                             # Intentar planificar el faltante como orden individual
                             mejor_comb = self._encontrar_mejor_combinacion(
-                                orden_faltante, self.env['megastock.production.order'], set(), bobinas_disponibles, 1
+                                orden_faltante, self.env['megastock.production.order'], set(), bobinas_disponibles, 1, margen_seguridad
                             )
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
-                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, log_file)
                                 grupo_counter += 1
                                 print(f"[ITERACIÓN {iteracion}] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1428,10 +1538,29 @@ class ProductionOrder(models.Model):
 
                     # 7.1 GUARDAR faltantes ANTES de resetear (¡CRÍTICO!)
                     faltantes_a_replanificar = [(orden, orden.faltante) for orden in con_faltante_alto]
-                    print(f"[ITERACIÓN {iteracion}] Guardando faltantes para replanificar: {[(o.orden_produccion, f) for o, f in faltantes_a_replanificar]}")
+                    log(f"[ITERACIÓN {iteracion}] Guardando faltantes para replanificar: {[(o.orden_produccion, f) for o, f in faltantes_a_replanificar]}")
 
-                    # 7.2 Resetear TODA la planificación (originales + temporales)
-                    self._resetear_planificacion(ordenes_originales)
+                    # 7.2 SOLO resetear órdenes con faltante >= 500 Y que NO sean duplas
+                    # MANTENER:
+                    # - órdenes con faltante=0 (ya completamente planificadas)
+                    # - órdenes que son parte de duplas (aunque tengan faltante >= 500)
+                    ordenes_a_resetear = ordenes_originales.filtered(lambda o: o.faltante >= 500 and o.tipo_combinacion != 'dupla')
+                    ordenes_completas = ordenes_originales.filtered(lambda o: o.faltante == 0)
+                    ordenes_duplas_preservadas = ordenes_originales.filtered(lambda o: o.faltante >= 500 and o.tipo_combinacion == 'dupla')
+
+                    log(f"[ITERACIÓN {iteracion}] MANTENIENDO {len(ordenes_completas)} órdenes completas (faltante=0):")
+                    if ordenes_completas:
+                        log(f"  Órdenes completas: {[o.orden_produccion for o in ordenes_completas]}")
+
+                    log(f"[ITERACIÓN {iteracion}] MANTENIENDO {len(ordenes_duplas_preservadas)} órdenes en duplas (con faltante >= 500):")
+                    if ordenes_duplas_preservadas:
+                        log(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in ordenes_duplas_preservadas]}")
+
+                    log(f"[ITERACIÓN {iteracion}] RESETEANDO {len(ordenes_a_resetear)} órdenes con faltante >= 500 NO-duplas:")
+                    if ordenes_a_resetear:
+                        log(f"  Órdenes a resetear: {[(o.orden_produccion, o.faltante) for o in ordenes_a_resetear]}")
+
+                    self._resetear_planificacion(ordenes_a_resetear)
                     self._resetear_planificacion(pedidos_temporales)
 
                     # 7.3 Eliminar temporales anteriores
@@ -1448,8 +1577,15 @@ class ProductionOrder(models.Model):
                     # Solo quedan desagrupadas y volverán a intentar agruparse
 
             # PASO 8: Limpieza final - Resetear pedidos con faltante < 500 que quedaron agrupados
+            # PERO NO resetear duplas - mantenerlas intactas
             ordenes_originales.invalidate_cache()
-            ordenes_con_faltante_final = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500)
+            ordenes_con_faltante_final = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500 and o.tipo_combinacion != 'dupla')
+            ordenes_con_faltante_final_duplas = ordenes_originales.filtered(lambda o: 0 < o.faltante < 500 and o.tipo_combinacion == 'dupla')
+
+            if ordenes_con_faltante_final_duplas:
+                log(f"[LIMPIEZA FINAL] PRESERVANDO {len(ordenes_con_faltante_final_duplas)} duplas con faltante < 500:")
+                log(f"  Duplas preservadas: {[(o.orden_produccion, o.faltante, o.grupo_planificacion) for o in ordenes_con_faltante_final_duplas]}")
+
             if ordenes_con_faltante_final:
                 self._resetear_planificacion(ordenes_con_faltante_final)
                 ordenes_pendientes = ordenes_con_faltante_final
@@ -1595,7 +1731,8 @@ class ProductionOrder(models.Model):
             for bobina in bobinas_ordenadas:
                 if ancho_util <= (bobina - MARGEN_SEGURIDAD):
                     # Calcular si el faltante cabe con este multiplicador
-                    cavidad_efectiva = orden_con_faltante.cavidad * multiplicador if orden_con_faltante.cavidad else multiplicador
+                    # Usar SOLO multiplicador, NO orden.cavidad
+                    cavidad_efectiva = multiplicador
 
                     if cavidad_efectiva > 0:
                         cortes_necesarios = faltante / cavidad_efectiva
@@ -1674,7 +1811,8 @@ class ProductionOrder(models.Model):
     def _calcular_eficiencia_para_faltante(self, orden, faltante, multiplicador, bobina_ancho):
         """Calcula eficiencia para una orden procesando solo su faltante"""
         ancho_efectivo = orden.ancho_calculado * multiplicador
-        cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
+        # Usar SOLO multiplicador, NO orden.cavidad
+        cavidad_efectiva = multiplicador
 
         if cavidad_efectiva == 0 or ancho_efectivo > bobina_ancho:
             return {
@@ -1723,8 +1861,9 @@ class ProductionOrder(models.Model):
         eficiencia = round((ancho_total / bobina_ancho) * 100)
 
         # Calcular metros lineales
-        cavidad_efectiva1 = orden1.cavidad * mult1 if orden1.cavidad else mult1
-        cavidad_efectiva2 = orden2.cavidad * mult2 if orden2.cavidad else mult2
+        # Usar SOLO multiplicadores, NO orden.cavidad
+        cavidad_efectiva1 = mult1
+        cavidad_efectiva2 = mult2
 
         metros1 = 0
         cortes1 = 0
@@ -1769,8 +1908,10 @@ class ProductionOrder(models.Model):
             menor, mayor = orden2, orden1
             mult_menor, mult_mayor = mult2, mult1
 
-        cavidad_menor = (menor.cavidad or 1) * mult_menor
-        cavidad_mayor = (mayor.cavidad or 1) * mult_mayor
+        # USAR SOLO el multiplicador (mult), NO usar orden.cavidad
+        # mult es el multiplicador para ESTA dupla específica
+        cavidad_menor = mult_menor
+        cavidad_mayor = mult_mayor
 
         # ========================================================================
         # ESCENARIO 1: MENOR completo → ajustar MAYOR
@@ -1782,9 +1923,9 @@ class ProductionOrder(models.Model):
         faltante_menor_esc1 = 0  # Se cumple completo
 
         # Ajustar MAYOR basándose en metros del MENOR
-        cantidad_ajustada_mayor = (metros_menor_esc1 / mayor.largo_calculado) * 1000
+        cantidad_ajustada_mayor = (metros_menor_esc1 * cavidad_mayor * 1000) / mayor.largo_calculado
         cantidad_calculada_mayor = round(cantidad_ajustada_mayor)
-        cantidad_planificada_mayor_esc1 = min(cantidad_calculada_mayor, mayor.cantidad)
+        cantidad_planificada_mayor_esc1 = min(cantidad_calculada_mayor, mayor.faltante)
 
         cortes_mayor_esc1 = cantidad_planificada_mayor_esc1 / cavidad_mayor
         metros_mayor_esc1 = (cortes_mayor_esc1 * mayor.largo_calculado) / 1000
@@ -1804,9 +1945,9 @@ class ProductionOrder(models.Model):
         faltante_mayor_esc2 = 0  # Se cumple completo
 
         # Ajustar MENOR basándose en metros del MAYOR
-        cantidad_ajustada_menor = (metros_mayor_esc2 / menor.largo_calculado) * 1000
+        cantidad_ajustada_menor = (metros_mayor_esc2 * cavidad_menor * 1000) / menor.largo_calculado
         cantidad_calculada_menor = round(cantidad_ajustada_menor)
-        cantidad_planificada_menor_esc2 = min(cantidad_calculada_menor, menor.cantidad)
+        cantidad_planificada_menor_esc2 = min(cantidad_calculada_menor, menor.faltante)
 
         cortes_menor_esc2 = cantidad_planificada_menor_esc2 / cavidad_menor
         metros_menor_esc2 = (cortes_menor_esc2 * menor.largo_calculado) / 1000
@@ -1833,6 +1974,29 @@ class ProductionOrder(models.Model):
             escenario_elegido = 'ESC-2'
         else:
             # Ningún escenario válido
+            return None
+
+        # ========================================================================
+        # VALIDACIÓN CRÍTICA: Descartar duplas con faltantes < 500
+        # ========================================================================
+        # Una dupla es INVÁLIDA si deja faltante > 0 Y < 500 en CUALQUIERA de las órdenes
+        if escenario_elegido == 'ESC-1':
+            faltante_menor_final = faltante_menor_esc1
+            faltante_mayor_final = faltante_mayor_esc1
+        else:  # ESC-2
+            faltante_menor_final = faltante_menor_esc2
+            faltante_mayor_final = faltante_mayor_esc2
+
+        # Verificar faltante del MENOR
+        if 0 < faltante_menor_final < 500:
+            # print(f"[DUPLA RECHAZADA] {menor.orden_produccion} + {mayor.orden_produccion}: "
+            #       f"faltante MENOR ({faltante_menor_final}) está entre 0 y 500")
+            return None
+
+        # Verificar faltante del MAYOR
+        if 0 < faltante_mayor_final < 500:
+            # print(f"[DUPLA RECHAZADA] {menor.orden_produccion} + {mayor.orden_produccion}: "
+            #       f"faltante MAYOR ({faltante_mayor_final}) está entre 0 y 500")
             return None
 
         # Retornar datos del escenario elegido
@@ -1863,7 +2027,7 @@ class ProductionOrder(models.Model):
                 'esc2_valido': esc2_valido
             }
 
-    def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
+    def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30, log_file=None):
         """Evalúa TODAS las duplas posibles de forma exhaustiva
 
         Args:
@@ -1871,22 +2035,49 @@ class ProductionOrder(models.Model):
             procesadas: Set de IDs de órdenes ya procesadas
             bobinas: Lista de anchos de bobinas disponibles
             cavidad_limite: Límite superior para multiplicar ancho_calculado
+            margen_seguridad: Margen de seguridad en mm (default: 30)
+            log_file: Archivo de log (opcional)
 
         Returns:
             Lista de duplas ordenadas por (faltante_max, sobrante)
         """
         import itertools
+        import sys
 
-        MARGEN_SEGURIDAD = 30
+        def log(msg):
+            """Escribe en archivo y en consola"""
+            print(msg)
+            if log_file:
+                log_file.write(msg + '\n')
+                log_file.flush()
+            sys.stdout.flush()
+
+        MARGEN_SEGURIDAD = margen_seguridad
         bobinas_ordenadas = sorted(bobinas)
 
         # Filtrar órdenes disponibles (no procesadas y con faltante > 0)
         ordenes_disponibles = [o for o in todas_ordenes if o.id not in procesadas and o.faltante > 0]
 
+        log(f"\n{'='*80}")
+        log(f"[EVALUACIÓN EXHAUSTIVA] Iniciando evaluación de duplas")
+        log(f"  Órdenes totales recibidas: {len(todas_ordenes)}")
+        log(f"  Órdenes ya procesadas: {len(procesadas)}")
+        log(f"  Órdenes disponibles (no procesadas + faltante>0): {len(ordenes_disponibles)}")
+
         if len(ordenes_disponibles) < 2:
+            log(f"  ⚠️ NO HAY SUFICIENTES ÓRDENES para formar duplas (necesitan al menos 2)")
+            log(f"{'='*80}\n")
             return []
 
         todas_las_duplas = []
+
+        # LOG: Mostrar cuántas combinaciones se van a evaluar
+        total_combinaciones = len(list(itertools.combinations(ordenes_disponibles, 2)))
+        total_evaluaciones = total_combinaciones * (cavidad_limite ** 2)
+        log(f"  Combinaciones posibles: {total_combinaciones}")
+        log(f"  Cavidad límite: {cavidad_limite}")
+        log(f"  Total evaluaciones (con multiplicadores): {total_evaluaciones}")
+        log(f"{'='*80}\n")
 
         # Generar TODAS las combinaciones de 2 órdenes
         for orden1, orden2 in itertools.combinations(ordenes_disponibles, 2):
@@ -1910,10 +2101,11 @@ class ProductionOrder(models.Model):
                             # VALIDACIÓN: Si ningún escenario es válido, descartar dupla
                             # ========================================================================
                             if faltantes is None:
-                                # Descartar esta dupla: ningún escenario produce metros iguales
-                                print(f"[DUPLA DESCARTADA] {orden1.orden_produccion} + {orden2.orden_produccion}: "
+                                # Descartar esta combinación de multiplicadores: ningún escenario produce metros iguales
+                                # Continuar probando con otras bobinas o multiplicadores
+                                log(f"[DUPLA DESCARTADA - mult1={mult1}, mult2={mult2}] {orden1.orden_produccion} + {orden2.orden_produccion}: "
                                       f"ningún escenario produce metros iguales")
-                                break
+                                break  # Romper loop de bobinas, continuar con siguiente combinación de multiplicadores
 
                             metros_redondeados = round(faltantes['metros_menor'])
 
@@ -1932,7 +2124,7 @@ class ProductionOrder(models.Model):
                             ]
 
                             # Calcular eficiencia
-                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina)
+                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina, margen_seguridad)
 
                             dupla = {
                                 'ordenes': ordenes_data,
@@ -1954,7 +2146,7 @@ class ProductionOrder(models.Model):
                             escenario_info = faltantes['escenario']
                             if faltantes['esc1_valido'] and faltantes['esc2_valido']:
                                 escenario_info += " (AMBOS válidos)"
-                            print(f"[DUPLA VÁLIDA] {faltantes['orden_menor']} + {faltantes['orden_mayor']}: "
+                            log(f"[DUPLA VÁLIDA] {faltantes['orden_menor']} + {faltantes['orden_mayor']}: "
                                   f"{escenario_info} - {metros_redondeados}m")
 
                             todas_las_duplas.append(dupla)
@@ -1963,9 +2155,36 @@ class ProductionOrder(models.Model):
         # Ordenar GLOBALMENTE por (faltante_max, sobrante)
         todas_las_duplas.sort(key=lambda x: (x['faltante_max'], x['sobrante']))
 
+        # LOG: Resumen de duplas encontradas
+        log(f"\n{'='*80}")
+        log(f"[EVALUACIÓN EXHAUSTIVA] Resumen de resultados")
+        log(f"  Total duplas válidas encontradas: {len(todas_las_duplas)}")
+
+        if todas_las_duplas:
+            # Contar duplas por categoría de faltante_max
+            sin_faltante = sum(1 for d in todas_las_duplas if d['faltante_max'] == 0)
+            con_faltante = len(todas_las_duplas) - sin_faltante
+            log(f"  Duplas con faltante_max=0 (completas): {sin_faltante}")
+            log(f"  Duplas con faltante_max>0 (parciales): {con_faltante}")
+
+            # Mostrar top 10
+            log(f"\n  Top 10 duplas (ordenadas por faltante_max, sobrante):")
+            for idx, dupla in enumerate(todas_las_duplas[:10], 1):
+                o1 = dupla['ordenes'][0]['orden']
+                o2 = dupla['ordenes'][1]['orden']
+                m1 = dupla['ordenes'][0]['multiplicador']
+                m2 = dupla['ordenes'][1]['multiplicador']
+                log(f"    {idx}. {o1.orden_produccion}(cant={o1.cantidad},mult={m1}) + "
+                      f"{o2.orden_produccion}(cant={o2.cantidad},mult={m2}) - "
+                      f"faltante_max={dupla['faltante_max']}, sobrante={dupla['sobrante']}mm, "
+                      f"bobina={dupla['bobina']}mm")
+        else:
+            log(f"  ⚠️ NO se encontraron duplas válidas")
+        log(f"{'='*80}\n")
+
         return todas_las_duplas
 
-    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1):
+    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30):
         """Encuentra la mejor combinación para una orden principal
 
         Args:
@@ -1974,12 +2193,18 @@ class ProductionOrder(models.Model):
             procesadas: Set de IDs de órdenes ya procesadas
             bobinas: Lista de anchos de bobinas disponibles
             cavidad_limite: Límite superior para multiplicar ancho_calculado
+            margen_seguridad: Margen de seguridad en mm (default: 30)
         """
+        print(f"\n[INDIVIDUAL] Evaluando {orden_principal.orden_produccion} (ancho={orden_principal.ancho_calculado}mm)")
+        print(f"  Bobinas disponibles: {bobinas}")
+        print(f"  Cavidad límite: {cavidad_limite}")
+        print(f"  Margen: {margen_seguridad}mm")
+
         mejor_combinacion = None
         menor_sobrante = float('inf')  # Criterio único: minimizar sobrante
 
-        # Margen de seguridad para cortes (30mm)
-        MARGEN_SEGURIDAD = 30
+        # Usar el margen de seguridad especificado por el usuario
+        MARGEN_SEGURIDAD = margen_seguridad
 
         # IMPORTANTE: Ordenar bobinas de MENOR a MAYOR para encontrar la más pequeña que quepa
         bobinas_ordenadas = sorted(bobinas)
@@ -1989,7 +2214,8 @@ class ProductionOrder(models.Model):
             ancho_util = orden_principal.ancho_calculado * multiplicador
 
             for bobina in bobinas_ordenadas:
-                if ancho_util <= (bobina - MARGEN_SEGURIDAD):
+                espacio_disponible = bobina - MARGEN_SEGURIDAD
+                if ancho_util <= espacio_disponible:
                     # Crear datos de orden con multiplicador
                     orden_data = [{
                         'orden': orden_principal,
@@ -1997,7 +2223,9 @@ class ProductionOrder(models.Model):
                         'ancho_efectivo': ancho_util
                     }]
 
-                    resultado = self._calcular_eficiencia_real_con_cavidad(orden_data, bobina)
+                    resultado = self._calcular_eficiencia_real_con_cavidad(orden_data, bobina, margen_seguridad)
+
+                    print(f"  ✓ mult={multiplicador}: {ancho_util}mm cabe en {bobina}mm (disponible={espacio_disponible}mm) → sobrante={resultado['sobrante']}mm")
 
                     # Criterio simple: menor sobrante gana
                     if resultado['sobrante'] < menor_sobrante:
@@ -2012,6 +2240,9 @@ class ProductionOrder(models.Model):
                             'metros_lineales': resultado['metros_lineales'],
                             'cortes_totales': resultado['cortes_totales']
                         }
+                        print(f"    → MEJOR hasta ahora (sobrante={menor_sobrante}mm)")
+                else:
+                    print(f"  ✗ mult={multiplicador}: {ancho_util}mm NO cabe en {bobina}mm (disponible={espacio_disponible}mm)")
 
         # Probar duplas con diferentes multiplicadores de cavidad para cada orden
         # IMPORTANTE: Si todas_ordenes solo tiene 1 orden, NO evaluar duplas
@@ -2049,7 +2280,7 @@ class ProductionOrder(models.Model):
                                 }
                             ]
 
-                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina)
+                            resultado = self._calcular_eficiencia_real_con_cavidad(ordenes_data, bobina, margen_seguridad)
 
                             # DEBUG: Log para verificar validación sin división
                             if resultado['eficiencia'] > 0:
@@ -2072,15 +2303,28 @@ class ProductionOrder(models.Model):
         # Las triplas no son posibles debido a limitaciones de las máquinas corrugadoras
         # que solo tienen máximo 2 cuchillas
 
+        if mejor_combinacion:
+            if mejor_combinacion['tipo'] == 'individual':
+                mult = mejor_combinacion['ordenes'][0]['multiplicador']
+                print(f"\n[RESULTADO] {orden_principal.orden_produccion}: {mejor_combinacion['tipo']} con mult={mult}, bobina={mejor_combinacion['bobina']}mm, sobrante={mejor_combinacion['sobrante']}mm")
+            else:
+                mult1 = mejor_combinacion['ordenes'][0]['multiplicador']
+                mult2 = mejor_combinacion['ordenes'][1]['multiplicador']
+                orden2_nombre = mejor_combinacion['ordenes'][1]['orden'].orden_produccion
+                print(f"\n[RESULTADO] {orden_principal.orden_produccion} + {orden2_nombre}: dupla con mult={mult1}x+{mult2}x, bobina={mejor_combinacion['bobina']}mm, sobrante={mejor_combinacion['sobrante']}mm")
+        else:
+            print(f"\n[RESULTADO] {orden_principal.orden_produccion}: NO SE ENCONTRÓ COMBINACIÓN")
+
         return mejor_combinacion
 
-    def _calcular_eficiencia_real_con_cavidad(self, ordenes_data, bobina_ancho):
+    def _calcular_eficiencia_real_con_cavidad(self, ordenes_data, bobina_ancho, margen_seguridad=30):
         """Calcula la eficiencia y sobrante para una combinación de órdenes
 
         Args:
             ordenes_data: Lista de diccionarios con estructura:
                          [{'orden': record, 'multiplicador': int, 'ancho_efectivo': float}, ...]
             bobina_ancho: Ancho de la bobina en mm
+            margen_seguridad: Margen de seguridad en mm (default: 30)
 
         Returns:
             dict con eficiencia, sobrante, metros_lineales, cortes_totales
@@ -2099,9 +2343,10 @@ class ProductionOrder(models.Model):
 
         # NUEVA FÓRMULA DE SOBRANTE (SIN DIVISIÓN):
         # Solo validar que el ancho total de todas las órdenes quepa en la bobina
-        # sobrante_total = (bobina - 30) - suma_anchos_efectivos
+        # sobrante_total = (bobina - margen) - suma_anchos_efectivos
 
-        MARGEN_SEGURIDAD = 30
+        # Usar el margen de seguridad especificado por el usuario
+        MARGEN_SEGURIDAD = margen_seguridad
         espacio_disponible = bobina_ancho - MARGEN_SEGURIDAD
 
         # Calcular ancho total de todas las órdenes
@@ -2254,20 +2499,34 @@ class ProductionOrder(models.Model):
             'cortes_totales': cortes_totales
         }
 
-    def _aplicar_combinacion(self, combinacion, grupo_id, bobinas_disponibles):
+    def _aplicar_combinacion(self, combinacion, grupo_id, bobinas_disponibles, margen_seguridad=30, log_file=None):
         """Aplica la combinación encontrada a las órdenes
 
         Args:
             combinacion: dict con la estructura de la combinación óptima
             grupo_id: ID del grupo de planificación
             bobinas_disponibles: Lista de anchos de bobinas seleccionadas por el usuario
+            margen_seguridad: Margen de seguridad en mm (default: 30)
+            log_file: Archivo de log (opcional)
         """
+        import sys
+
+        def log(msg):
+            """Escribe en archivo y en consola"""
+            print(msg)
+            if log_file:
+                log_file.write(msg + '\n')
+                log_file.flush()
+            sys.stdout.flush()
+
         grupo_nombre = f"GRUPO-{grupo_id:03d}"
-        print(f"\n{'='*80}")
-        print(f"[_APLICAR_COMBINACION] INICIO - {grupo_nombre}")
-        print(f"  Tipo combinación: {combinacion.get('tipo')}")
-        print(f"  Número de órdenes: {len(combinacion.get('ordenes', []))}")
-        print(f"{'='*80}\n")
+        log(f"\n{'='*80}")
+        log(f"[_APLICAR_COMBINACION] INICIO - {grupo_nombre}")
+        log(f"  Tipo combinación: {combinacion.get('tipo')}")
+        log(f"  Número de órdenes: {len(combinacion.get('ordenes', []))}")
+        for i, od in enumerate(combinacion.get('ordenes', []), 1):
+            log(f"    Orden {i}: {od['orden'].orden_produccion} (mult={od.get('multiplicador', 1)})")
+        log(f"{'='*80}\n")
 
         # VALIDACIÓN PREVENTIVA: Filtrar órdenes que ya tienen grupo asignado
         ordenes_disponibles = []
@@ -2275,19 +2534,22 @@ class ProductionOrder(models.Model):
             orden = orden_data['orden']
             if not orden.grupo_planificacion:
                 ordenes_disponibles.append(orden_data)
+                log(f"  Orden {orden.orden_produccion}: DISPONIBLE (sin grupo previo)")
             else:
-                print(f"[ADVERTENCIA] {grupo_nombre}: Orden {orden.orden_produccion} ya está en {orden.grupo_planificacion}, omitiendo")
+                log(f"  [ADVERTENCIA] Orden {orden.orden_produccion}: YA ESTÁ EN {orden.grupo_planificacion}, OMITIENDO")
 
         # Si no quedan órdenes disponibles, abortar
         if not ordenes_disponibles:
-            print(f"[ERROR] {grupo_nombre}: No hay órdenes disponibles para aplicar, abortando")
+            log(f"[ERROR] {grupo_nombre}: NO HAY ÓRDENES DISPONIBLES, ABORTANDO")
             return
+
+        log(f"\n{grupo_nombre}: {len(ordenes_disponibles)} orden(es) disponible(s) para aplicar")
 
         # Actualizar la combinación con solo las órdenes disponibles
         combinacion['ordenes'] = ordenes_disponibles
 
         # Calcular sobrante individual para cada orden
-        MARGEN_SEGURIDAD = 30
+        MARGEN_SEGURIDAD = margen_seguridad
         num_ordenes = len(combinacion['ordenes'])
 
         # CORRECCIÓN DE BUG: Si solo hay 1 orden Y el tipo original es 'individual'
@@ -2299,9 +2561,9 @@ class ProductionOrder(models.Model):
             bobina_original = combinacion.get('bobina')
             sobrante_original = combinacion.get('sobrante')
 
-            print(f"[BUG FIX] {grupo_nombre}: Detectada orden individual (num_ordenes=1)")
-            print(f"[BUG FIX] {grupo_nombre}: Bobina actual: {bobina_original}mm, Tipo: {combinacion['tipo']}")
-            print(f"[BUG FIX] {grupo_nombre}: Recalculando bobina óptima para pedido individual...")
+            log(f"[BUG FIX] {grupo_nombre}: Detectada orden individual (num_ordenes=1)")
+            log(f"[BUG FIX] {grupo_nombre}: Bobina actual: {bobina_original}mm, Tipo: {combinacion['tipo']}")
+            log(f"[BUG FIX] {grupo_nombre}: Recalculando bobina óptima para pedido individual...")
 
             # Recalcular la mejor bobina para este pedido individual
             orden_unica = combinacion['ordenes'][0]['orden']
@@ -2310,7 +2572,7 @@ class ProductionOrder(models.Model):
             multiplicador = combinacion['ordenes'][0].get('multiplicador', 1)
             ancho_necesario = orden_unica.ancho_calculado * multiplicador
 
-            print(f"[BUG FIX] {grupo_nombre}: ancho_calculado={orden_unica.ancho_calculado}mm, multiplicador={multiplicador}, ancho_real={ancho_necesario}mm")
+            log(f"[BUG FIX] {grupo_nombre}: ancho_calculado={orden_unica.ancho_calculado}mm, multiplicador={multiplicador}, ancho_real={ancho_necesario}mm")
 
             # Buscar la bobina más pequeña que quepa (minimizar sobrante)
             # USAR LAS BOBINAS SELECCIONADAS, no todas las activas
@@ -2341,19 +2603,19 @@ class ProductionOrder(models.Model):
                 combinacion['ordenes'][0]['ancho_efectivo'] = ancho_necesario
 
                 if bobina_optima != bobina_original:
-                    print(f"[BUG FIX] {grupo_nombre}: Bobina corregida: {bobina_original}mm → {bobina_optima}mm")
-                    print(f"[BUG FIX] {grupo_nombre}: Sobrante reducido: {sobrante_original}mm → {menor_sobrante:.2f}mm")
-                    print(f"[BUG FIX] {grupo_nombre}: Eficiencia mejorada: {combinacion['eficiencia']:.2f}%")
+                    log(f"[BUG FIX] {grupo_nombre}: Bobina corregida: {bobina_original}mm → {bobina_optima}mm")
+                    log(f"[BUG FIX] {grupo_nombre}: Sobrante reducido: {sobrante_original}mm → {menor_sobrante:.2f}mm")
+                    log(f"[BUG FIX] {grupo_nombre}: Eficiencia mejorada: {combinacion['eficiencia']:.2f}%")
                 else:
-                    print(f"[BUG FIX] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
+                    log(f"[BUG FIX] {grupo_nombre}: Bobina ya era óptima: {bobina_optima}mm")
             else:
-                print(f"[ERROR] {grupo_nombre}: No se encontró bobina óptima para ancho {ancho_necesario}mm")
+                log(f"[ERROR] {grupo_nombre}: No se encontró bobina óptima para ancho {ancho_necesario}mm")
 
             combinacion['tipo'] = 'individual'
 
         # VALIDACIÓN ADICIONAL: Si el tipo es 'dupla', DEBE haber exactamente 2 órdenes
         elif combinacion['tipo'] == 'dupla' and num_ordenes != 2:
-            print(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
+            log(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
             # Forzar a individual si no son exactamente 2
             combinacion['tipo'] = 'individual'
 
@@ -2381,7 +2643,7 @@ class ProductionOrder(models.Model):
                 orden_menor = orden2
                 orden_mayor = orden1
 
-            print(f"[DUPLA] {grupo_nombre}: Escenario={escenario}, MENOR={orden_menor.orden_produccion}(faltante={orden_menor.faltante}), MAYOR={orden_mayor.orden_produccion}(faltante={orden_mayor.faltante})")
+            log(f"[DUPLA] {grupo_nombre}: Escenario={escenario}, MENOR={orden_menor.orden_produccion}(faltante={orden_menor.faltante}), MAYOR={orden_mayor.orden_produccion}(faltante={orden_mayor.faltante})")
 
         # Primera pasada: Calcular orden con cantidad menor (o todas si es individual)
         for orden_data in combinacion['ordenes']:
@@ -2410,8 +2672,9 @@ class ProductionOrder(models.Model):
                     continue
 
             # Calcular valores de planificación según especificaciones:
-            # cavidad_efectiva = cavidad * multiplicador
-            cavidad_efectiva = orden.cavidad * multiplicador if orden.cavidad else multiplicador
+            # cavidad_efectiva = multiplicador (NO usar orden.cavidad)
+            # El multiplicador ya define cuántas cavidades se usan en ESTA combinación
+            cavidad_efectiva = multiplicador
 
             # 1. cortes_planificados = cantidad / cavidad_efectiva
             # Usar ceil para asegurar que se produzca al menos la cantidad solicitada
@@ -2452,10 +2715,10 @@ class ProductionOrder(models.Model):
             # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
             tipo_final = combinacion['tipo']
             if tipo_final == 'dupla' and len(combinacion['ordenes']) != 2:
-                print(f"[ERROR CRÍTICO] Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
+                log(f"[ERROR CRÍTICO] Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
                 tipo_final = 'individual'
             elif tipo_final == 'individual' and len(combinacion['ordenes']) > 1:
-                print(f"[ADVERTENCIA] Tipo 'individual' con {len(combinacion['ordenes'])} órdenes")
+                log(f"[ADVERTENCIA] Tipo 'individual' con {len(combinacion['ordenes'])} órdenes")
 
             orden.write({
                 'grupo_planificacion': grupo_nombre,
@@ -2469,6 +2732,11 @@ class ProductionOrder(models.Model):
                 'cantidad_planificada': cantidad_planificada,
                 'cavidad_optimizada': multiplicador,
             })
+
+            log(f"  [PRIMERA PASADA] Orden {orden.orden_produccion} escrita:")
+            log(f"    - cantidad_planificada={cantidad_planificada}, cavidad_optimizada={multiplicador}")
+            log(f"    - metros_lineales={metros_lineales_planificados}m, cortes={cortes_planificados}")
+            log(f"    - bobina={combinacion['bobina']}mm, sobrante={sobrante_individual}mm")
 
         # Segunda pasada: Calcular la orden AJUSTADA en duplas con fórmula especial
         # ESC-1: Ajustar MAYOR basándose en metros de MENOR (orden_base = MENOR)
@@ -2501,16 +2769,17 @@ class ProductionOrder(models.Model):
 
                 # Fórmula especial para la orden AJUSTADA:
                 # cantidad_planificada = round((metros_lineales_base / largo_calculado_ajustada) * 1000)
-                # IMPORTANTE: Limitar a la cantidad original para evitar faltantes negativos
+                # IMPORTANTE: Limitar al faltante para evitar faltantes negativos
                 cantidad_planificada = 0
                 if orden_ajustada.largo_calculado and orden_ajustada.largo_calculado > 0:
                     # Usar round() para mayor precisión (consistente con evaluación bidireccional)
                     cantidad_calculada = round((metros_lineales_base / orden_ajustada.largo_calculado) * 1000)
-                    # NO exceder la cantidad original del pedido
-                    cantidad_planificada = min(cantidad_calculada, orden_ajustada.cantidad)
+                    # NO exceder el faltante del pedido
+                    cantidad_planificada = min(cantidad_calculada, orden_ajustada.faltante)
 
                 # Para este pedido, cortes_planificados se calcula al revés desde cantidad_planificada
-                cavidad_efectiva = orden_ajustada.cavidad * multiplicador if orden_ajustada.cavidad else multiplicador
+                # Usar SOLO multiplicador, NO orden.cavidad
+                cavidad_efectiva = multiplicador
                 # Usar int() para evitar sobrepasarse de la cantidad planificada
                 cortes_planificados = int(cantidad_planificada / cavidad_efectiva) if cavidad_efectiva > 0 else 0
 
@@ -2519,29 +2788,47 @@ class ProductionOrder(models.Model):
                 if cavidad_efectiva > 0 and orden_ajustada.largo_calculado:
                     metros_lineales_ajustada = round(((cantidad_planificada * orden_ajustada.largo_calculado) / cavidad_efectiva) / 1000)
 
-                print(f"[DUPLA] {grupo_nombre}: {escenario} - Metros calculados")
-                print(f"  - Orden BASE ({orden_base.orden_produccion}): {metros_lineales_base}m")
-                print(f"  - Orden AJUSTADA ({orden_ajustada.orden_produccion}): {metros_lineales_ajustada}m")
+                log(f"[DUPLA] {grupo_nombre}: {escenario} - Metros calculados")
+                log(f"  - Orden BASE ({orden_base.orden_produccion}): {metros_lineales_base}m")
+                log(f"  - Orden AJUSTADA ({orden_ajustada.orden_produccion}): {metros_lineales_ajustada}m")
 
                 # VALIDACIÓN FINAL: Verificar consistencia antes de escribir
                 tipo_final = combinacion['tipo']
                 if tipo_final == 'dupla' and len(combinacion['ordenes']) != 2:
-                    print(f"[ERROR CRÍTICO] Orden ajustada: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
+                    log(f"[ERROR CRÍTICO] Orden ajustada: Intentando escribir tipo 'dupla' con {len(combinacion['ordenes'])} órdenes. Corrigiendo a 'individual'")
                     tipo_final = 'individual'
 
-                # Actualizar orden AJUSTADA
-                orden_ajustada.write({
-                    'grupo_planificacion': grupo_nombre,
-                    'tipo_combinacion': tipo_final,
-                    'ancho_utilizado': combinacion['ancho_utilizado'],
-                    'bobina_utilizada': combinacion['bobina'],
-                    'sobrante': sobrante_individual,
-                    'eficiencia': combinacion['eficiencia'],
-                    'metros_lineales_planificados': metros_lineales_ajustada,
-                    'cortes_planificados': cortes_planificados,
-                    'cantidad_planificada': cantidad_planificada,
-                    'cavidad_optimizada': multiplicador,
-                })
+                # CRÍTICO: Refrescar el recordset antes de escribir para evitar problemas de caché
+                orden_ajustada_refreshed = self.env['megastock.production.order'].browse(orden_ajustada.id)
+
+                log(f"[DEBUG] {grupo_nombre}: Intentando escribir orden AJUSTADA {orden_ajustada_refreshed.orden_produccion} (ID: {orden_ajustada_refreshed.id})")
+                log(f"[DEBUG] {grupo_nombre}: cantidad_planificada={cantidad_planificada}, metros={metros_lineales_ajustada}m")
+                log(f"[DEBUG] {grupo_nombre}: Estado actual - grupo_planificacion='{orden_ajustada_refreshed.grupo_planificacion}'")
+
+                try:
+                    orden_ajustada_refreshed.write({
+                        'grupo_planificacion': grupo_nombre,
+                        'tipo_combinacion': tipo_final,
+                        'ancho_utilizado': combinacion['ancho_utilizado'],
+                        'bobina_utilizada': combinacion['bobina'],
+                        'sobrante': sobrante_individual,
+                        'eficiencia': combinacion['eficiencia'],
+                        'metros_lineales_planificados': metros_lineales_ajustada,
+                        'cortes_planificados': cortes_planificados,
+                        'cantidad_planificada': cantidad_planificada,
+                        'cavidad_optimizada': multiplicador,
+                    })
+                    log(f"[SEGUNDA PASADA] Orden AJUSTADA {orden_ajustada_refreshed.orden_produccion} escrita exitosamente")
+
+                    # Verificar inmediatamente si se guardó
+                    orden_verificacion = self.env['megastock.production.order'].browse(orden_ajustada_refreshed.id)
+                    log(f"  [VERIFICACIÓN] grupo_planificacion='{orden_verificacion.grupo_planificacion}'")
+                    log(f"  [VERIFICACIÓN] cantidad_planificada={orden_verificacion.cantidad_planificada}")
+                    log(f"  [VERIFICACIÓN] cavidad_optimizada={orden_verificacion.cavidad_optimizada}")
+                    log(f"  [VERIFICACIÓN] metros_lineales={orden_verificacion.metros_lineales_planificados}m")
+
+                except Exception as e:
+                    log(f"[ERROR] {grupo_nombre}: Error al escribir orden AJUSTADA: {e}")
 
     def action_generar_ordenes_trabajo(self):
         """Acción para abrir wizard de generación de órdenes de trabajo"""
@@ -2585,7 +2872,7 @@ class ProductionOrder(models.Model):
         # Resetear campos de planificación y estado
         ordenes_reseteable.write({
             'grupo_planificacion': False,
-            'tipo_combinacion': 'individual',
+            'tipo_combinacion': False,  # CAMBIADO: era 'individual', ahora False para no tener default
             'ancho_utilizado': 0,
             'bobina_utilizada': 0,
             'sobrante': 0,
