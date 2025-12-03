@@ -1293,9 +1293,11 @@ class ProductionOrder(models.Model):
         else:
             import sys
             from datetime import datetime
+            import tempfile
+            import os
 
-            # Abrir archivo de log
-            log_path = r"C:\Program Files\Odoo 16.0.20250630\planificacion_log.txt"
+            # Abrir archivo de log en directorio temporal (funciona en Windows y Linux)
+            log_path = os.path.join(tempfile.gettempdir(), 'planificacion_log.txt')
             log_file = open(log_path, 'w', encoding='utf-8')
 
             def log(msg):
