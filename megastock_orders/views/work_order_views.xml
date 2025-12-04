@@ -150,7 +150,8 @@
                                     <field name="cavidad_optimizada" string="Cavidad"/>
                                     <field name="cortes_planificados" string="Cortes"/>
                                     <field name="cantidad_planificada" string="Cant. Planif."/>
-                                    <field name="metros_lineales_planificados" string="Metros Lin."/>
+                                    <field name="metros_lineales_calculados" string="Metros Calc." digits="[16, 0]"/>
+                                    <field name="metros_lineales_planificados" string="Metros Plan." digits="[16, 0]"/>
                                     <field name="estado" widget="badge"/>
                                     <field name="fecha_produccion"/>
                                 </tree>
