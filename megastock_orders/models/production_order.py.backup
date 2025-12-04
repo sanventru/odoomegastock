@@ -2770,13 +2770,12 @@ class ProductionOrder(models.Model):
                 sobrante_individual = round(sobrante_total / num_ordenes)
 
                 # Fórmula especial para la orden AJUSTADA:
-                # cantidad_planificada = round((metros_lineales_base * multiplicador * 1000) / largo_calculado_ajustada)
+                # cantidad_planificada = round((metros_lineales_base / largo_calculado_ajustada) * 1000)
                 # IMPORTANTE: Limitar al faltante para evitar faltantes negativos
                 cantidad_planificada = 0
                 if orden_ajustada.largo_calculado and orden_ajustada.largo_calculado > 0:
                     # Usar round() para mayor precisión (consistente con evaluación bidireccional)
-                    # FIX: Incluir multiplicador (cavidad) en el cálculo para duplas con cavidad > 1
-                    cantidad_calculada = round((metros_lineales_base * multiplicador * 1000) / orden_ajustada.largo_calculado)
+                    cantidad_calculada = round((metros_lineales_base / orden_ajustada.largo_calculado) * 1000)
                     # NO exceder el faltante del pedido
                     cantidad_planificada = min(cantidad_calculada, orden_ajustada.faltante)
 
