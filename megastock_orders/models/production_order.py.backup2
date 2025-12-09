@@ -382,45 +382,27 @@ class ProductionOrder(models.Model):
             else:
                 record.ancho_rayado = 0.0
 
-    @api.depends('largo', 'alto', 'flauta')
+    @api.depends('largo_indice_flauta', 'alto_indice_flauta')
     def _compute_largo_calculado(self):
-        """Calcula largo real según fórmula: 2*alto + largo + compensacion_largo_flauta"""
+        """Calcula largo real según fórmula: 2*alto_indice_flauta + largo_indice_flauta + 8"""
         for record in self:
-            if record.largo and record.alto:
-                # Obtener compensación de la flauta
-                compensacion = 0.0
-                if record.flauta:
-                    flauta_obj = self.env['megastock.flauta'].search([
-                        ('codigo', '=', record.flauta.upper().strip())
-                    ], limit=1)
-                    if flauta_obj and flauta_obj.compensacion_largo:
-                        compensacion = flauta_obj.compensacion_largo
-
-                record.largo_calculado = (2 * record.alto) + record.largo + compensacion
+            if record.largo_indice_flauta and record.alto_indice_flauta:
+                record.largo_calculado = (2 * record.alto_indice_flauta) + record.largo_indice_flauta + 8
             else:
-                record.largo_calculado = record.largo or 0
+                record.largo_calculado = record.largo_indice_flauta or 0
 
-    @api.depends('ancho', 'alto', 'flauta', 'troquel')
+    @api.depends('ancho_indice_flauta', 'alto_indice_flauta', 'troquel')
     def _compute_ancho_calculado(self):
-        """Calcula ancho real según fórmula: 2*alto + ancho + compensacion_ancho_flauta"""
+        """Calcula ancho real según fórmula: 2*alto_indice_flauta + ancho_indice_flauta + 14 + (2 si troquel=SI)"""
         for record in self:
-            if record.ancho and record.alto:
-                # Obtener compensación de la flauta
-                compensacion = 0.0
-                if record.flauta:
-                    flauta_obj = self.env['megastock.flauta'].search([
-                        ('codigo', '=', record.flauta.upper().strip())
-                    ], limit=1)
-                    if flauta_obj and flauta_obj.compensacion_ancho:
-                        compensacion = flauta_obj.compensacion_ancho
-
-                base_ancho = (2 * record.alto) + record.ancho + compensacion
-                # Agregar 2mm si troquel = 'si' (actualmente no se aplica)
+            if record.ancho_indice_flauta and record.alto_indice_flauta:
+                base_ancho = (2 * record.alto_indice_flauta) + record.ancho_indice_flauta + 14
+                # Agregar 2mm si troquel = 'si'
                 troquel_extra = 2 if record.troquel == 'si' else 0
                 #record.ancho_calculado = base_ancho + troquel_extra
                 record.ancho_calculado = base_ancho
             else:
-                record.ancho_calculado = record.ancho or 0
+                record.ancho_calculado = record.ancho_indice_flauta or 0
 
     @api.depends('ancho', 'flauta')
     def _compute_solapa(self):
