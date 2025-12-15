@@ -34,6 +34,15 @@
                         </p>
                     </group>
                 </group>
+                <group>
+                    <group>
+                        <field name="limite_faltante" placeholder="Ej: 500"/>
+                        <p class="text-muted">
+                            Faltantes mayores o iguales a este valor serán replanificados (por defecto: 500)
+                        </p>
+                    </group>
+                    <group/>
+                </group>
                 <div class="alert alert-info mt16" role="alert">
                     <strong>¿Cómo funciona?</strong>
                     <ul>

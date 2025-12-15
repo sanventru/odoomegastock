@@ -45,6 +45,13 @@ class PlanificacionWizard(models.TransientModel):
         help='Margen de seguridad en milímetros para los cortes. Por defecto: 30mm'
     )
 
+    limite_faltante = fields.Integer(
+        string='Límite Faltante',
+        required=True,
+        default=500,
+        help='Faltantes mayores o iguales a este valor serán replanificados. Por defecto: 500'
+    )
+
     def action_planificar(self):
         """Ejecuta la planificación con los parámetros ingresados"""
         self.ensure_one()
@@ -88,7 +95,8 @@ class PlanificacionWizard(models.TransientModel):
             cavidad_limite=self.cavidad_limite,
             bobina_unica=bobina_unica,
             bobinas_disponibles=anchos_seleccionados,
-            margen_seguridad=self.margen or 30  # Usar valor ingresado o 30 por defecto
+            margen_seguridad=self.margen or 30,  # Usar valor ingresado o 30 por defecto
+            limite_faltante=self.limite_faltante  # Límite configurable para faltantes
         )
 
         # Construir mensaje con información del resultado
