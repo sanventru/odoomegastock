@@ -111,6 +111,7 @@ if records:
                 <field name="ancho_utilizado" optional="hide"/>
                 <field name="bobina_utilizada" optional="hide"/>
                 <field name="sobrante" optional="hide"/>
+                <field name="porcentaje_sobrante" optional="show"/>
                 <field name="faltante" optional="show"/>
 
                 <!-- Campos opcionales - Otros -->
@@ -252,6 +253,7 @@ if records:
                                     <field name="ancho_utilizado" readonly="1"/>
                                     <field name="bobina_utilizada" readonly="1"/>
                                     <field name="sobrante" readonly="1"/>
+                                    <field name="porcentaje_sobrante" readonly="1"/>
                                     <field name="cortes_planificados" readonly="1"/>
                                     <field name="cantidad_planificada" readonly="1"/>
                                     <field name="faltante" readonly="1"/>

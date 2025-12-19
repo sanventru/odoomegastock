@@ -32,10 +32,10 @@ class PlanificacionWizard(models.TransientModel):
     )
 
     porcentaje_sobrante = fields.Float(
-        string='Porcentaje de Sobrante (%)',
-        required=False,
-        default=0.0,
-        help='Porcentaje de sobrante permitido para la planificación'
+        string='Límite de Sobrante (%)',
+        required=True,
+        default=30.0,
+        help='Límite de sobrante: combinaciones con sobrante > este % serán rechazadas'
     )
 
     margen = fields.Integer(
@@ -96,7 +96,8 @@ class PlanificacionWizard(models.TransientModel):
             bobina_unica=bobina_unica,
             bobinas_disponibles=anchos_seleccionados,
             margen_seguridad=self.margen or 30,  # Usar valor ingresado o 30 por defecto
-            limite_faltante=self.limite_faltante  # Límite configurable para faltantes
+            limite_faltante=self.limite_faltante,  # Límite configurable para faltantes
+            limite_sobrante=self.porcentaje_sobrante  # Límite configurable para sobrante
         )
 
         # Construir mensaje con información del resultado

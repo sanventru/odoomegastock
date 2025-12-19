@@ -242,6 +242,7 @@ class ProductionOrder(models.Model):
     ancho_utilizado = fields.Float(string='Ancho Utilizado (mm)', help='Ancho total utilizado en la bobina', group_operator='max')
     bobina_utilizada = fields.Float(string='Bobina Utilizada (mm)', help='Ancho de bobina utilizada', group_operator='max')
     sobrante = fields.Float(string='Sobrante (mm)', help='Material sobrante después del corte')
+    porcentaje_sobrante = fields.Float(string='Sobrante (%)', compute='_compute_porcentaje_sobrante', store=True, help='Porcentaje de sobrante respecto a la bobina utilizada')
     eficiencia = fields.Float(string='Eficiencia (%)', help='Porcentaje de eficiencia del material calculado con algoritmo avanzado', group_operator='avg')
     metros_lineales_planificados = fields.Float(string='Metros Lineales Planificados', help='Metros lineales calculados para la planificación')
     cortes_planificados = fields.Integer(string='Cortes Planificados', help='Total de cortes calculados en la planificación')
@@ -615,6 +616,15 @@ class ProductionOrder(models.Model):
         for record in self:
             record.faltante = (record.cantidad or 0) - (record.cantidad_planificada or 0)
 
+    @api.depends('sobrante', 'bobina_utilizada')
+    def _compute_porcentaje_sobrante(self):
+        """Calcula el porcentaje de sobrante respecto a la bobina utilizada"""
+        for record in self:
+            if record.bobina_utilizada and record.bobina_utilizada > 0:
+                record.porcentaje_sobrante = (record.sobrante / record.bobina_utilizada) * 100
+            else:
+                record.porcentaje_sobrante = 0.0
+
     @api.depends('cantidad', 'cavidad', 'cavidad_optimizada')
     def _compute_cantidad_ajustada(self):
         """Optimiza cantidad según cavidad: ceil(cantidad/cavidad) * cavidad"""
@@ -941,7 +951,7 @@ class ProductionOrder(models.Model):
         if pedidos_temporales:
             pedidos_temporales.unlink()
 
-    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None, margen_seguridad=30, limite_faltante=500):
+    def _optimizar_ordenes(self, ordenes, test_principal=None, cavidad_limite=1, bobina_unica=False, bobinas_disponibles=None, margen_seguridad=30, limite_faltante=500, limite_sobrante=30):
         """Algoritmo de optimización basado en el archivo Excel de trimado con validación iterativa de faltantes
 
         Args:
@@ -952,6 +962,7 @@ class ProductionOrder(models.Model):
             bobinas_disponibles: Lista de anchos de bobinas a considerar (default: None, usa todas las activas)
             margen_seguridad: Margen de seguridad en mm para los cortes (default: 30)
             limite_faltante: Faltantes >= este valor serán replanificados (default: 500)
+            limite_sobrante: Sobrante > este % será rechazado (default: 30)
         """
         from odoo.exceptions import UserError
 
@@ -967,6 +978,12 @@ class ProductionOrder(models.Model):
                 "Ve a Configuración > Bobinas y configura al menos una bobina activa, "
                 "o selecciona bobinas en el wizard de planificación."
             )
+
+        # DEBUG: Mostrar parámetros recibidos
+        print(f"\n{'='*80}")
+        print(f"[DEBUG PARAMETROS] limite_faltante = {limite_faltante}")
+        print(f"[DEBUG PARAMETROS] limite_sobrante = {limite_sobrante}")
+        print(f"{'='*80}\n")
 
         # ESTRATEGIA 1: BOBINA ÚNICA - Replanificación iterativa con una sola bobina
         if bobina_unica:
@@ -1004,7 +1021,7 @@ class ProductionOrder(models.Model):
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
 
                 todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad, limite_faltante
+                    ordenes_a_planificar, ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad, limite_faltante, limite_sobrante
                 )
 
                 print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
@@ -1052,7 +1069,7 @@ class ProductionOrder(models.Model):
                     if orden.id not in ordenes_procesadas and orden.faltante > 0:
                         # Buscar mejor combinación individual
                         mejor_individual = self._encontrar_mejor_combinacion(
-                            orden, self.env['megastock.production.order'], ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad
+                            orden, self.env['megastock.production.order'], ordenes_procesadas, [bobina_seleccionada], cavidad_limite, margen_seguridad, limite_sobrante
                         )
 
                         if mejor_individual:
@@ -1067,7 +1084,7 @@ class ProductionOrder(models.Model):
                 # PASO 3: Aplicar grupos encontrados
                 if grupos_optimizados:
                     for grupo in grupos_optimizados:
-                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, log_file)
+                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, limite_sobrante, log_file)
                         grupo_counter += 1  # Incrementar para el siguiente grupo
                     grupos_finales = grupos_optimizados
                     print(f"[BOBINA ÚNICA - ITERACIÓN {iteracion}] Grupos aplicados exitosamente")
@@ -1131,12 +1148,12 @@ class ProductionOrder(models.Model):
                         for orden_faltante in con_faltante_alto:
                             # Intentar planificar el faltante como orden individual
                             mejor_comb = self._encontrar_mejor_combinacion(
-                                orden_faltante, self.env['megastock.production.order'], set(), [bobina_seleccionada], 1, margen_seguridad
+                                orden_faltante, self.env['megastock.production.order'], set(), [bobina_seleccionada], 1, margen_seguridad, limite_sobrante
                             )
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
                                 grupo_counter = len(grupos_finales) + 1
-                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, log_file)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, limite_sobrante, log_file)
                                 grupos_finales.append(mejor_comb)
                                 print(f"[BOBINA ÚNICA] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1377,7 +1394,7 @@ class ProductionOrder(models.Model):
                 log(f"[ITERACIÓN {iteracion}] FASE 1: Evaluando TODAS las duplas exhaustivamente...")
 
                 todas_las_duplas = self._evaluar_todas_duplas_exhaustivo(
-                    ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad, limite_faltante, log_file
+                    ordenes_a_planificar, ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad, limite_faltante, limite_sobrante, log_file
                 )
 
                 log(f"[ITERACIÓN {iteracion}] Total duplas evaluadas: {len(todas_las_duplas)}")
@@ -1429,7 +1446,7 @@ class ProductionOrder(models.Model):
 
                     # Buscar mejor combinación individual
                     mejor_combinacion = self._encontrar_mejor_combinacion(
-                        orden, self.env['megastock.production.order'], ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad
+                        orden, self.env['megastock.production.order'], ordenes_procesadas, bobinas_disponibles, cavidad_limite, margen_seguridad, limite_sobrante
                     )
 
                     if mejor_combinacion:
@@ -1443,7 +1460,7 @@ class ProductionOrder(models.Model):
                 # Aplicar los grupos encontrados
                 if grupos_optimizados:
                     for grupo in grupos_optimizados:
-                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, log_file)
+                        self._aplicar_combinacion(grupo, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, limite_sobrante, log_file)
                         grupo_counter += 1  # Incrementar para el siguiente grupo
 
                 # PASO 3: Refrescar y calcular faltantes (SOLO en órdenes originales)
@@ -1540,11 +1557,11 @@ class ProductionOrder(models.Model):
                         for orden_faltante in con_faltante_alto:
                             # Intentar planificar el faltante como orden individual
                             mejor_comb = self._encontrar_mejor_combinacion(
-                                orden_faltante, self.env['megastock.production.order'], set(), bobinas_disponibles, 1, margen_seguridad
+                                orden_faltante, self.env['megastock.production.order'], set(), bobinas_disponibles, 1, margen_seguridad, limite_sobrante
                             )
                             if mejor_comb:
                                 # Aplicar como nuevo grupo
-                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, log_file)
+                                self._aplicar_combinacion(mejor_comb, grupo_counter, bobinas_disponibles, margen_seguridad, limite_faltante, limite_sobrante, log_file)
                                 grupo_counter += 1
                                 print(f"[ITERACIÓN {iteracion}] Faltante planificado individualmente: {orden_faltante.orden_produccion}")
                             else:
@@ -1721,7 +1738,7 @@ class ProductionOrder(models.Model):
                 'iteraciones': iteracion
             }
 
-    def _encontrar_mejor_combinacion_para_faltante(self, orden_con_faltante, ordenes_disponibles, bobinas, cavidad_limite=1):
+    def _encontrar_mejor_combinacion_para_faltante(self, orden_con_faltante, ordenes_disponibles, bobinas, cavidad_limite=1, limite_sobrante=30):
         """Encuentra la mejor combinación para una orden que tiene faltante >= limite_faltante
 
         Args:
@@ -1729,6 +1746,7 @@ class ProductionOrder(models.Model):
             ordenes_disponibles: Órdenes sin grupo disponibles para combinar
             bobinas: Lista de anchos de bobinas disponibles
             cavidad_limite: Límite superior para multiplicar ancho_calculado
+            limite_sobrante: Sobrante > este % será rechazado (default: 30)
 
         Returns:
             dict con la mejor combinación encontrada, o None si no se encuentra
@@ -1770,6 +1788,13 @@ class ProductionOrder(models.Model):
                         resultado = self._calcular_eficiencia_para_faltante(
                             orden_con_faltante, faltante, multiplicador, bobina
                         )
+
+                        # ═════════════════════════════════════════════════════════
+                        # VALIDACIÓN: Sobrante > limite_sobrante% → Rechazar individual
+                        # ═════════════════════════════════════════════════════════
+                        porcentaje_sobrante = (resultado['sobrante'] / bobina) * 100
+                        if porcentaje_sobrante > limite_sobrante:
+                            continue  # Rechazar, buscar otras opciones
 
                         if resultado['sobrante'] < menor_sobrante:
                             menor_sobrante = resultado['sobrante']
@@ -1813,6 +1838,13 @@ class ProductionOrder(models.Model):
                                 orden_con_faltante, faltante, mult1,
                                 orden2, mult2, bobina
                             )
+
+                            # ═════════════════════════════════════════════════════════
+                            # VALIDACIÓN: Sobrante > limite_sobrante% → Rechazar dupla
+                            # ═════════════════════════════════════════════════════════
+                            porcentaje_sobrante = (resultado['sobrante'] / bobina) * 100
+                            if porcentaje_sobrante > limite_sobrante:
+                                continue  # Rechazar, buscar otras opciones
 
                             if resultado['sobrante'] < menor_sobrante:
                                 menor_sobrante = resultado['sobrante']
@@ -2049,7 +2081,7 @@ class ProductionOrder(models.Model):
                 'esc2_valido': esc2_valido
             }
 
-    def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30, limite_faltante=500, log_file=None):
+    def _evaluar_todas_duplas_exhaustivo(self, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30, limite_faltante=500, limite_sobrante=30, log_file=None):
         """Evalúa TODAS las duplas posibles de forma exhaustiva
 
         Args:
@@ -2115,6 +2147,15 @@ class ProductionOrder(models.Model):
                     for bobina in bobinas_ordenadas:
                         if ancho_total <= (bobina - MARGEN_SEGURIDAD):
                             sobrante = (bobina - MARGEN_SEGURIDAD) - ancho_total
+
+                            # ═════════════════════════════════════════════════════════
+                            # VALIDACIÓN: Sobrante > limite_sobrante% → Descartar dupla
+                            # ═════════════════════════════════════════════════════════
+                            porcentaje_sobrante = (sobrante / bobina) * 100
+                            if porcentaje_sobrante > limite_sobrante:
+                                log(f"[DUPLA DESCARTADA - SOBRANTE > {limite_sobrante}%] {orden1.orden_produccion} + {orden2.orden_produccion}: "
+                                    f"Sobrante {sobrante:.0f}mm ({porcentaje_sobrante:.1f}%) en bobina {bobina}mm")
+                                break  # Descartar esta combinación, continuar con siguiente
 
                             # Pre-calcular faltantes y metros con EVALUACIÓN BIDIRECCIONAL
                             # Retorna None si ningún escenario (ESC-1 o ESC-2) produce metros iguales
@@ -2207,7 +2248,7 @@ class ProductionOrder(models.Model):
 
         return todas_las_duplas
 
-    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30):
+    def _encontrar_mejor_combinacion(self, orden_principal, todas_ordenes, procesadas, bobinas, cavidad_limite=1, margen_seguridad=30, limite_sobrante=30):
         """Encuentra la mejor combinación para una orden principal
 
         Args:
@@ -2250,7 +2291,16 @@ class ProductionOrder(models.Model):
 
                     print(f"  ✓ mult={multiplicador}: {ancho_util}mm cabe en {bobina}mm (disponible={espacio_disponible}mm) → sobrante={resultado['sobrante']}mm")
 
-                    # Criterio simple: menor sobrante gana
+                    # ═════════════════════════════════════════════════════════
+                    # VALIDACIÓN: Sobrante > limite_sobrante% → Rechazar individual
+                    # ═════════════════════════════════════════════════════════
+                    porcentaje_sobrante = (resultado['sobrante'] / bobina) * 100
+                    if porcentaje_sobrante > limite_sobrante:
+                        # Continuar buscando otras opciones, no guardar esta
+                        print(f"    ✗ RECHAZADO - Sobrante > {limite_sobrante}% ({porcentaje_sobrante:.1f}%)")
+                        continue
+
+                    # Criterio simple: menor sobrante gana (solo si pasa validación)
                     if resultado['sobrante'] < menor_sobrante:
                         menor_sobrante = resultado['sobrante']
                         mejor_combinacion = {
@@ -2522,7 +2572,7 @@ class ProductionOrder(models.Model):
             'cortes_totales': cortes_totales
         }
 
-    def _aplicar_combinacion(self, combinacion, grupo_id, bobinas_disponibles, margen_seguridad=30, limite_faltante=500, log_file=None):
+    def _aplicar_combinacion(self, combinacion, grupo_id, bobinas_disponibles, margen_seguridad=30, limite_faltante=500, limite_sobrante=30, log_file=None):
         """Aplica la combinación encontrada a las órdenes
 
         Args:
@@ -2531,6 +2581,7 @@ class ProductionOrder(models.Model):
             bobinas_disponibles: Lista de anchos de bobinas seleccionadas por el usuario
             margen_seguridad: Margen de seguridad en mm (default: 30)
             limite_faltante: Faltantes >= este valor serán replanificados (default: 500)
+            limite_sobrante: Sobrante > este % será rechazado (default: 30)
             log_file: Archivo de log (opcional)
         """
         import sys
@@ -2576,10 +2627,16 @@ class ProductionOrder(models.Model):
         MARGEN_SEGURIDAD = margen_seguridad
         num_ordenes = len(combinacion['ordenes'])
 
-        # CORRECCIÓN DE BUG: Si solo hay 1 orden Y el tipo original es 'individual'
+        # VALIDACIÓN ADICIONAL: Si el tipo es 'dupla', DEBE haber exactamente 2 órdenes
+        # CORREGIR TIPO PRIMERO, antes de recalcular bobina
+        if combinacion['tipo'] == 'dupla' and num_ordenes != 2:
+            log(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
+            # Forzar a individual si no son exactamente 2
+            combinacion['tipo'] = 'individual'
+
+        # CORRECCIÓN DE BUG: Si solo hay 1 orden disponible Y tipo es 'individual'
         # RECALCULAR la bobina óptima para ese pedido individual
-        # IMPORTANTE: NO recalcular si el tipo original era 'dupla' porque significa
-        # que la dupla perdió una orden y la bobina 1880 es la correcta para el grupo
+        # Esto se ejecuta DESPUÉS de corregir el tipo, así cubre todos los casos
         if num_ordenes == 1 and combinacion['tipo'] == 'individual':
             # Guardar bobina original para debug
             bobina_original = combinacion.get('bobina')
@@ -2635,16 +2692,23 @@ class ProductionOrder(models.Model):
             else:
                 log(f"[ERROR] {grupo_nombre}: No se encontró bobina óptima para ancho {ancho_necesario}mm")
 
-            combinacion['tipo'] = 'individual'
+        # ═════════════════════════════════════════════════════════
+        # VALIDACIÓN CRÍTICA: Sobrante > limite_sobrante% → RECHAZAR
+        # ═════════════════════════════════════════════════════════
+        log(f"[DEBUG _aplicar_combinacion] {grupo_nombre}: Verificando validación de sobrante")
+        log(f"[DEBUG _aplicar_combinacion] {grupo_nombre}: bobina={combinacion.get('bobina')}, sobrante={combinacion.get('sobrante')}, limite_sobrante={limite_sobrante}")
 
-        # VALIDACIÓN ADICIONAL: Si el tipo es 'dupla', DEBE haber exactamente 2 órdenes
-        elif combinacion['tipo'] == 'dupla' and num_ordenes != 2:
-            log(f"[ERROR CRÍTICO] {grupo_nombre}: Tipo 'dupla' con {num_ordenes} órdenes (debe ser exactamente 2)")
-            # Forzar a individual si no son exactamente 2
-            combinacion['tipo'] = 'individual'
+        if combinacion.get('bobina') and combinacion.get('sobrante') is not None:
+            porcentaje_sobrante = (combinacion['sobrante'] / combinacion['bobina']) * 100
+            log(f"[DEBUG _aplicar_combinacion] {grupo_nombre}: porcentaje_sobrante calculado = {porcentaje_sobrante:.1f}%")
 
-            # El recálculo ya se hará en el primer bloque if num_ordenes == 1
-            # Este bloque solo corrige el tipo, el recálculo se hace arriba
+            if porcentaje_sobrante > limite_sobrante:
+                log(f"[RECHAZADO EN _aplicar_combinacion - SOBRANTE > {limite_sobrante}%] {grupo_nombre}: {porcentaje_sobrante:.1f}% - NO SE APLICARÁ")
+                return
+            else:
+                log(f"[DEBUG _aplicar_combinacion] {grupo_nombre}: ✓ APROBADO - Sobrante {porcentaje_sobrante:.1f}% <= {limite_sobrante}%")
+        else:
+            log(f"[DEBUG _aplicar_combinacion] {grupo_nombre}: ⚠ NO SE PUDO VALIDAR - bobina o sobrante es None")
 
         espacio_por_orden = (combinacion['bobina'] - MARGEN_SEGURIDAD) / num_ordenes
 
